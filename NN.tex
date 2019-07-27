@@ -1,4 +1,5 @@
-\documentclass[12pt]{article}  \usepackage{algorithm2e} \usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
+\documentclass[12pt]{article}  \usepackage[boxruled,lined]{algorithm2e} \usepackage{booktabs}
+\usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}  \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
 \section{Logistic Regression}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter \begin{description} \item[Intro] 
@@ -15,8 +16,8 @@ We can draw a \emph{computation graph} to describe the forward pass as follows:
 \begin{tikzpicture}   \node (w) at (0, 1) {w};
   \node (x) at (0, .5) {x};
   \node (b) at (0,0) {b};
-  \draw[->] (w) to (1, .6);
   \draw[->] (x) to (1, .5);
+  \draw[->] (w) to (1, .6);
   \draw[->] (b) to (1, .4);
   \node[draw=black,rectangle] (z) at (2.5, .5) {$z = w^Tx + b$};
   \draw[->] (z) to (4.25, .5);
@@ -25,15 +26,24 @@ We can draw a \emph{computation graph} to describe the forward pass as follows:
   \node[draw=black,rectangle] (loss) at (8, .5) {$\mathcal L (a,y)$};
 \end{tikzpicture}
 \end{center} We seek to learn $w, b$ to minimize the loss function. \emph{Back propogation} proceeds as follows:
+
+{
+\small{
 \begin{align*}
 \texttt{da} &= \frac{\partial \mathcal L}{\partial a} = - \left(\frac{y}{a} - \frac{1-y}{1-a}\right) = \frac{-y}{a} + \frac{1-y}{1-a}. \\
   \texttt{dz} &= \frac{\partial \mathcal L}{\partial z} = \frac{\partial \mathcal L}{\partial a}\frac{\partial a}{\partial z} = \left(\frac{-y}{a} + \frac{1-y}{1-a}\right) \times a(1-a) = \frac{-y}{a} \cdot a(1-a) + \frac{1-y}{1-a} \cdot (1-a) a = -y(1-a)+ (1-y)a \\ &= ay - y + a - ay = a - y.  \\
 \texttt{dw} &= \frac{\partial \mathcal L}{\partial w} \overset{?}{=} \frac{\partial \mathcal L}{\partial z} \frac{\partial z}{\partial w} = (a-y) x^T. \\
 \texttt{db} &= \frac{\partial \mathcal L}{\partial b} = \frac{\partial \mathcal L}{\partial z} \underbrace{\frac{\partial z}{\partial b}}_{=1}. \end{align*}
+}
+}
 Our update rule then becomes: $w := w - \alpha \texttt{dw}$, and $b := b - \alpha \texttt{db}$. Our (average) \emph{cost} function is defined as $J(w,b) = \frac{1}{m} \sum_{i=1}^m \mathcal L(a^{(i)}, y^{(i)})$. Since $\frac{\partial}{\partial \cdot}$ is a linear operator, obtaining gradients is quite straightforward since we are left with a series of derivatives of loss functions, which we calculated above.
 \begin{align*}    \frac{\partial J}{\partial w} = \frac{1}{m} \sum \frac{\partial \mathcal L}{\partial w}, \hspace{15pt} \textrm{and} \hspace{15pt} \frac{\partial J}{\partial b} = \frac{1}{m} \sum \frac{\partial \mathcal L}{\partial b} \end{align*}
-Our optimization routine then becomes
-\begin{algorithm}   \For{\texttt{i in range(m)}} {
+Our optimization routine then can be written as in algorithm \ref{alg: logisticreg}
+
+{\small
+\begin{algorithm}[H]
+  \label{alg: logisticreg}
+  \caption{Logistic Regression - Optimization}   \For{\texttt{i in range(m)}} {
     $z^{(i)} = w^Tx^{(i)} + b$ \\
     $a^{(i)} = \sigma(z^{(i)})$ \\
     $J += - \left[ y^{(i)} \log a^{(i)} + (1-y^{(i)}) \log (1 - a^{(i)}) \right]$ \\
@@ -44,4 +54,212 @@ Our optimization routine then becomes
 $J /= m$ \\
 $\partial w /= m$ \\
 $\partial b /= m$ \end{algorithm}
-The above concludes one round of \href{https://en.wikipedia.org/wiki/Gradient_descent}{Gradient Descent}. We repeat this procedure many times until training loss (and ideally test loss ) is sufficiently minimized. We remark that it's possible to remove both \texttt{for} loops (over the training data, and over the parameters in $w$) by using vectorized operations in \texttt{numpy}. We execute this in code \href{https://github.com/asantucci/NN/blob/master/logistic_regression.py#L46}{here}. \end{document}
+}
+The above concludes one round of \href{https://en.wikipedia.org/wiki/Gradient_descent}{Gradient Descent}. We repeat this procedure many times until training loss (and ideally test loss ) is sufficiently minimized. We remark that it's possible to remove both \texttt{for} loops (over the training data, and over the parameters in $w$) by using vectorized operations in \texttt{numpy}. We execute this in code \href{https://github.com/asantucci/NN/blob/master/logistic_regression.py#L46}{here}.
+
+\section{Neural Networks}
+\vspace{-10pt}
+We previous saw a simple computation graph. 
+\begin{tikzpicture}   \node (w) at (0, 1) {w};
+  \node (x) at (0, .5) {x};
+  \node (b) at (0,0) {b};
+  \draw[->] (x) to (1, .5);
+  \draw[->] (w) to (1, .6);
+  \draw[->] (b) to (1, .4);
+  \node[draw=black,rectangle] (z) at (2.5, .5) {$z = w^Tx + b$};
+  \draw[->] (z) to (4.25, .5);
+  \node[draw=black,rectangle] (yhat) at (5.5, .5) {$\hat y = a = \sigma(z)$};
+  \draw[->] (yhat) to (7.25, .5);
+  \node[draw=black,rectangle] (loss) at (8, .5) {$\mathcal L (a,y)$};
+\end{tikzpicture}
+\subsection{Understanding Small Neural Networks}
+A Neural Network can be constructed by stacking together sigmoids, depicted as follows:
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+  \node (x1) at (0, 1) {$x_1$};
+  \node (x2) at (0, 0) {$x_2$};
+  \node (x3) at (0,-1) {$x_3$};
+  \node (inputlayer) at (0, -3) {$\substack{\textrm{input}\\ \textrm{layer}}$};
+  \draw[->,dashed] (inputlayer) to (x3);
+  \node (lbl) at (1,2) {\small{$[1]$}}; 
+  \node[draw=black,circle,inner sep = 0pt] (n1) at (1, 1) {\tiny $a_1^{[1]}$};
+  \draw[->,dashed] (lbl) to (n1);
+  \node[draw=black,circle,inner sep = 0pt] (n2) at (1, 0) {\tiny $a_2^{[1]}$};
+  \node[draw=black,circle,inner sep = 0pt] (n3) at (1,-1) {\tiny $a_3^{[1]}$};
+  \node (hiddenlayer) at (1, -3) {$\substack{\textrm{hidden}\\ \textrm{layer}}$};
+  \draw[->,dashed] (hiddenlayer) to (n3);
+  \draw[->] (x1) to (n1);
+  \draw[->] (x1) to (n2);
+  \draw[->] (x1) to (n3);   \draw[->] (x2) to (n1);
+  \draw[->] (x2) to (n2);
+  \draw[->] (x2) to (n3);   
+  \draw[->] (x3) to (n1);
+  \draw[->] (x3) to (n2);
+  \draw[->] (x3) to (n3); 
+  \node[draw=black,circle] (m1) at (2,0) {};
+  \node (lbl2) at (2,2) {\small{$[2]$}}; 
+  \draw[->,dashed] (lbl2) to (m1);
+  \node (yhat) at (3,0) {$\hat y = a^{[2]}$};
+  \node (outputlayer) at (2, -3) {$\substack{\textrm{output}  \\ \textrm{layer}}$};
+  \draw[->,dashed] (outputlayer) to (m1);
+  \draw[->] (n1) to (m1);
+  \draw[->] (n2) to (m1);
+  \draw[->] (n3) to (m1);
+  \draw[->] (m1) to (yhat);
+  \node (x) at (2.5, -1) {$x$};
+  \node (w1) at (2.5, -1.5) {$W^{[1]}$};
+  \node (b1) at (2.5, -2) {$b^{[1]}$};
+  \node[draw=black,rectangle] (z1) at (5.25, -1.5) {$z^{[1]} = W^{[1]}x + b^{[1]}$};
+  \draw[->] (x) to (z1);
+  \draw[->] (w1) to (z1);
+  \draw[->] (b1) to (z1);
+  \node[draw=black,rectangle] (a1) at (8.5, -1.5) {$a^{[1]} = \sigma (z^{[1]})$};
+  \draw[->] (z1) to (a1);
+  \node[draw=black,rectangle] (z2) at (12.25, -1.5) {$z^{[2]} = W^{[2]}x + a^{[1]} + b^{[2]}$};
+  \draw[->] (a1) to (z2);
+  \node (w2) at (9.2, -2.25) {$W^{[2]}$};
+  \node (b2) at (9.2, -2.75) {$b^{[2]}$};
+  \draw[->] (w2) to (9.9, -1.5);
+  \draw[->] (b2) to (9.9, -1.5);
+  \node[draw=black,rectangle] (a2) at (16, -1.5) {$a^{[2]} = \sigma(z^{[2]})$};
+  \draw[->] (z2) to (a2);
+  \node[draw=black,rectangle] (l) at (18.75, -1.5) {$\mathcal L(a^{[2]},y)$};
+  \draw[->] (a2) to (l);
+\end{tikzpicture}
+\caption{A 2-layer Neural Network (you could say we don't count the input layer, or you could say we do but we index starting from zero).}
+\end{figure}
+\newline
+\vspace{-40pt}
+\paragraph{Terminology and Notation}
+Each \emph{neuron} in the graph consists of both a linear transformation and a non-linear activation function, i.e. the first stack of nodes will produce a $z$ and an $a$. We use the super-script square brackets $[\hspace{2pt} ]$ to denote a stack of nodes, i.e. a layer, not to be confused with super-script parentheses which index training examples. I.e. $a^{[\ell]}_i$ denotes the output of an activation function in layer $\ell$ for the $i$th neuron.
+The key difference between our Logistic Regression and 
+this (or any) Neural Network is that we simply repeat linear transformations followed by non-linear activation functions \emph{multiple times}.
+The reason why we call the intermediary layer a ``hidden'' layer is because we do not observe what these values are to be in the training set. By convention, we define  $a^{[0]} = X$. We can further refer to the hidden layer by ${a^{[1]}} = \begin{bmatrix}   a_1^{[1]} & a_2^{[1]} & a_3^{[1]}  \end{bmatrix}^T$. Notice that the hidden layer and output layer have parameters $W^{[\cdot]}$ and $b^{[\cdot]}$ associated with them. 
+
+\paragraph{Visualizing a Neuron}
+Let's take a look at neural network representation in a bit more detail. We can think about each neuron as being divided into two parts: one which performs a linear transformation and another which performs an activation function. The mental model is:
+\begin{figure}[h]
+  \centering   \begin{tikzpicture}[scale=0.9]     \node (x1) at (0, 1) {$x_1$};
+    \node (x2) at (0, 0) {$x_2$};
+    \node (x3) at (0,-1) {$x_3$};
+    \node[draw,circle] (neuron) at (1.5,0) {$\substack{z = w^Tx + b \\ a = \sigma(z)}$};
+    \draw[->] (x1) to (neuron);
+    \draw[->] (x2) to (neuron);
+    \draw[->] (x3) to (neuron);
+    \node (output) at (3.5,0) {$a = \hat y$};
+    \draw[->] (neuron) to (output);
+  \end{tikzpicture} \end{figure}
+\newline
+In general, we'll have something as follows for the first neuron in the hidden layer, and to be crystal clear we draw out the second neuron as well.
+\begin{tikzpicture}[scale=0.7]     \node (x1) at (0, 1) {$x_1$};
+    \node (x2) at (0, 0) {$x_2$};
+    \node (x3) at (0,-1) {$x_3$};
+    \node[draw,circle] (neuron) at (2.5,2) {$\substack{z_1^{[1]} = {w_1^{[1]}}^Tx + b_1^{[1]} \\ a_1^{[1]} = \sigma(z_1^{[1]})}$};
+    \draw[->] (x1) to (neuron);
+    \draw[->] (x2) to (neuron);
+    \draw[->] (x3) to (neuron);
+    \node[draw,circle,dashed] (n2) at (2.5,0 ) {};     \node[draw,circle,dashed] (n3) at (2.5,-1) {}; 
+    \node[draw,circle,dashed] (n4) at (2.5,-2) {}; 
+    \draw[->,dashed] (x1) to (n2);
+    \draw[->,dashed] (x2) to (n2);
+    \draw[->,dashed] (x3) to (n2);
+    \draw[->,dashed] (x1) to (n3);
+    \draw[->,dashed] (x2) to (n3);
+    \draw[->,dashed] (x3) to (n3);
+    \draw[->,dashed] (x1) to (n4);
+    \draw[->,dashed] (x2) to (n4);
+    \draw[->,dashed] (x3) to (n4);
+\end{tikzpicture}
+\hspace{20pt} \begin{tikzpicture}[scale=0.7]     
+    \node (x1) at (0, 1) {$x_1$};
+    \node (x2) at (0, 0) {$x_2$};
+    \node (x3) at (0,-1) {$x_3$};
+    \node[draw,circle,dashed] (neuron) at (2.75,2) {};
+    \draw[->,dashed] (x1) to (neuron);
+    \draw[->,dashed] (x2) to (neuron);
+    \draw[->,dashed] (x3) to (neuron);
+    \node[draw,circle] (n2) at (3.5,0 ) {$\substack{z_2^{[1]} = {w_2^{[1]}}^Tx + b_2^{[1]} \\ a_2^{[1]} = \sigma(z_2^{[1]})}$};     
+    \node[draw,circle,dashed] (n3) at (2.75,-2) {}; 
+    \node[draw,circle,dashed] (n4) at (2.75,-3) {}; 
+    \draw[->] (x1) to (n2);
+    \draw[->] (x2) to (n2);
+    \draw[->] (x3) to (n2);
+    \draw[->,dashed] (x1) to (n3);
+    \draw[->,dashed] (x2) to (n3);
+    \draw[->,dashed] (x3) to (n3);
+    \draw[->,dashed] (x1) to (n4);
+    \draw[->,dashed] (x2) to (n4);
+    \draw[->,dashed] (x3) to (n4);
+\end{tikzpicture} 
+To avoid having to calculate $z_i^{[\ell]}$ using a \texttt{for}
+loop, we can instead use a matrix multiply.
+$$
+W^{[1]}x + b^{[1]} = 
+\underbrace{\begin{bmatrix}    & {w_1^{[1]}}^T & \\
+   & {w_2^{[1]}}^T & \\    & {w_3^{[1]}}^T & \\    
+   & {w_4^{[1]}}^T & \\ 
+\end{bmatrix}}_{\in \mathbb R^{4, 3}} \begin{bmatrix} x_1 \\ x_2 \\ x_3  \end{bmatrix} + \begin{bmatrix}   b_1^{[1]} \\ b_2^{[1]} \\ b_3^{[1]} \\ b_4^{[1]} \end{bmatrix} = \begin{bmatrix}   z_1^{[1]} \\
+  z_2^{[1]} \\
+  z_3^{[1]} \\
+  z_4^{[1]} \\ \end{bmatrix} = z^{[1]}
+$$
+
+We can then write ${a^{[1]}}^T = \begin{bmatrix}   a_1^{[1]} & a_2^{[1]} & a_3^{[1]} & a_4^{[1]} \end{bmatrix} = \sigma (z^{[1]})$ where the $\sigma(\cdot)$ is applied element-wise.
+
+To summarize, given an input $x$, we set $a^{[0]} = x$ and we compute forward steps: $z^{[\ell]} = W^{[\ell]}a^{[\ell-1]} + b^{[\ell]}$
+for each layer in the network.
+
+\paragraph{Vectorization} Suppose we have a single hidden-layer neural network. As per above, the forward propagation involves computing: 
+$  z^{[1]} = W^{[1]}a^{[0]} + b^{[1]}; \hspace{10pt} a^{[1]} = \sigma(z^{[1]}); \hspace{10pt} 
+   z^{[2]} = W^{[2]}a^{[1]} + b^{[2]}; \hspace{10pt} 
+   a^{[2]} = \sigma(z^{[2]}).
+$
+We need to replicate this procedure for each of our $m$ training samples. I.e. we need to feed each training example through the network to get an output. Let our final output be denoted by $a^{[\ell](j)}$ denote the output for the activation function for the $j$th training example at the $\ell$th layer in our network. So in our case above, $a^{[2](j)}$ is the output for the $j$th training example.
+To avoid a \texttt{for} loop over each of our $m$ training examples:
+{\tiny
+\begin{algorithm}[h]
+  \caption{Naive Forward Propagation on a 2-layer Neural Network}   \For{i = 1 to m}{
+    $z^{[1](i)} = W^{[1]}x^{(i)} + b^{[1]}$ \\
+    $a^{[1](i)} = \sigma(z^{[1]}(i))$ \\
+    $z^{[2](i)} = W^{[2]}a^{[1](i)} + b^{[2]}$ \\
+    $a^{[2](i)} = \sigma(z^{[2]}(i))$
+  } \end{algorithm}
+}
+\newline
+\vspace{-.5ex}Recall we arranged our input matrix such that each column is an observation, i.e. $X = \begin{bmatrix}    | & | & & | \\    x^{(1)} & x^{(2)} & \ldots & x^{(m)} \\   | & | & & |  \end{bmatrix} \in \mathbb R^{n_x, m}$. Then,
+$  
+  Z^{[1]} = W^{[1]} X + b^{[1]}; \hspace{10pt}
+  A^{[1]} = \sigma(Z^{[1]}); \hspace{10pt}
+  Z^{[2]} = W^{[2]} A^{[1]} + b^{[2]}; \hspace{10pt}
+  A^{[2]} = \sigma(Z^{[2]})
+$ To be explicit, $Z^{[1]}$ is also arranged with observations in columns, i.e. $Z^{[1]} = \begin{bmatrix}   | & | & & | \\ z^{[1](1)} & z^{[1](2)} & \ldots & z^{[1](m)} \\ | & | & & | \end{bmatrix}$ and $A^{[1]} = \begin{bmatrix}    | & | & & | \\    a^{[1](1)} & a^{[1](2)} & \ldots & a^{[1](m)}  \\  | & | & & | \end{bmatrix}$.\footnote{As one scans matrix $A^{[\ell]}$ from left to right, we scan through observations or training examples, and as we scan from top to bottom we scan through the activations of different hidden units.}
+
+\subsection{Activation Functions}
+Another activation function to consider is $\tanh (z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}$. It's a shifted and rescaled version of the sigmoid function, which ranges from $[-1, 1]$ and cross the $x$-axis at zero; it is intuitively thought to perform better than a sigmoid activation function since it has the effect of ``centering'' the data in the intermediate layers of the network around zero. The one exception is the output layer: if we are predicting binary classification it makes sense to use sigmoid since our target values are in $\{0, 1\}$ we therefore want $\hat y$ to be in $(0,1)$.
+
+\begin{figure}[h]
+  \centering   \begin{tikzpicture}   \draw[->] (-3,0) -- (3,0) node[right] {$x$};   \draw[->] (0,-1) -- (0,1) node[above] {$y$};
+  \draw[domain=-3:3,smooth,variable=\x,blue] plot ({\x},{(exp(\x) - exp(-\x))/(exp(\x) + exp(-\x))}); 
+\end{tikzpicture}   \end{figure}
+Both sigmoid and $\tanh$ suffer from the problem of saturating gradients. I.e. if the input value is either very small or very large, the derivative of the function becomes very small. This has the effect of slowing down gradient descent.
+
+\paragraph{Rectified Linear Unit}
+This leads us to the rectified linear unit: $a = g(z) = \max\{0, z\}$. The derivative at zero is not well defined, however, it is unlikely that we will ever encounter a true zero in our computations and so we can ignore this case without much worry. One disadvantage of the ReLU is that its derivative is identically zero when the input is negative, but this ends up not harming us in practice: enough neurons will likely have positive inputs such that gradients can still be learned. There is also the leaky ReLU: $a = g(z) = \max\{0.01 \times z, z\}$.
+
+\begin{figure}[h]
+  \centering   
+  \begin{tikzpicture}   
+    \draw[->] (-1,0) -- (1,0) node[right] {$x$};   
+    \draw[->] (0,-1) -- (0,1) node[above] {$y$};
+    \draw[domain=-1:1,smooth,variable=\x,blue] plot ({\x},{max(0,\x)}); 
+  \end{tikzpicture}   
+\end{figure}
+
+\paragraph{Linear Activation Function (Identity Function)} It's worthwhile to realize that if we only used linear activation functions $g(z) = z$, then our neural network would in fact be a linear model. This is easy to see, since if $a^{[1]} = z^{[1]} = W^{[1]} x + b^{[1]}$ and $z^{[2]} = W^{[2]} a^{[1]} + b^{[2]}$ then plugging in for $a^{[1]}$, $z^{[2]} = W^{[2]} (W^{[1]} x + b^{[1]}) + b^{[2]} = \underbrace{W^{[2]}W^{[1]}}_{=W'}x + \underbrace{W^{[2]}b^{[1]} + b^{[2]}}_{b'}$ which is linear with respect to the input $x$. The one time we may use a linear activation function is if, for example, we were predicting housing prices, in which case we may want our output to range arbitrarily high. Even then, a better choice would be ReLU since housing prices are non-negative.
+
+\paragraph{Derivatives of Activation Functions} 
+\end{document}
+
+
+
