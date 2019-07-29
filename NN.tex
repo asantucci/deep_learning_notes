@@ -1,7 +1,12 @@
 \documentclass[12pt]{article}  \usepackage[boxruled,lined]{algorithm2e} \usepackage{booktabs}
 \usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
 \usepackage[dvipsnames]{xcolor}
-\usepackage{tikz}  \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
+\usepackage{tikz}  
+\usetikzlibrary{positioning}
+
+\newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
+\renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
+
 \section{Logistic Regression}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter \begin{description} \item[Intro] 
 This model assumes that the log odds-ratio can be fit by a linear model. We start with the probability mass function for a \href{https://en.wikipedia.org/wiki/Bernoulli_distribution}{Bernoulli trial}: $f(y;p) = p^y \times (1-p)^{(1-y)}$ for $y \in \{0, 1\}$. We are interested in estimating what $p$ is, and so it's natural to conceive of a maximum likelihood estimator; since $\log$ monotone we can apply this transformation without changing the maximizer. The log-likelihood is given by $y \log p + (1-y) \log (1-p)$ using \href{https://en.wikipedia.org/wiki/Logarithm#Logarithmic_identities}{properties of logarithms}. In optimization, we generally work to minimize objective functions, and so it's then natural to set our (objective) \emph{loss function}
 to be $- \left[y \log p + (1-y) \log (1-p)\right]$. In summary, we 
@@ -13,11 +18,12 @@ have, for $\sigma(x) = \frac{1}{1 + \exp(-x)}$:
 
 We can draw a \emph{computation graph} to describe the forward pass as follows:
 \begin{center}
-\begin{tikzpicture}   \node (w) at (0, 1) {w};
-  \node (x) at (0, .5) {x};
-  \node (b) at (0,0) {b};
-  \draw[->] (x) to (1, .5);
-  \draw[->] (w) to (1, .6);
+\begin{tikzpicture}
+  \node (x) at (0, 1) {x};
+  \node (w) at (0,.5) {w};
+  \node (b) at (0, 0) {b};
+  \draw[->] (x) to (1, .6);
+  \draw[->] (w) to (1, .5);
   \draw[->] (b) to (1, .4);
   \node[draw=black,rectangle] (z) at (2.5, .5) {$z = w^Tx + b$};
   \draw[->] (z) to (4.25, .5);
@@ -59,7 +65,7 @@ The above concludes one round of \href{https://en.wikipedia.org/wiki/Gradient_de
 
 \section{Neural Networks}
 \vspace{-10pt}
-We previous saw a simple computation graph. 
+We previously saw a simple computation graph. 
 \begin{tikzpicture}   \node (w) at (0, 1) {w};
   \node (x) at (0, .5) {x};
   \node (b) at (0,0) {b};
@@ -236,6 +242,7 @@ $
 $ To be explicit, $Z^{[1]}$ is also arranged with observations in columns, i.e. $Z^{[1]} = \begin{bmatrix}   | & | & & | \\ z^{[1](1)} & z^{[1](2)} & \ldots & z^{[1](m)} \\ | & | & & | \end{bmatrix}$ and $A^{[1]} = \begin{bmatrix}    | & | & & | \\    a^{[1](1)} & a^{[1](2)} & \ldots & a^{[1](m)}  \\  | & | & & | \end{bmatrix}$.\footnote{As one scans matrix $A^{[\ell]}$ from left to right, we scan through observations or training examples, and as we scan from top to bottom we scan through the activations of different hidden units.}
 
 \subsection{Activation Functions}
+\paragraph{Hyperbolic Tangent}
 Another activation function to consider is $\tanh (z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}$. It's a shifted and rescaled version of the sigmoid function, which ranges from $[-1, 1]$ and cross the $x$-axis at zero; it is intuitively thought to perform better than a sigmoid activation function since it has the effect of ``centering'' the data in the intermediate layers of the network around zero. The one exception is the output layer: if we are predicting binary classification it makes sense to use sigmoid since our target values are in $\{0, 1\}$ we therefore want $\hat y$ to be in $(0,1)$.
 
 \begin{figure}[h]
@@ -258,8 +265,108 @@ This leads us to the rectified linear unit: $a = g(z) = \max\{0, z\}$. The deriv
 
 \paragraph{Linear Activation Function (Identity Function)} It's worthwhile to realize that if we only used linear activation functions $g(z) = z$, then our neural network would in fact be a linear model. This is easy to see, since if $a^{[1]} = z^{[1]} = W^{[1]} x + b^{[1]}$ and $z^{[2]} = W^{[2]} a^{[1]} + b^{[2]}$ then plugging in for $a^{[1]}$, $z^{[2]} = W^{[2]} (W^{[1]} x + b^{[1]}) + b^{[2]} = \underbrace{W^{[2]}W^{[1]}}_{=W'}x + \underbrace{W^{[2]}b^{[1]} + b^{[2]}}_{b'}$ which is linear with respect to the input $x$. The one time we may use a linear activation function is if, for example, we were predicting housing prices, in which case we may want our output to range arbitrarily high. Even then, a better choice would be ReLU since housing prices are non-negative.
 
-\paragraph{Derivatives of Activation Functions} 
+\subsubsection{Derivatives of Activation Functions} 
+\paragraph{Hyperbolic Tangent}
+Recall that 
+\begin{align*}   \sinh(x) = \frac{e^x - e^{-x}}{2}, \hspace{10pt} 
+  \cosh(x) = \frac{e^x + e^{-x}}{2}, \hspace{10pt} \textrm{ and } \hspace{5pt}
+  \tanh(x) = \frac{\sinh(x)}{\cosh(x)}. \end{align*}
+It's easy to see using linearity of $\frac{\d \,}{\d x}$ and the chain rule that $\frac{\d \,}{\d x}  \sinh(x) = \frac{e^x}{2} + \frac{e^{-x}}{2} = \cosh(x)$ and similarly that $\frac{\d \,}{\d x}\cosh(x) = \sinh(x)$. Then, apply either quotient rule \emph{or} both the product rule and chain rule:
+\begin{align}   \frac{\d \,}{\d x} \tanh(x) = \frac{\d \,}{\d x} \sinh(x) \cosh(x)^{-1} = \cosh(x) \cosh(x)^{-1} - \sinh(x)\cosh(x)^{-2}\sinh(x) = 1 - \tanh(x)^2. \end{align}
+\paragraph{Rectified Linear Unit} has derivative equal to
+\begin{align}   \frac{\d \,}{\d x} \max\{0,x\}=       \begin{cases}        0 &\quad\text{if } x < 0\\        1 &\quad\text{if } x > 0 \\
+       \textrm{undefined} &\quad\text{if } x = 0      \end{cases} \end{align}
+Technically the derivative is undefined when $x = 0$, however, in practice a floating point variable never takes on the value zero exactly. We can therefore ignore this case by choosing to ``define'' the gradient to be either zero or one (which we choose again doesn't matter in practice). Either way, note that ReLU is convex and so we realize a \href{https://en.wikipedia.org/wiki/Subderivative}{sub-derivative}.
+
+\paragraph{Leaky ReLU} is defined as $\max \{0.01 x, x \}$ and its derivative is therefore given by
+\begin{align}   
+  \frac{\d \,}{\d x} \max\{0.01x,x\}=       
+  \begin{cases}        
+    0.01 &\quad\text{if } x < 0\\        
+    1    &\quad\text{if } x > 0 \\
+    \textrm{undefined} &\quad\text{if } x = 0      
+  \end{cases} 
+\end{align}
+Again the fact that the derivative doesn't exist at $x=0$ doesn't matter in practice since we're dealing with floating point values that are never identically zero.
+
+\subsection{Back-Propagation for Neural Networks}
+\paragraph{Review: Logistic Regression Computation Graph}
+Recall our logistic regression computation graph. After computing our forward pass, we needed to compute a backward pass by calculating gradients at each step, depicted in \color{orange}{orange} \color{black} below.
+\begin{figure}[h]
+\centering \begin{tikzpicture}
+  \node (x) at (0, 1) {x};
+  \node (w) at (0, .5) {w};
+  \node (b) at (0,0) {b};
+  \node [left = .1cm of w] {\color{orange}$\d w$}; 
+  \node [left = .25cm of b] {\color{orange}$\d b$}; 
+  \draw[->] (x) to (1, .6);
+  \draw[->] (w) to (1, .5);
+  \draw[->] (b) to (1, .4);
+  \node[draw=black,rectangle] (z) at (2.5, .5) {$z = w^Tx + b$};
+  \node at (2.5,-0.25) {\color{orange}$\d z$};
+  \draw[->] (z) to (4.25, .5);
+  \node[draw=black,rectangle] (yhat) at (5.5, .5) {$\hat y = a = \sigma(z)$};
+  \node at (5.5,-0.25) {\color{orange}$\d a$};
+  \draw[->] (yhat) to (7.25, .5);
+  \node[draw=black,rectangle] (loss) at (8, .5) {$\mathcal L (a,y)$};
+\end{tikzpicture}   \end{figure}
+\newline
+Note that $\d z = \d a \cdot g'(z)$ where $g(z) = \sigma(z)$, i.e. we use the fact that $\frac{\d L(a,y)}{\d z} = \frac{\d L(a,y)}{\d a} \frac{\d a}{\d z}$.
+
+\paragraph{Two Layer Neural Network Back Propagation}
+Let us now reconsider our two layer neural network and 
+its computation graph. We highlight terms we must compute in \color{orange}{orange}\color{black}.
+\begin{figure}[h]
+\hspace{-20pt}
+\begin{tikzpicture}
+  \node (x)  at (-3, 1)  {x};
+  \node (w1) at (-3, .5) {$W^{[1]}$};
+  \node (b1) at (-3,0)   {$b^{[1]}$};
+  \node [left = .1cm of w1] {\color{orange}$\d W^{[1]}= \d z^{[1]} x^T$}; 
+  \node [left = .25cm of b1] {\color{orange}$\d b^{[1]}= \d z^{[1]}$}; 
+  \node[draw=black,rectangle, right = .5cm of w1] (z1)  {$z^{[1]} = W^{[1]}x + b^{[1]}$};
+  \draw[->] (x) to (z1);
+  \draw[->] (w1) to (z1);
+  \draw[->] (b1) to (z1);
+  \node [below = .1cm of z1] {\color{orange}$\d z^{[1]}=W^{[2]T} \d z^{[2]} * g^{[1]'}(z^{[1]})$};
+  \node[draw=black,rectangle, right = .5cm of z1] (a1) {$a^{[1]} = \sigma(z^{[1]})$};
+  \draw[->] (z1) to (a1);
+  \node [below = .1cm of a1] {\color{orange}$\d a^{[1]}$};
+  \node[draw=black,rectangle, right = .5cm of a1] (z2) {$z^{[2]} = W^{[2]} a^{[1]} + b^{[2]}$};
+  \node[below=.1cm of z2] (dz2) {\color{orange} $\d z^{[2]}= a^{[2]} - y$};
+  \draw[->] (a1) to (z2);
+  \node[above left = 1cm of z2] (w2) {$W^{[2]}$};
+  \node[left = .1cm of w2] (dw2) {\color{orange}$\d W^{[2]}= \d z^{[2]} a^{[1]T}$};
+  \node[below = .00025cm of w2] (b2) {$b^{[2]}$};
+  \node[left = .1cm of b2] (db2) {\color{orange}$\d b^{[2]} = \d z^{[2]}$};
+  \draw[->] (w2) to (z2);
+  \draw[->] (b2) to (z2);
+  \node[draw=black,rectangle,right = .5cm of z2] (a2) {$a^{[2]} = \sigma(z^{[2]})$};
+  \node[below=.1cm of a2] (da2) {\color{orange} $da^{[2]}$};
+  \draw[->] (z2) to (a2);
+  \node[draw=black,rectangle,right=.5cm of a2] (loss) {$\mathcal{L}(a^{[2]}, y)$};
+  \draw[->] (a2) to (loss);
+\end{tikzpicture}   
+\end{figure}
+\newline
+Where in $\d z^{[1]}=W^{[2]T} \d z^{[2]} * g^{[1]'}(z^{[1]})$ the $*$ denotes an element-wise product.
+Note that the computations for $\d a^{[\ell]}$ are typically rolled into the next computation for $\d z^{[\ell]}$.
+Further realize that the above computations are performed for \emph{each} training example in our data set 
+during gradient descent.
+\paragraph{Vectorized Implementation}
+We can vectorize our computations as follows.
+\begin{align*}   \d Z^{[2]} &= A^{[2]} - Y \\
+  \d W^{[2]} &= \frac{1}{m} \d Z^{[2]} {A^{[1]}}^T \\
+  \d b^{[2]} &= \frac{1}{m} \texttt{np.sum}(\d Z^{[2]}\texttt{, axis = 1, keepdims = True}) \\
+  \d Z^{[1]} &= {W^{[2]}}^T \d Z^{[2]} * g^{[1]'}(Z^{[1]}) \hspace{35pt} (element-wise product)\\
+  \d W^{[1]} &= \frac{1}{m} \d Z^{[1]} X^T \\ 
+  \d b^{[1]} &= \frac{1}{m} \texttt{np.sum}(\d Z^{[1]}\texttt{, axis = 1, keepdims = True}) \end{align*}
+
+\subsubsection{Random Initialization}
+\paragraph{Why Initializing With Zeros Won't Work for $W$'s: Symmetric Neurons}
+Note that initializing our weights matrix with zeros will prevent gradient descent from working. What happens? For any example, $a_1^{[1]} = a_2^{[2]}$, whence $\d z_1^{[1]} = \d z_2^{[2]}$. I.e. the hidden units are symmetrical, and $\d W = \begin{bmatrix}   u & v \\ u & v \end{bmatrix}$ and our weights matrix will have first row equal to the second row. By induction, no matter how many times we train our network, the neurons in the hidden layer will remain symmetric and no learning will take place. 
+Note that it turns out $b$ does not have this symmetry-breaking problem, and so we can initialize $b$'s to zeros.
+
+\paragraph{Random Initialization}
+Instead, if we initialize weights randomly, each neuron in each hidden layer will compute different functions. I.e. $W^{[1]} = $\texttt{np.random.randn((.,.)) * 0.01} where we apply an ad-hoc scaling factor. We prefer initializing weights to small values. Why? Suppose we are using either sigmoid or $\tanh$ activation functions then if $W$ initialized large, $Wx + b$ also large, whence $g(z)$ large and we yield saturated (near-zero) gradients; this means gradient descent and learning will be very slow. If we don't have any sigmoid or $\tanh$ activation functions, this is less of an issue. 
 \end{document}
-
-
-
