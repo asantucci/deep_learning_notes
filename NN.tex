@@ -63,7 +63,7 @@ $\partial b /= m$ \end{algorithm}
 }
 The above concludes one round of \href{https://en.wikipedia.org/wiki/Gradient_descent}{Gradient Descent}. We repeat this procedure many times until training loss (and ideally test loss ) is sufficiently minimized. We remark that it's possible to remove both \texttt{for} loops (over the training data, and over the parameters in $w$) by using vectorized operations in \texttt{numpy}. We execute this in code \href{https://github.com/asantucci/NN/blob/master/logistic_regression.py#L46}{here}.
 
-\section{Neural Networks}
+\section{Neural Networks with 2-layers}
 \vspace{-10pt}
 We previously saw a simple computation graph. 
 \begin{tikzpicture}   \node (w) at (0, 1) {w};
@@ -348,7 +348,6 @@ its computation graph. We highlight terms we must compute in \color{orange}{oran
   \draw[->] (a2) to (loss);
 \end{tikzpicture}   
 \end{figure}
-\newline
 Where in $\d z^{[1]}=W^{[2]T} \d z^{[2]} * g^{[1]'}(z^{[1]})$ the $*$ denotes an element-wise product.
 Note that the computations for $\d a^{[\ell]}$ are typically rolled into the next computation for $\d z^{[\ell]}$.
 Further realize that the above computations are performed for \emph{each} training example in our data set 
@@ -369,4 +368,125 @@ Note that it turns out $b$ does not have this symmetry-breaking problem, and so 
 
 \paragraph{Random Initialization}
 Instead, if we initialize weights randomly, each neuron in each hidden layer will compute different functions. I.e. $W^{[1]} = $\texttt{np.random.randn((.,.)) * 0.01} where we apply an ad-hoc scaling factor. We prefer initializing weights to small values. Why? Suppose we are using either sigmoid or $\tanh$ activation functions then if $W$ initialized large, $Wx + b$ also large, whence $g(z)$ large and we yield saturated (near-zero) gradients; this means gradient descent and learning will be very slow. If we don't have any sigmoid or $\tanh$ activation functions, this is less of an issue. 
+
+\section{Deep Learning: $L$-layer Neural Networks}
+
+Let's consider a four layer neural network, depicted below in figure \ref{fig: fourlayernet}.
+Let us define some notation. Let $L=4$ denote the number of layers in the network. The notation $n^{[\ell]} = \# \textrm{units in layer } \ell$.
+
+\begin{figure}[h]   \centering
+  \label{fig: fourlayernet}
+  \begin{tikzpicture}[scale=0.25]     \node (x1) at (-2, 1) {$x_1$};
+    \node [below = .5 cm of x1] (x2) {$x_2$};
+    \node [below = .5 cm of x2] (x3) {$x_3$};
+    \node [draw,circle,above right = 1 cm of x1] (n11) {};
+    \node [draw,circle,below = .5 cm of n11] (n12) {};
+    \node [draw,circle,below = .5cm of n12] (n13) {};
+    \node [draw,circle,below = .5cm of n13] (n14) {};
+    \node [draw,circle,below = .5cm of n14] (n15) {};
+    \node [draw,circle,right = 1 cm of n11] (n21) {};
+    \node [draw,circle,below = .5 cm of n21] (n22) {};
+    \node [draw,circle,below = .5cm of n22] (n23) {};
+    \node [draw,circle,below = .5cm of n23] (n24) {};
+    \node [draw,circle,below = .5cm of n24] (n25) {};
+    \node [draw,circle,right = 1cm of n22] (n31) {};
+    \node [draw,circle,below = .5cm of n31] (n32) {};
+    \node [draw,circle,below = .5cm of n32] (n33) {};
+    \node [draw,circle,right = 1cm of n32] (outputneuron) {};
+    \node [right = 1cm of outputneuron] (yhat) {$\hat y$};
+    \draw[->] (x1) to (n11);
+    \draw[->] (x1) to (n12);
+    \draw[->] (x1) to (n13);
+    \draw[->] (x1) to (n14);
+    \draw[->] (x1) to (n15);
+    \draw[->] (x2) to (n11);
+    \draw[->] (x2) to (n12);
+    \draw[->] (x2) to (n13);
+    \draw[->] (x2) to (n14);
+    \draw[->] (x2) to (n15);
+    \draw[->] (x3) to (n11);
+    \draw[->] (x3) to (n12);
+    \draw[->] (x3) to (n13);
+    \draw[->] (x3) to (n14);
+    \draw[->] (x3) to (n15);
+    \draw[->] (n11) to (n21);
+    \draw[->] (n11) to (n22);
+    \draw[->] (n11) to (n23);
+    \draw[->] (n11) to (n24);
+    \draw[->] (n11) to (n25);
+    \draw[->] (n12) to (n21);
+    \draw[->] (n12) to (n22);
+    \draw[->] (n12) to (n23);
+    \draw[->] (n12) to (n24);
+    \draw[->] (n12) to (n25);
+    \draw[->] (n13) to (n21);
+    \draw[->] (n13) to (n22);
+    \draw[->] (n13) to (n23);
+    \draw[->] (n13) to (n24);
+    \draw[->] (n13) to (n25);
+    \draw[->] (n14) to (n21);
+    \draw[->] (n14) to (n22);
+    \draw[->] (n14) to (n23);
+    \draw[->] (n14) to (n24);
+    \draw[->] (n14) to (n25);
+    \draw[->] (n15) to (n21);
+    \draw[->] (n15) to (n22);
+    \draw[->] (n15) to (n23);
+    \draw[->] (n15) to (n24);
+    \draw[->] (n15) to (n25);
+    \draw[->] (n21) to (n31);
+    \draw[->] (n21) to (n32);
+    \draw[->] (n21) to (n33);
+    \draw[->] (n22) to (n31);
+    \draw[->] (n22) to (n32);
+    \draw[->] (n22) to (n33);
+    \draw[->] (n23) to (n31);
+    \draw[->] (n23) to (n32);
+    \draw[->] (n23) to (n33);
+    \draw[->] (n24) to (n31);
+    \draw[->] (n24) to (n32);
+    \draw[->] (n24) to (n33);
+    \draw[->] (n25) to (n31);
+    \draw[->] (n25) to (n32);
+    \draw[->] (n25) to (n33);
+    \draw[->] (n31) to (outputneuron);
+    \draw[->] (n32) to (outputneuron);
+    \draw[->] (n33) to (outputneuron);
+    \draw[->] (outputneuron) to (yhat);
+  \end{tikzpicture}
+  \caption{Four-layer, fully connected neural network.} \end{figure}
+In our example depicted, $n^{[0]} = n_x = 3$, $n^{[1]} = n^{[2]} = 5$ and $n^{[3]} = 3$ and $n^{L} = 1$. We'll also use $a^{[\ell]} = g^{[\ell]}(z^{[\ell]})$ to denote the activations in layer $\ell$, where to compute $z^{[\ell]}$ we use weights matrix $W^{[\ell]}$ and bias term $b^{[\ell]}$. Lastly, realize that with this notation our input matrix $X = a^{[0]}$ and our output $\hat y = a^{[L]}$.
+
+\paragraph{Forward Propagation}
+In general, we have that for a single training example:
+\begin{align*}   z^{[\ell]} &= W^{[\ell]} a^{[\ell-1]} + b^{[\ell]}, \\ 
+  a^{[\ell]} &= g^{[\ell]}(z^{[\ell]}). \end{align*}
+And for our entire training set, where $X = A^{[0]}$ is our data arranged such that each column is an observation:
+\begin{align}   Z^{[\ell]} &= W^{[\ell]} A^{[\ell-1]} + b^{[\ell]}, \\ 
+  A^{[\ell]} &= g^{[\ell]}(Z^{[\ell]}).    \end{align}
+Note that by rules of matrix multiplication, it's easy to see that $Z^{[\ell]}$ must have as many columns as there are training examples, and since $g^{[\ell]}$ is applied element-wise then $A^{[\ell]}$ also has as $m$ columns.
+For our last layer, $\hat Y = g(Z^{[L]}) = A^{[L]}$. We remark that although we typically try to vectorize code and remove \texttt{for}-loops, it is perfectly reasonable to loop over the layers in the network during forward propagation. I.e. we expect to see \texttt{for} $\ell = 1, \ldots, L$.
+
+\paragraph{Getting Your Dimensions Right} In general, the dimension for a weights matrix at layer $\ell$ is given b
+\begin{equation}   W^{[\ell]} : \left( n^{[\ell]}, n^{[\ell - 1]} \right). \end{equation}
+What about our bias term? In general, $b^{[\ell]} : \left(n^{[\ell]}, 1\right)$, Further, during backpropogation, the dimensions of the derivative matrices don't change. I.e. 
+$\d   W^{[\ell]} : \left( n^{[\ell]}, n^{[\ell - 1]} \right)$, and $\d b^{[\ell]} : \left(n^{[\ell]}, 1\right)$.
+
+\paragraph{Deep Representations}
+What do our intermediary layers come to learn in different applications?
+
+Consider face detection. The first layer of the network may learn to detect edges, and the second layer perhaps may learn how to detect different pieces of a face by connecting edges together such as an eye or an ear. A later layer of a network may learn to distinguish between faces at an even less granular level.
+
+As another example consider problems in the context of audio. The first layer of the network may lrn to distinguish between low and high frequency waveforms, whereas the second layer may learn to recognize phonemes (in the word cat, each letter, when pronounced, is a phoneme), and later layers of the network may learn to recognize words and finally phrases/sentences.
+
+Earlier layers are in general based on more granular features, i.e. simple transformations of the input data. Later layers compose hierarchically and are eventually able to solve complex tasks.
+
+\paragraph{Circuit Theory and Deep Learning}
+``There are functions you can compute with a 'small' $L$-layer deep neural network that shallower networks require exponentially more hidden units to compute.''
+
+As an example, consider using a neural network to approximate \texttt{xor} applied to $n$ input bits. I.e. we seek to calculate $x_1 \textrm{ xor } x_2 \textrm{ xor } \ldots \textrm{ xor } x_n$. If we are free to use as many layers in the network as we wish, then we could envision building a \texttt{xor} tree as follows: pair successive inputs together and apply the \texttt{xor} operation, and pipe the resulting output into the subsequent layer of the network. Realize that we require $\log n$ layers in our network in order to exactly compute the right answer. If, on the other hand, we weren't allowed to use an arbitrary number of layers but instead only a single hidden layer, we would require $O(2^n)$ neurons in order to achieve the same result; to see why realize that we effectively need to enumerate all possible $2^n$ possible input sequences in order to map them correctly back to the right answer in a subsequent step. Note that it is possible to get away with using only $2^{n-1}$ neurons to accomplish this task but this is still exponentially more neurons than the network with $O(\log n)$ layers.
+
+\paragraph{Building Blocks of Deep Neural Networks} A.
+
 \end{document}
+
