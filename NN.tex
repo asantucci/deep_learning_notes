@@ -146,19 +146,22 @@ The reason why we call the intermediary layer a ``hidden'' layer is because we d
 \paragraph{Visualizing a Neuron}
 Let's take a look at neural network representation in a bit more detail. We can think about each neuron as being divided into two parts: one which performs a linear transformation and another which performs an activation function. The mental model is:
 \begin{figure}[h]
-  \centering   \begin{tikzpicture}[scale=0.9]     \node (x1) at (0, 1) {$x_1$};
-    \node (x2) at (0, 0) {$x_2$};
-    \node (x3) at (0,-1) {$x_3$};
+  \centering   
+  \begin{tikzpicture}[scale=0.6]     
+    \node (x1) at (-1, 1) {$x_1$};
+    \node (x2) at (-1, 0) {$x_2$};
+    \node (x3) at (-1,-1) {$x_3$};
     \node[draw,circle] (neuron) at (1.5,0) {$\substack{z = w^Tx + b \\ a = \sigma(z)}$};
     \draw[->] (x1) to (neuron);
     \draw[->] (x2) to (neuron);
     \draw[->] (x3) to (neuron);
-    \node (output) at (3.5,0) {$a = \hat y$};
+    \node (output) at (5,0) {$a = \hat y$};
     \draw[->] (neuron) to (output);
   \end{tikzpicture} \end{figure}
 \newline
 In general, we'll have something as follows for the first neuron in the hidden layer, and to be crystal clear we draw out the second neuron as well.
-\begin{tikzpicture}[scale=0.7]     \node (x1) at (0, 1) {$x_1$};
+\begin{tikzpicture}[scale=0.7]     
+  \node (x1) at (0, 1) {$x_1$};
     \node (x2) at (0, 0) {$x_2$};
     \node (x3) at (0,-1) {$x_3$};
     \node[draw,circle] (neuron) at (2.5,2) {$\substack{z_1^{[1]} = {w_1^{[1]}}^Tx + b_1^{[1]} \\ a_1^{[1]} = \sigma(z_1^{[1]})}$};
@@ -199,7 +202,7 @@ In general, we'll have something as follows for the first neuron in the hidden l
     \draw[->,dashed] (x3) to (n4);
 \end{tikzpicture} 
 To avoid having to calculate $z_i^{[\ell]}$ using a \texttt{for}
-loop, we can instead use a matrix multiply.
+loop, we can instead use a matrix multiply, where $W^{[1]} \in \mathbb R^{n_1, n_x}$:
 $$
 W^{[1]}x + b^{[1]} = 
 \underbrace{\begin{bmatrix}    & {w_1^{[1]}}^T & \\
@@ -210,10 +213,8 @@ W^{[1]}x + b^{[1]} =
   z_3^{[1]} \\
   z_4^{[1]} \\ \end{bmatrix} = z^{[1]}
 $$
-
 We can then write ${a^{[1]}}^T = \begin{bmatrix}   a_1^{[1]} & a_2^{[1]} & a_3^{[1]} & a_4^{[1]} \end{bmatrix} = \sigma (z^{[1]})$ where the $\sigma(\cdot)$ is applied element-wise.
-
-To summarize, given an input $x$, we set $a^{[0]} = x$ and we compute forward steps: $z^{[\ell]} = W^{[\ell]}a^{[\ell-1]} + b^{[\ell]}$
+Given an input $x$, we set $a^{[0]} = x$ and we compute forward steps: $z^{[\ell]} = W^{[\ell]}a^{[\ell-1]} + b^{[\ell]}$
 for each layer in the network.
 
 \paragraph{Vectorization} Suppose we have a single hidden-layer neural network. As per above, the forward propagation involves computing: 
@@ -222,8 +223,8 @@ $  z^{[1]} = W^{[1]}a^{[0]} + b^{[1]}; \hspace{10pt} a^{[1]} = \sigma(z^{[1]}); 
    a^{[2]} = \sigma(z^{[2]}).
 $
 We need to replicate this procedure for each of our $m$ training samples. I.e. we need to feed each training example through the network to get an output. Let our final output be denoted by $a^{[\ell](j)}$ denote the output for the activation function for the $j$th training example at the $\ell$th layer in our network. So in our case above, $a^{[2](j)}$ is the output for the $j$th training example.
-To avoid a \texttt{for} loop over each of our $m$ training examples:
-{\tiny
+We'd like to avoid applying a \texttt{for} loop over each of our $m$ training examples, like so:
+{\footnotesize
 \begin{algorithm}[h]
   \caption{Naive Forward Propagation on a 2-layer Neural Network}   \For{i = 1 to m}{
     $z^{[1](i)} = W^{[1]}x^{(i)} + b^{[1]}$ \\
@@ -246,7 +247,8 @@ $ To be explicit, $Z^{[1]}$ is also arranged with observations in columns, i.e. 
 Another activation function to consider is $\tanh (z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}$. It's a shifted and rescaled version of the sigmoid function, which ranges from $[-1, 1]$ and cross the $x$-axis at zero; it is intuitively thought to perform better than a sigmoid activation function since it has the effect of ``centering'' the data in the intermediate layers of the network around zero. The one exception is the output layer: if we are predicting binary classification it makes sense to use sigmoid since our target values are in $\{0, 1\}$ we therefore want $\hat y$ to be in $(0,1)$.
 
 \begin{figure}[h]
-  \centering   \begin{tikzpicture}   \draw[->] (-3,0) -- (3,0) node[right] {$x$};   \draw[->] (0,-1) -- (0,1) node[above] {$y$};
+  \centering   
+  \begin{tikzpicture}[scale=0.7]   \draw[->] (-3,0) -- (3,0) node[right] {$x$};   \draw[->] (0,-1) -- (0,1) node[above] {$y$};
   \draw[domain=-3:3,smooth,variable=\x,blue] plot ({\x},{(exp(\x) - exp(-\x))/(exp(\x) + exp(-\x))}); 
 \end{tikzpicture}   \end{figure}
 Both sigmoid and $\tanh$ suffer from the problem of saturating gradients. I.e. if the input value is either very small or very large, the derivative of the function becomes very small. This has the effect of slowing down gradient descent.
@@ -256,7 +258,7 @@ This leads us to the rectified linear unit: $a = g(z) = \max\{0, z\}$. The deriv
 
 \begin{figure}[h]
   \centering   
-  \begin{tikzpicture}   
+  \begin{tikzpicture}[scale=1.2]
     \draw[->] (-1,0) -- (1,0) node[right] {$x$};   
     \draw[->] (0,-1) -- (0,1) node[above] {$y$};
     \draw[domain=-1:1,smooth,variable=\x,blue] plot ({\x},{max(0,\x)}); 
@@ -272,7 +274,7 @@ Recall that
   \cosh(x) = \frac{e^x + e^{-x}}{2}, \hspace{10pt} \textrm{ and } \hspace{5pt}
   \tanh(x) = \frac{\sinh(x)}{\cosh(x)}. \end{align*}
 It's easy to see using linearity of $\frac{\d \,}{\d x}$ and the chain rule that $\frac{\d \,}{\d x}  \sinh(x) = \frac{e^x}{2} + \frac{e^{-x}}{2} = \cosh(x)$ and similarly that $\frac{\d \,}{\d x}\cosh(x) = \sinh(x)$. Then, apply either quotient rule \emph{or} both the product rule and chain rule:
-\begin{align}   \frac{\d \,}{\d x} \tanh(x) = \frac{\d \,}{\d x} \sinh(x) \cosh(x)^{-1} = \cosh(x) \cosh(x)^{-1} - \sinh(x)\cosh(x)^{-2}\sinh(x) = 1 - \tanh(x)^2. \end{align}
+\begin{align*}   \frac{\d \,}{\d x} \tanh(x) = \frac{\d \,}{\d x} \sinh(x) \cosh(x)^{-1} = \cosh(x) \cosh(x)^{-1} - \sinh(x)\cosh(x)^{-2}\sinh(x) = 1 - \tanh(x)^2. \end{align*}
 \paragraph{Rectified Linear Unit} has derivative equal to
 \begin{align}   \frac{\d \,}{\d x} \max\{0,x\}=       \begin{cases}        0 &\quad\text{if } x < 0\\        1 &\quad\text{if } x > 0 \\
        \textrm{undefined} &\quad\text{if } x = 0      \end{cases} \end{align}
@@ -348,6 +350,7 @@ its computation graph. We highlight terms we must compute in \color{orange}{oran
   \draw[->] (a2) to (loss);
 \end{tikzpicture}   
 \end{figure}
+\newline
 Where in $\d z^{[1]}=W^{[2]T} \d z^{[2]} * g^{[1]'}(z^{[1]})$ the $*$ denotes an element-wise product.
 Note that the computations for $\d a^{[\ell]}$ are typically rolled into the next computation for $\d z^{[\ell]}$.
 Further realize that the above computations are performed for \emph{each} training example in our data set 
@@ -357,14 +360,14 @@ We can vectorize our computations as follows.
 \begin{align*}   \d Z^{[2]} &= A^{[2]} - Y \\
   \d W^{[2]} &= \frac{1}{m} \d Z^{[2]} {A^{[1]}}^T \\
   \d b^{[2]} &= \frac{1}{m} \texttt{np.sum}(\d Z^{[2]}\texttt{, axis = 1, keepdims = True}) \\
-  \d Z^{[1]} &= {W^{[2]}}^T \d Z^{[2]} * g^{[1]'}(Z^{[1]}) \hspace{35pt} (element-wise product)\\
+  \d Z^{[1]} &= {W^{[2]}}^T \d Z^{[2]} * g^{[1]'}(Z^{[1]}) \hspace{35pt} (* \textrm{ denotes an element-wise product})\\
   \d W^{[1]} &= \frac{1}{m} \d Z^{[1]} X^T \\ 
   \d b^{[1]} &= \frac{1}{m} \texttt{np.sum}(\d Z^{[1]}\texttt{, axis = 1, keepdims = True}) \end{align*}
 
 \subsubsection{Random Initialization}
 \paragraph{Why Initializing With Zeros Won't Work for $W$'s: Symmetric Neurons}
 Note that initializing our weights matrix with zeros will prevent gradient descent from working. What happens? For any example, $a_1^{[1]} = a_2^{[2]}$, whence $\d z_1^{[1]} = \d z_2^{[2]}$. I.e. the hidden units are symmetrical, and $\d W = \begin{bmatrix}   u & v \\ u & v \end{bmatrix}$ and our weights matrix will have first row equal to the second row. By induction, no matter how many times we train our network, the neurons in the hidden layer will remain symmetric and no learning will take place. 
-Note that it turns out $b$ does not have this symmetry-breaking problem, and so we can initialize $b$'s to zeros.
+It turns out $b$ does not have this symmetry-breaking problem, and so we can initialize $b$'s to zeros.
 
 \paragraph{Random Initialization}
 Instead, if we initialize weights randomly, each neuron in each hidden layer will compute different functions. I.e. $W^{[1]} = $\texttt{np.random.randn((.,.)) * 0.01} where we apply an ad-hoc scaling factor. We prefer initializing weights to small values. Why? Suppose we are using either sigmoid or $\tanh$ activation functions then if $W$ initialized large, $Wx + b$ also large, whence $g(z)$ large and we yield saturated (near-zero) gradients; this means gradient descent and learning will be very slow. If we don't have any sigmoid or $\tanh$ activation functions, this is less of an issue. 
@@ -462,8 +465,8 @@ In general, we have that for a single training example:
 \begin{align*}   z^{[\ell]} &= W^{[\ell]} a^{[\ell-1]} + b^{[\ell]}, \\ 
   a^{[\ell]} &= g^{[\ell]}(z^{[\ell]}). \end{align*}
 And for our entire training set, where $X = A^{[0]}$ is our data arranged such that each column is an observation:
-\begin{align}   Z^{[\ell]} &= W^{[\ell]} A^{[\ell-1]} + b^{[\ell]}, \\ 
-  A^{[\ell]} &= g^{[\ell]}(Z^{[\ell]}).    \end{align}
+\begin{align*}   Z^{[\ell]} &= W^{[\ell]} A^{[\ell-1]} + b^{[\ell]}, \\ 
+  A^{[\ell]} &= g^{[\ell]}(Z^{[\ell]}).    \end{align*}
 Note that by rules of matrix multiplication, it's easy to see that $Z^{[\ell]}$ must have as many columns as there are training examples, and since $g^{[\ell]}$ is applied element-wise then $A^{[\ell]}$ also has as $m$ columns.
 For our last layer, $\hat Y = g(Z^{[L]}) = A^{[L]}$. We remark that although we typically try to vectorize code and remove \texttt{for}-loops, it is perfectly reasonable to loop over the layers in the network during forward propagation. I.e. we expect to see \texttt{for} $\ell = 1, \ldots, L$.
 
@@ -472,21 +475,102 @@ For our last layer, $\hat Y = g(Z^{[L]}) = A^{[L]}$. We remark that although we 
 What about our bias term? In general, $b^{[\ell]} : \left(n^{[\ell]}, 1\right)$, Further, during backpropogation, the dimensions of the derivative matrices don't change. I.e. 
 $\d   W^{[\ell]} : \left( n^{[\ell]}, n^{[\ell - 1]} \right)$, and $\d b^{[\ell]} : \left(n^{[\ell]}, 1\right)$.
 
-\paragraph{Deep Representations}
-What do our intermediary layers come to learn in different applications?
+\paragraph{Deep Representations:
+\small What do our intermediary layers come to learn in different applications?}
+\begin{itemize} \item Consider face detection. The first layer of the network may learn to detect edges, and the second layer perhaps may learn how to detect different pieces of a face by connecting edges together such as an eye or an ear. A later layer of a network may learn to distinguish between faces at an even less granular level.
 
-Consider face detection. The first layer of the network may learn to detect edges, and the second layer perhaps may learn how to detect different pieces of a face by connecting edges together such as an eye or an ear. A later layer of a network may learn to distinguish between faces at an even less granular level.
-
-As another example consider problems in the context of audio. The first layer of the network may lrn to distinguish between low and high frequency waveforms, whereas the second layer may learn to recognize phonemes (in the word cat, each letter, when pronounced, is a phoneme), and later layers of the network may learn to recognize words and finally phrases/sentences.
-
-Earlier layers are in general based on more granular features, i.e. simple transformations of the input data. Later layers compose hierarchically and are eventually able to solve complex tasks.
-
+\item As another example consider problems in the context of audio. The first layer of the network may lrn to distinguish between low and high frequency waveforms, whereas the second layer may learn to recognize phonemes (in the word cat, each letter, when pronounced, is a phoneme), and later layers of the network may learn to recognize words and finally phrases/sentences.
+\end{itemize}
+Earlier layers are in general based on more granular features, i.e. simple transformations of the input data. Later layers compose hierarchically and are eventually able to solve complex tasks.   
 \paragraph{Circuit Theory and Deep Learning}
-``There are functions you can compute with a 'small' $L$-layer deep neural network that shallower networks require exponentially more hidden units to compute.''
+``There are functions you can compute with a `small' $L$-layer deep neural network that shallower networks require exponentially more hidden units to compute.''
 
 As an example, consider using a neural network to approximate \texttt{xor} applied to $n$ input bits. I.e. we seek to calculate $x_1 \textrm{ xor } x_2 \textrm{ xor } \ldots \textrm{ xor } x_n$. If we are free to use as many layers in the network as we wish, then we could envision building a \texttt{xor} tree as follows: pair successive inputs together and apply the \texttt{xor} operation, and pipe the resulting output into the subsequent layer of the network. Realize that we require $\log n$ layers in our network in order to exactly compute the right answer. If, on the other hand, we weren't allowed to use an arbitrary number of layers but instead only a single hidden layer, we would require $O(2^n)$ neurons in order to achieve the same result; to see why realize that we effectively need to enumerate all possible $2^n$ possible input sequences in order to map them correctly back to the right answer in a subsequent step. Note that it is possible to get away with using only $2^{n-1}$ neurons to accomplish this task but this is still exponentially more neurons than the network with $O(\log n)$ layers.
 
-\paragraph{Building Blocks of Deep Neural Networks} A.
+\paragraph{Hyperparameters}
+The \emph{parameters} of a neural network are the weights and biases:
+\[
+W^{[1]}, b^{[1]}, W^{[2]}, b^{[2]}, \ldots, W^{[L]}, b^{[L]}. 
+\]
+But there are other factors which determine how these parameters are learned, and these in turn are called \emph{hyperparameters}. These include:
+\begin{itemize} \item The learning rate $\alpha$.
+\item The number of iterations of gradient descent that we run.
+\item The number of hidden layers $L$.
+\item The number of hidden units $n^{[1]}, n^{[2]}, \ldots, n^{[L]}$.
+\item The choice of activation functions $g^{[1]}, g^{[2]}, \ldots, g^{[L]}$. \end{itemize}
+
+In more advanced deep learning, additional hyperparameters include momentum, minibatch-size, and various forms of regularizations.
+Applied deep learning is a very empirical process, which means that there is a loop: (i) idea, (ii) code, (iii) experiment; we iterate on this to find the best set of hyperparameters. It's nearly impossible to get these right on the first try, and so it's important that we set up a train, development, and test data set accordingly. The optimal configuration is often application/domain dependent.
+
+\section{Setting up your Machine Learning Application}
+\subsection{Splitting Data, and the (missing) Bias and Variance tradeoff}
+\paragraph{Train, Development, and Test Data}
+Historically, it was considered best practice to split data into training and test sets of size 70\% and 30\% respectively. This maybe makes sense when we have (up to) a million records. But with bigger data sets, we don't necessarily also need larger test sets in order to validate our algorithm; it may suffice to sample 10k records and use them as hold-out or test sets. If we believe in this example that 10k records is enough to deliver an unbiased estimate of which \emph{algorithm} is better (on the development/CV/hold-out set) and what the test error is (on the test set), then our split becomes more like 98\%, 1\%, 1\%. Lastly, we remark that it may be OK to not have a test set so long as we don't need an unbiased estimator of performance.
+\vspace{-.5ex}
+\paragraph{Bias - Variance} In Deep Learning, we still talk about bias and variance, but we don't emphasize as much that there is a tradeoff between these two quantities. Andrew considers \emph{bias} to be determined by the training set error relative to how well a human can perform the same task (i.e. Bayes error), and the \emph{variance} to be determined by the relation to the training set error. 
+E.g. if \{\texttt{train, test}\} error is \{0.01, 0.11\} on a problem where humans can achieve perfect accuracy, we might say the algorithm has low bias but high variance. If we observe \{0.15, 0.16\}, we might say the algorithm has high bias. If we observe \{0.15, 0.30\}, we have a case of both high bias and high variance. Lastly, \{0.005, 0.01\} corresponds to both low bias and low variance.
+
+\paragraph{Basic Recipe for Machine Learning}
+Supposing that we have:
+\begin{itemize}   \item \emph{High Bias}, as measured by the \emph{training} set. Possible remedies $\leadsto$ bigger network, more hidden units, train longer, and neural network architecture search.
+  \item \emph{High Variance}, as measured by the \emph{development} set. Possible remedies $\leadsto$ more data, regularization, and neural network architecture search. \end{itemize}
+Notice that depending on whether we have high bias or high variance, the set of things to try is very different. In modern deep learning, so long as we can train a bigger network on a bigger dataset this guarantees a model with lower bias \emph{and} lower variance, i.e. there is no longer a bias-variance tradeoff.
+
+\subsection{Regularization} 
+Suppose you have high variance. One way to address this is through regularization (another is through obtaining more training data, this may be harder but also more reliable). 
+\paragraph{Logistic Loss with Regularization}
+In this context, an $\ell_2$ regularization may look as follows:
+\[
+  J(w,b) = \frac{1}{m} \sum_{i=1}^m \mathcal L \left(\hat {y^{(i)}}, y^{(i)}\right) + \frac{\lambda}{2m} \|w\|_2^2
+\]
+where $\|w\|_2^2 = \sum_{j=1}^{n_x} w_j^2 = w^Tw$. Why not add regularization to $b$? Since $b \in \mathbb R$ just a single scalar, adding it to $w \in \mathbb R^{n_x}$ won't make much of a difference in practice ($w$ contains many real numbers whose magnitude overwhelm $b$). An $\ell_1$ regularization would look like $\frac{\lambda}{m} \sum_{i=1}^{n_x} |w_i|$. With $\ell_1$ regularization, we yield a \emph{sparse} model.
+In all the above, $\lambda$ is the regularization hyper-parameter which is set using the cross-validation set.
+
+\paragraph{Neural Network Regularization} Here,
+\[
+J\left(W^{[1]}, b^{[1]}, \ldots, W^{[L]}, b^{[L]}\right) = \frac{1}{m} \sum_{i=1}^{m} \mathcal L(\hat {y^{(i)}}, y^{(i)}) + \frac{\lambda}{2m} \sum_{\ell=1}^{L} \|W^{[\ell]}\|_F^2
+\]
+where we're using Frobenius norm $\|W^{[\ell]}\|_F^2 = \sum_{i=1}^{n^{[\ell-1]}} \sum_{j=1}^{n^{[\ell]}} (W_{ij}^{[\ell]})^2$, recalling that $W \in \mathbb R^{n^{[\ell]} \times n^{[\ell - 1]}}$. We need to make note that we have a new rule for back-propagation:
+\[
+\d W^{[\ell]} = \left(\texttt{from backprop}\right) + \frac{\lambda}{m} W^{[\ell]}.
+\]
+We sometimes refer to adding this regularization term as \emph{weight decay}, since the back propagation update rule becomes
+\[
+W^{[\ell]} := W^{[\ell]} - \alpha \d W^{[\ell]} = \underbrace{W^{[\ell]} - \frac{\alpha \lambda}{m} W^{[\ell]}}_{(1-\frac{\alpha \lambda}{m})W^{[\ell]}} - \alpha \left(\textrm{from backprop}\right)
+\]
+where $(1-\frac{\alpha \lambda}{m}) < 1$ is a shrinkage term.
+
+\paragraph{Why does Regularization Mitigate Overfitting?} As we crank up $\lambda$, we push $W \leadsto 0$, whence the effects of hidden units are mitigated, and we realize a network that behaves closer to a stacked (multiple layers) logistic regression. 
+Another way to gain intuition is as follows. Suppose we use a $\tanh$ activation function. If $\lambda \uparrow$, then $W^{[\ell]} \downarrow$, whence our input values to $\tanh$ are very small. Recall that $\tanh$ is approximately linear around the origin, and so for high levels of $\lambda$ we recover a neural network where every layer is linear; recall that no matter how deep the network is if it only consists of linear layers then the whole network yields a linear decision boundary.
+
+\paragraph{(Inverted) Dropout Regularization} For \emph{each} training example, and for \emph{each} neuron in our network, we toss a (weighted) coin and remove the neuron from the network entirely according to the 
+outcome. This means that for each training example we perform back propagation on a modified and (sometimes significantly) 
+reduced network.
+One way to implement dropout is known as ``inverted dropout''. We illustrate with layer $\ell = 3$, for some \texttt{keep\_prob} 
+e.g. 0.8.
+
+\begin{verbatim} 
+d3 = np.random.rand(a3.shape[0], a3.shape[1]) < keep_prob
+a3 = np.multiply(a3, d3)
+a3 /= keep_prob  # <-- Inverted dropout technique.
+\end{verbatim}
+The last step is what gives the technique its name, and is 
+simply done in order to keep, in expectation, $z^{[4]} = W^{[4]} a^{[3]} + b^{[b]}$ the same. Note that this Boolean array \texttt{d3} is also used in back-propagation. 
+Now, if we are to make predictions given a new $X = a^{[0]}$, we don't need to apply drop-out at test time.
+
+\paragraph{Why does dropout work?} One intuition is that in applying dropout, we prevent our network from relying on any one particular feature too much and instead spread out the weights. We can think about this from the perspective of a single neuron in a network: since the neurons in the previous layer can be randomly eliminated, the neuron in the subsequent layer must learn not to place too much weight on any one feature and instead learn a small amount of information from each. This spread of weights has the effect of shrinking the squared norm of the weights matrix; in fact, dropout can be formally shown tobe an adaptive form of $\ell_2$ regularization.
+
+\paragraph{Varying dropout by layer}
+Note that it's also possible to vary the \texttt{keep\_prob} variable by layer. In fully connected layers with more neurons where we might worry about overfitting more, it's sensible to apply a more stringent (lower) value of \texttt{keep\_prob} when compared to perhaps a succession of layers with decreasingly fewer neurons where perhaps we are worried about overfitting less. The downside of this approach is that we have additional hyperparameters to search through when cross validating our approach; a workaround is to make a binary decision of whether to apply dropout at all to a given layer, and for all layers with dropout applied to use the same \texttt{keep\_prob}. We lastly remark that dropout \emph{can} be applied to the input features, but typically if any is applied we choose \texttt{keep\_prob} $\approx 1$.
+One downside to dropout is that our cost function $J$ is no longer well defined, and we are not guaranteed that $J$ will be monotone decreasing as a function of the number of iterations of gradient descent.
+
+\subsection{Other Regularization Methods} 
+\paragraph{Data augmentation} E.g. in computer vision we can flip, rotate, and zoom into images to increase the size of our training set. By applying random distortions, we can fake additional training example. Of course, an independent training example provides more information than a synthesized example. In recognizing hand-written text, we could also apply small rotations and random perturbations to the ``thickness'' of the lines drawn. 
+
+\paragraph{Early Stopping}
+Another technique of regularization is \emph{early stopping}, whereby optimize for training error loss but also evaluate our cross-validation dataset error each iteration, and stop training when development set error starts increasing. Why does this method work? In practice, we initialize $W$ to small random numbers, and as we train more iterations of gradient descent we learn larger weights; by stopping early, we are in turn applying a shrinkage effect and encouraging a smaller Frobenius norm on $W$. Andrew likes to keep the task of Optimizing Cost Function $J(W,b)$ separate from the task of Not Overfitting, since each has its own set of workarounds; see orthogonalization.
+
+\section{Setting Up Your Optimization Problem}
 
 \end{document}
 
