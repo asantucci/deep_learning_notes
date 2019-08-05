@@ -1,7 +1,9 @@
 \documentclass[12pt]{article}  \usepackage[boxruled,lined]{algorithm2e} \usepackage{booktabs}
 \usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
+\usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
-\usepackage{tikz}  
+\usepackage{tikz}
+\usepackage{pgfplots}  
 \usetikzlibrary{positioning}
 
 \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
@@ -571,6 +573,110 @@ One downside to dropout is that our cost function $J$ is no longer well defined,
 Another technique of regularization is \emph{early stopping}, whereby optimize for training error loss but also evaluate our cross-validation dataset error each iteration, and stop training when development set error starts increasing. Why does this method work? In practice, we initialize $W$ to small random numbers, and as we train more iterations of gradient descent we learn larger weights; by stopping early, we are in turn applying a shrinkage effect and encouraging a smaller Frobenius norm on $W$. Andrew likes to keep the task of Optimizing Cost Function $J(W,b)$ separate from the task of Not Overfitting, since each has its own set of workarounds; see orthogonalization.
 
 \section{Setting Up Your Optimization Problem}
+\subsection{Normalizing input data}
+Suppose we have a two dimensional data-set as follows.
 
+\begin{tikzpicture}[     declare function={a(\x)=0.75;},     declare function={b(\x)=0.25;} ] \begin{axis}[     domain=1:5,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+
+We standardize our data by first subtracting out the mean: $\mu = \frac{1}{m} \sum_{i=1}^{m} x^{(i)}$, $x -= \mu$.
+
+\begin{tikzpicture}[     declare function={a(\x)=0.25;},     declare function={b(\x)=-0.25;} ] \begin{axis}[     domain=-2:2,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+
+We then divide through by the variance, $\sigma^2 = \frac{1}{m} \sum_{i=1}^{m} x^{(i)}**2$ where we remark that the $**$ denotes element-wise multiplication and further that typically $\textrm{Var}(Z) = \mathbb E [Z^2] - \mathbb E [Z]^2$, but we've already de-meaned our random vector.
+$x /= \sigma^2$.
+\begin{tikzpicture}[scale=0.5,     declare function={a(\x)=0.25;},     declare function={b(\x)=-0.25;} ] \begin{axis}[     domain=-.5:.5,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+
+We remark that the same $\mu$ and $\sigma^2$ should be used to normalize the development and test data-sets.
+
+\paragraph{Normalization and Gradient Descent} Why should we normalize our data? It comes down to being able to apply a higher learning rate when training our algorithm. When our input data $x_1, x_2$ have very different scales (e.g. $x_1 \in [0, 1e3]$ and $x_2 \in [0,1]$), the weights learned for $w_1$ and $w_2$ will be on very different scales as well. If we plot the loss function $\mathcal L(\hat y, y)$ over $w_1, w_2$ it turns out that we end up with very elongated contours. We therefore must apply a small learning rate, leading to many small steps before convergence.
+
+\begin{minipage}{1.0\textwidth} \begin{multicols}{2} \begin{tikzpicture}
+  \draw[->] (-3.25,-2.25) to (-3.25, 1);
+  \node at (-3.25, 1.2) {$w_2$};
+  \draw[->] (-3.25,-2.25) to (3.25, -2.25);
+  \node at (3.5, -2.25) {$w_1$};
+    \draw[rotate=30] (0,0) ellipse (3cm and 1.5cm); 
+    \draw[rotate=30] (0,0) ellipse (2cm and 1cm);     \draw[rotate=30] (0,0) ellipse (1cm and .5cm); 
+    \draw[rotate=30] (0,0) ellipse (.5cm and .25cm);
+  \draw[->] (-2.5, -1) to (-1.8, -1.25);
+  \draw[->] (-1.8, -1.25) to (-1.1, -.5);
+  \draw[->] (-1.1, -.5) to (-.4, -.25);
+  \draw[->] (-.4, -.25) to (0, 0);
+\end{tikzpicture} 
+\vfill\null \columnbreak
+\begin{tikzpicture}[scale=2]
+  \draw[->] (-1, -1) to (-1, 1);
+  \node at (-1, 1.1) {$w_2$};
+  \draw[->] (-1, -1) to (1, -1);
+  \node at (1.25, -1) {$w_1$};
+  \draw (0, 0) circle (1cm);   
+  \draw (0, 0) circle (.5cm); 
+  \draw (0, 0) circle (.25cm); 
+  \draw[->] (-1, 0) to (-.5, 0);
+  \draw[->] (-.5, 0) to (0, 0);
+\end{tikzpicture}
+\end{multicols} \end{minipage}
+
+Whereas if we first normalize our inputs, the loss function when plotted over the weights appears more like a uniform bowl, and our contour plots are spherical. Our learning rate can be set higher since the step size is no longer limited by the major axis. Performing normalization never hurts our learning algorithm.
+
+\subsection{Vanishing/Exploding gradients}
+Suppose for the sake of argument that we have a very deep neural network; we've drawn only two hidden neurons per layer but this is only for illustration sake.
+
+\begin{tikzpicture}[darkstyle/.style={circle,draw,fill=gray!40,minimum size=20}]
+  \node (x1) at (-1.3, 1.5) {$x_1$};   \node (x2) at (-1.3, 0) {$x_2$};   
+  \foreach \x in {0,...,4}     \foreach \y in {0,...,1}
+      \node [darkstyle] (\x\y) at (1.5*\x,1.5*\y) {};
+  \draw[->] (x1) to (00);
+  \draw[->] (x1) to (01);
+  \draw[->] (x2) to (00);
+  \draw[->] (x2) to (01);
+  \draw[->] (00) to (10);
+  \draw[->] (00) to (11);
+  \draw[->] (01) to (10);
+  \draw[->] (01) to (11);
+  \draw[->] (10) to (21);
+  \draw[->] (10) to (20);
+  \draw[->] (10) to (21);
+  \draw[->] (11) to (20);
+  \draw[->] (11) to (21);
+  \draw[->] (20) to (30);
+  \draw[->] (20) to (31);
+  \draw[->] (21) to (30);
+  \draw[->] (21) to (31);
+  \draw[->] (30) to (40);
+  \draw[->] (30) to (41);
+  \draw[->] (31) to (40);
+  \draw[->] (31) to (41);
+  \node[darkstyle] (outputneuron) at (7, .75) {}; 
+  \draw[->] (40) to (outputneuron);
+  \draw[->] (41) to (outputneuron);
+  \node (yhat) at (8, .75) {$\hat y$};
+  \draw[->] (outputneuron) to (yhat);
+\end{tikzpicture}
+
+Suppose we choose $g(z) = z$, i.e. a linear activation function, and suppose for sake of argument that we ignore our bias term, i.e. $b^{[\ell]} = 0$ for each layer. It's easy to see that $\hat y = W^{[L]} W^{[L-1]} \ldots W^{[2]} W^{[1]} W^{[0]} X$. Ignoring the last $W^{[L]}$ which is of different dimension, suppose each intermediary weight matrix is slightly larger than an identity matrix i.e. $\begin{bmatrix}   1 + \epsilon & 0 \\ 0 & 1 + \epsilon \end{bmatrix}$ then the value of $\hat y$ explodes with the number of layers,
+$\hat y = W^{[L]} \begin{bmatrix}   (1 + \epsilon)^{L-1} & 0 \\ 0 & (1 + \epsilon)^{L-1} \end{bmatrix}X$. Similarly, if the intermediary matrices are slightly smaller than an identity matrix, then the values of subsequent activation functions get exponentially smaller. This can start to become problematic if we have $L$ quite large; in 2018 Microsoft published state of the art results using $L \approx 150$, which is large enough for these problems to manifest by slowing down gradient descent.
+
+\subsection{Weight Initialization for Deep Networks} Suppose for the sake of illustration we have a single activation neuron.
+\begin{figure}[h]
+  \centering   
+  \begin{tikzpicture}[scale=0.6]
+    \node (x1) at (-1, 1) {$x_1$};
+    \node (x2) at (-1, 0) {$x_2$};
+    \node (x3) at (-1,-1) {$x_3$};
+    \node (x4) at (-1,-2) {$x_4$};
+    \node[draw,circle] (neuron) at (1.5,0) {};
+    \draw[->] (x1) to (neuron);
+    \draw[->] (x2) to (neuron);
+    \draw[->] (x3) to (neuron);
+    \draw[->] (x4) to (neuron);
+    \node (output) at (5,0) {$\hat y$};
+    \draw[->] (neuron) to (output);
+  \end{tikzpicture} 
+\end{figure}
+For simplicity sake, ignore $b$ for now. The input to our activation function
+looks like $z = w_1 x_1 + w_2 x_2 + \ldots + w_n x_n$. So, if the number of input features (or hidden neurons in an intermediary layer) is large, we want smaller $w_i$ to compensate such that $z$ doesn't explode. One idea might be to set $\textrm{Var}(w_i) = \frac{1}{n}$ such that $\textrm{Var}(z) \approx \sum_i \textrm{Var}(x_i)$ and we preserve the variance of our input to our activation function. To accomplish this, we set
+\begin{align*}   W^{[\ell]} = \texttt{np.random.randn(shape) * np.sqrt} \left(\frac{1}{n^{[\ell-1]}}\right) \end{align*}
+If we're using ReLU activation functions, it's common to replace the numerator in the scaling constant above with a 2 instead of a 1 (i.e. to set $\textrm{Var}(w_i) = \frac{2}{n}$). If you want, you can consider this scaling factor to be another hyperparameter, and we can search across a sequence of values and choose the best according to our development data-set.
 \end{document}
 
