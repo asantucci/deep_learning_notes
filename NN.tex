@@ -1,4 +1,5 @@
-\documentclass[12pt]{article}  \usepackage[boxruled,lined]{algorithm2e} \usepackage{booktabs}
+\documentclass[12pt]{article}  
+\usepackage[boxruled,lined]{algorithm2e} \usepackage{booktabs}
 \usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
 \usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
@@ -678,5 +679,44 @@ For simplicity sake, ignore $b$ for now. The input to our activation function
 looks like $z = w_1 x_1 + w_2 x_2 + \ldots + w_n x_n$. So, if the number of input features (or hidden neurons in an intermediary layer) is large, we want smaller $w_i$ to compensate such that $z$ doesn't explode. One idea might be to set $\textrm{Var}(w_i) = \frac{1}{n}$ such that $\textrm{Var}(z) \approx \sum_i \textrm{Var}(x_i)$ and we preserve the variance of our input to our activation function. To accomplish this, we set
 \begin{align*}   W^{[\ell]} = \texttt{np.random.randn(shape) * np.sqrt} \left(\frac{1}{n^{[\ell-1]}}\right) \end{align*}
 If we're using ReLU activation functions, it's common to replace the numerator in the scaling constant above with a 2 instead of a 1 (i.e. to set $\textrm{Var}(w_i) = \frac{2}{n}$). If you want, you can consider this scaling factor to be another hyperparameter, and we can search across a sequence of values and choose the best according to our development data-set.
+
+\subsection{Numerical Approximation of Gradients}
+When performing back propagation, there is a technique known as Gradient-Checking
+that will help to ensure your implementation of back propagation is correct. To 
+perform gradient checking, we first need to understand how to numerically approximate
+a gradient.
+
+Suppose we have some function $f(\theta) = \theta^3$, and we choose $\epsilon = 0.01$. To compute a numerical gradient around a point $\theta$, we will use a central difference method:
+\[
+f'(\theta) \approx \frac{f(\theta + \epsilon) - f(\theta - \epsilon)}{2 \epsilon}.
+\]
+This approximation has an error that is upper-bounded by $O(\epsilon^2)$, which can be shown through a Taylor Series approximation, recalling that $f'(\theta) = \lim_{\epsilon \to 0} \frac{f(\theta + \epsilon) - f(\theta - \epsilon)}{2 \epsilon}$. This is in stark contrast to taking a one-sided difference to approximate a gradient, which has error bounded by $O(\epsilon)$.
+
+\paragraph{Gradient Checking} A technique for catching errors in a back-propagation implementation. The first step is to take
+$W^{[1]}, b^{[1]}, \ldots, W^{[L]}, b^{[L]}$ and \emph{reshape} 
+them into one giant vector, call it $\theta$. We may now 
+equivalently define our cost function as 
+ $J(W^{[1]}, b^{[1]}, \ldots, W^{[L]}, b^{[L]}) = J(\theta)$.
+The next step is to take $\d W^{[1]}, \d b^{[1]}, \ldots, \d W^{[L]}, \d b^{[L]}$ (ordered the same way) and reshape them into another giant vector $\d \theta$.
+
+\begin{algorithm}
+  \caption{\texttt{Grad-check}}   \For{each $i$} {
+    $\d \theta_{\texttt{approx}}^{[i]} = \frac{J(\theta_1, \theta_2, \ldots, \theta_i + \epsilon, \ldots) - J(\theta_1, \theta_2, \ldots, \theta_i - \epsilon, \ldots)}{2\epsilon}$
+  } \end{algorithm}
+We now end up with two vectors, each the same length, $\d \theta_{\texttt{approx}}^{[i]}$ and $\d \theta$. We can now compare them using Euclidean norms,
+\begin{equation}
+\label{eq: normed-diff}
+\frac{\| \d \theta_{\texttt{approx}} - \d \theta\|_2}{\|\d \theta_{\texttt{approx}}\|_2 + \| \d \theta \|_2}
+\end{equation}
+
+Now, suppose we implement gradient checking with $\epsilon = 10^{-7}$. If \ref{eq: normed-diff} is $O(10^{-7})$ or smaller, then great! We've implemented back propagation correctly. If \ref{eq: normed-diff} outputs something $O(10^{-5})$, it would be prudent to check the components (elements) of $\d \theta_{\texttt{approx}} - \d \theta\|_2$ and see if any one of them is particularly large, if so we might want to double check our implementation for that layer. If, however, \ref{eq: normed-diff} outputs something $O(10^{-3})$, it's indicative of a bug in our implementation. Again, the method is to inspect the components of \ref{eq: normed-diff} to locate the source of our bug.
+
+\paragraph{Implementation Notes for Gradient Checking}
+\begin{itemize}   \item Don't use in training -- only to debug. I.e. computing $\d \theta_{\texttt{approx}}^{[i]}$ for each $i$ is expensive. Once we've verified that \ref{eq: normed-diff} outputs something sufficiently small, we should turn \emph{off} \texttt{grad-check}.
+  \item If algorithm fails \texttt{grad-check}, examine individual components in order to debug. We might find that the bug is isolated to a particular layer. 
+  \item Remember regularization -- if $J(\theta) = \frac{1}{m} \sum_{i=1}^m \mathcal L(\hat {y^{(i)}}, y^{(i)}) + \frac{\lambda}{2m} \sum_\ell \|W^{[\ell]}\|_F^2$ includes regularization, then we need to be sure to include this penalty term when we compute $\d \theta_{\texttt{approx}}$, since $\d \theta$ is defined as the derivative with respect to our cost function.
+  \item \texttt{Grad-check} does \emph{not} work with dropout -- since dropout randomly eliminates (hidden) nodes from the network, there is no easy to compute $J(\theta)$ that dropout is doing gradient descent on.\footnote{It turns out that when using dropout, we can actually define a cost function that is defined over the exponentially large space of all possible subsets of hidden neurons, however this is computationally intractable to compute and compare with.} To get around this, we might turn \texttt{keep\_prop = 1.0} before running \texttt{grad-check}.
+  \item Run at a random initialization of $W$'s and $b$'s, and perhaps again after some training -- it's possible that our (buggy) back propagation algorithm may not incur \emph{too} much error when $W, b \approx 0$, but that as our weights increase the errors do to. So, we might try running \texttt{grad-check} when we first randomly initialize $W$ and $b$, and then also again after some training has allowed our weights to drift sufficiently away from zero.  \end{itemize}
+
 \end{document}
 
