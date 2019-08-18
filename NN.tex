@@ -1,11 +1,13 @@
 \documentclass[12pt]{article}  
 \usepackage[boxruled,lined]{algorithm2e} \usepackage{booktabs}
-\usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
+\usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} 
+\usepackage{xparse} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
 \usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 \usepackage{pgfplots}  
 \usetikzlibrary{positioning}
+\usetikzlibrary{calc}
 
 \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
@@ -553,19 +555,23 @@ One way to implement dropout is known as ``inverted dropout''. We illustrate wit
 e.g. 0.8.
 
 \begin{verbatim} 
-d3 = np.random.rand(a3.shape[0], a3.shape[1]) < keep_prob
+d3 = np.random.rand(a3.shape[0], a3.shape[1]) < keep_prob  # rand, NOT randn.
 a3 = np.multiply(a3, d3)
 a3 /= keep_prob  # <-- Inverted dropout technique.
 \end{verbatim}
 The last step is what gives the technique its name, and is 
 simply done in order to keep, in expectation, $z^{[4]} = W^{[4]} a^{[3]} + b^{[b]}$ the same. Note that this Boolean array \texttt{d3} is also used in back-propagation. 
-Now, if we are to make predictions given a new $X = a^{[0]}$, we don't need to apply drop-out at test time.
+Now, if we are to make predictions given a new $X = a^{[0]}$, \emph{we don't need to   apply drop-out at test time.}
 
 \paragraph{Why does dropout work?} One intuition is that in applying dropout, we prevent our network from relying on any one particular feature too much and instead spread out the weights. We can think about this from the perspective of a single neuron in a network: since the neurons in the previous layer can be randomly eliminated, the neuron in the subsequent layer must learn not to place too much weight on any one feature and instead learn a small amount of information from each. This spread of weights has the effect of shrinking the squared norm of the weights matrix; in fact, dropout can be formally shown tobe an adaptive form of $\ell_2$ regularization.
 
 \paragraph{Varying dropout by layer}
 Note that it's also possible to vary the \texttt{keep\_prob} variable by layer. In fully connected layers with more neurons where we might worry about overfitting more, it's sensible to apply a more stringent (lower) value of \texttt{keep\_prob} when compared to perhaps a succession of layers with decreasingly fewer neurons where perhaps we are worried about overfitting less. The downside of this approach is that we have additional hyperparameters to search through when cross validating our approach; a workaround is to make a binary decision of whether to apply dropout at all to a given layer, and for all layers with dropout applied to use the same \texttt{keep\_prob}. We lastly remark that dropout \emph{can} be applied to the input features, but typically if any is applied we choose \texttt{keep\_prob} $\approx 1$.
 One downside to dropout is that our cost function $J$ is no longer well defined, and we are not guaranteed that $J$ will be monotone decreasing as a function of the number of iterations of gradient descent.
+
+\paragraph{Backpropagation with Dropout} There are two steps to carry out for each layer which utilizes dropout.
+\begin{itemize} \item We previously shut down some neurons during forward propagation with mask $D^{[\ell]}$; in back propagation, we have to shut down the same neurons by applying the same mask $D^{[\ell]}$ to $\d A^{[\ell]}$.
+\item During forward propagation we had previously divided $A^{[\ell]}$ by \texttt{keep\_prob}, whence in backward propagation we must divide $\d A^{[\ell]}$ by \texttt{keep\_prob} again (since $\frac{\d\,}{\d x} c f(x) = c \frac{\d\,}{\d x} f(x)$). \end{itemize}
 
 \subsection{Other Regularization Methods} 
 \paragraph{Data augmentation} E.g. in computer vision we can flip, rotate, and zoom into images to increase the size of our training set. By applying random distortions, we can fake additional training example. Of course, an independent training example provides more information than a synthesized example. In recognizing hand-written text, we could also apply small rotations and random perturbations to the ``thickness'' of the lines drawn. 
@@ -575,7 +581,7 @@ Another technique of regularization is \emph{early stopping}, whereby optimize f
 
 \section{Setting Up Your Optimization Problem}
 \subsection{Normalizing input data}
-Suppose we have a two dimensional data-set as follows.
+Suppose we have a two dimensional data-set as follows; we plot out $(x_1, x_2)$ pairs.
 
 \begin{tikzpicture}[     declare function={a(\x)=0.75;},     declare function={b(\x)=0.25;} ] \begin{axis}[     domain=1:5,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
 
@@ -623,6 +629,8 @@ Whereas if we first normalize our inputs, the loss function when plotted over th
 \subsection{Vanishing/Exploding gradients}
 Suppose for the sake of argument that we have a very deep neural network; we've drawn only two hidden neurons per layer but this is only for illustration sake.
 
+{
+\centering
 \begin{tikzpicture}[darkstyle/.style={circle,draw,fill=gray!40,minimum size=20}]
   \node (x1) at (-1.3, 1.5) {$x_1$};   \node (x2) at (-1.3, 0) {$x_2$};   
   \foreach \x in {0,...,4}     \foreach \y in {0,...,1}
@@ -654,6 +662,7 @@ Suppose for the sake of argument that we have a very deep neural network; we've 
   \node (yhat) at (8, .75) {$\hat y$};
   \draw[->] (outputneuron) to (yhat);
 \end{tikzpicture}
+}
 
 Suppose we choose $g(z) = z$, i.e. a linear activation function, and suppose for sake of argument that we ignore our bias term, i.e. $b^{[\ell]} = 0$ for each layer. It's easy to see that $\hat y = W^{[L]} W^{[L-1]} \ldots W^{[2]} W^{[1]} W^{[0]} X$. Ignoring the last $W^{[L]}$ which is of different dimension, suppose each intermediary weight matrix is slightly larger than an identity matrix i.e. $\begin{bmatrix}   1 + \epsilon & 0 \\ 0 & 1 + \epsilon \end{bmatrix}$ then the value of $\hat y$ explodes with the number of layers,
 $\hat y = W^{[L]} \begin{bmatrix}   (1 + \epsilon)^{L-1} & 0 \\ 0 & (1 + \epsilon)^{L-1} \end{bmatrix}X$. Similarly, if the intermediary matrices are slightly smaller than an identity matrix, then the values of subsequent activation functions get exponentially smaller. This can start to become problematic if we have $L$ quite large; in 2018 Microsoft published state of the art results using $L \approx 150$, which is large enough for these problems to manifest by slowing down gradient descent.
@@ -690,7 +699,7 @@ Suppose we have some function $f(\theta) = \theta^3$, and we choose $\epsilon = 
 \[
 f'(\theta) \approx \frac{f(\theta + \epsilon) - f(\theta - \epsilon)}{2 \epsilon}.
 \]
-This approximation has an error that is upper-bounded by $O(\epsilon^2)$, which can be shown through a Taylor Series approximation, recalling that $f'(\theta) = \lim_{\epsilon \to 0} \frac{f(\theta + \epsilon) - f(\theta - \epsilon)}{2 \epsilon}$. This is in stark contrast to taking a one-sided difference to approximate a gradient, which has error bounded by $O(\epsilon)$.
+This approximation has an error that is upper-bounded by $O(\epsilon^2)$, which can be shown through a Taylor Series approximation (see \href{https://en.wikipedia.org/wiki/Finite_difference_method#Accuracy_and_order}{finite difference method}), recalling that $f'(\theta) = \lim_{\epsilon \to 0} \frac{f(\theta + \epsilon) - f(\theta - \epsilon)}{2 \epsilon}$. This is in stark contrast to taking a one-sided difference to approximate a gradient, which has error bounded by $O(\epsilon)$.
 
 \paragraph{Gradient Checking} A technique for catching errors in a back-propagation implementation. The first step is to take
 $W^{[1]}, b^{[1]}, \ldots, W^{[L]}, b^{[L]}$ and \emph{reshape} 
@@ -718,5 +727,129 @@ Now, suppose we implement gradient checking with $\epsilon = 10^{-7}$. If \ref{e
   \item \texttt{Grad-check} does \emph{not} work with dropout -- since dropout randomly eliminates (hidden) nodes from the network, there is no easy to compute $J(\theta)$ that dropout is doing gradient descent on.\footnote{It turns out that when using dropout, we can actually define a cost function that is defined over the exponentially large space of all possible subsets of hidden neurons, however this is computationally intractable to compute and compare with.} To get around this, we might turn \texttt{keep\_prop = 1.0} before running \texttt{grad-check}.
   \item Run at a random initialization of $W$'s and $b$'s, and perhaps again after some training -- it's possible that our (buggy) back propagation algorithm may not incur \emph{too} much error when $W, b \approx 0$, but that as our weights increase the errors do to. So, we might try running \texttt{grad-check} when we first randomly initialize $W$ and $b$, and then also again after some training has allowed our weights to drift sufficiently away from zero.  \end{itemize}
 
-\end{document}
+\section{Optimization Algorithms}
+\subsection{Mini-batch gradient descent}
+We've previously seen that matrix-multiplies allow us to efficiently compute a gradient on all $m$ training examples simultaneously. I.e., we had
+\begin{equation}
+  X = \begin{bmatrix}     x^{(1)} & x^{(2)} & \ldots & x^{(m)}   \end{bmatrix} \in \mathbb R^{n_x, m} \\ \hspace{15pt}
+  Y = \begin{bmatrix}     y^{(1)} & y^{(2)} & \ldots & y^{(m)}   \end{bmatrix} \in \mathbb R^{1, m}.
+\end{equation}
 
+But in deep learning we often work with large data; 
+what if $m$ really large, e.g. 50M? This means that we have to churn through a lot of compute before taking a very small step in gradient descent. It turns out that we can often allow our algorithm to learn faster if we allow for gradient descent to start taking palce before we're done processing all $m$ training examples.
+
+We partition our data into mini-batches, 
+each of approximately equal size. Let us use a superscript curly-brace to denote the mini-batch number. E.g. if we choose a mini-batch size of 1e3 training examples, 
+our training data now looks like
+\[
+  X = \begin{bmatrix}       \color{purple} x^{(1)} & \color{purple} x^{(2)} & \color{purple} \ldots & \color{purple} x^{(1000)}      & \color{orange} x^{(1001)} & \color{orange} \ldots & \color{orange} x^{(2000)} & \color{black} \ldots & x^{(m)}   \end{bmatrix} \in \mathbb R^{n_x, m}
+\]
+and correspondingly for $Y$.
+The number of mini-batches is of course given by $m/\texttt{mini-batch size}$. Mini-batch $t$ then consists of $\{X^{\{t\}}, Y^{\{t\}}\}$. The dimension of $X^{\{t\}}$ is $(n_x, \texttt{mini-batch size})$.
+
+\begin{algorithm}[h]   \caption{Mini-batch gradient descent}
+  \For{$t = 1, \ldots, m/\texttt{mini-batch size}$} {
+    \tcp{One step (epoch) of gradient descent using $X^{\{t\}}, Y^{\{t\}}$.}
+    $Z^{[1]} = W^{[1]} X^{\{t\}} + b^{[1]}$ \\
+    $A^{[1]} = g^{[1]}(Z^{[1]})$ \\
+    $\vdots$ \\
+    $A^{[L]} = g^{[L]}(Z^{[L]})$
+    $J^{\{t\}} \gets \frac{1}{\texttt{mini-batch size}} \sum_{i=1}^{\texttt{mini-batch size}} \mathcal L(\hat y^{(i)}, y^{(i)}) + \frac{\lambda}{2 \cdot \texttt{mini-batch size}} \sum_{\ell = 1}^{L} \|W^{[\ell]}\|_F^2$ \\
+    \tcp{Backpropagation to compute gradients w.r.t. $J^{\{t\}}$ (using $X^{\{t\}}, Y^{\{t\}}$).}
+    $W^{[\ell]} := W^{[\ell]} - \alpha \d W^{[\ell]}$
+    $b^{[\ell]} := b^{[\ell]} - \alpha \d b^{[\ell]}$
+  } \end{algorithm}
+
+With larger data sets, mini-batch gradient descent is likely to converge much faster.
+
+\subsubsection{Understanding mini-batch gradient descent}
+With (vanilla) batch gradient descent, we expect that the loss
+function should be monotone decreasing with respect to the 
+number of iterations of gradient descent. E.g.
+\begin{tikzpicture}
+\draw[->] (0, 0) to (0, 1.1) node [left] {cost}; \draw[->] (0, 0) to (2.1, 0) node [right]{\# iterations}; 
+\draw[smooth, domain=0.2:2, color=orange, thick]      plot (\x,{exp(-\x)}) {};
+\end{tikzpicture}
+When we train on a cost function $J^{\{t\}}$, it depends on
+$X^{\{t\}}, Y^{\{t\}}$ which vary with each iteration. And so
+it's not the case that we expect our cost function to 
+monotonically decrease with each iteration of mini-batch gradient descent. We should see something that is (hopefully) sinusoidal and downward trending, e.g.
+\begin{tikzpicture}
+\draw[->] (0, 0) to (0, 1.1) node [left] {cost}; \draw[->] (0, 0) to (2.1, 0) node [right]{\# iterations};
+\draw[smooth, domain=0.2:2, color=orange, thick]
+plot (\x,{exp(-\x)*abs(cos(\x*1000))}) {};
+\end{tikzpicture}. Why does our learning plot have this shape? It could be the case that the first epoch of data $X^{\{1\}}, Y^{\{1\}}$ was ``easier'' to predict on relative to a latter epoch.
+
+
+\subsubsection{Choosing mini-batch size}
+One point worth discussing is how to choose your mini-batch size. If we select $\texttt{mini-batch size} = m$, then we recover gradient descent. On the other extreme, we can set the \texttt{mini-batch size} to $1$, in which case we get 
+\href{https://en.wikipedia.org/wiki/Stochastic_gradient_descent}{Stochastic Gradient Descent}, in which case each 
+training example is its own mini-batch. Let's consider these two extremes as applied to the following hypothetical loss function (and corresponding contours).
+{
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+      \draw[->] (-3.25,-2.25) to (-3.25, 1);
+      \node at (-3.25, 1.2) {$w_2$};
+      \draw[->] (-3.25,-2.25) to (3.25, -2.25);
+      \node at (3.5, -2.25) {$w_1$};
+      \draw[rotate=30] (0,0) ellipse (3cm and 1.5cm); 
+      \draw[rotate=30] (0,0) ellipse (2cm and 1cm);     \draw[rotate=30] (0,0) ellipse (1cm and .5cm); 
+      \draw[rotate=30] (0,0) ellipse (.5cm and .25cm);
+  \draw[->,orange] (-1.8, -2) to (-1.7, -1.05);
+  \draw[->,orange] (-1.7, -1.05) to (-.9, -.5);
+  \draw[->,orange] (-.9, -.5) to (-.4, -.25);
+  \draw[->,orange] (-.4, -.25) to (0, 0);
+  \NewDocumentCommand{\irregularline}{O {2mm} m m D <> {20}}{{       \coordinate (old) at #2;       \foreach \i in {1,2,...,#4}{         \draw (old) -- ($ ($#2!\i/(#4+1)!#3$) + (0,#1*rand) $) coordinate (old);       }       \draw (old) -- #3;     }}
+  \irregularline{(0,0)}{(1.8,1.8)}<100>
+\end{tikzpicture} 
+\end{figure}
+}
+
+We've drawn vanilla gradient descent (in \color{orange}{orange}\color{black}) taking a few easy steps through the training data, each time moving toward the 
+(global) minimum. On the other hand stochastic gradient descent (which we've drawn starting from a different initialization point for the sake of illustration) 
+doesn't always get the direction right and in fact the path may be
+far more circuitous than what we've shown. In fact, SGD won't even ever hit the global minimum (or ``converge''), it is far more likely to simply ``dance around'' the global minimum within some reasonably tight radius.
+
+\paragraph{Advantages of mini-batch gradient descent}
+In reality, we choose a mini-batch size in between 1 and $m$. If we were to choose $m$, the time required for each step of 
+training would be too large (assuming large data). If we were to choose SGD, the downside is that we lose almost all speed-up from 
+vectorization, since we process only one example at a time. With mini-batch gradient descent, we do get some 
+vectorization (speed-up relative to processing one example at a time), and secondly we can make progress without 
+waiting to process the entire training set. Further, with mini-batch gradient descent we won't take as circuitous a 
+route before approaching the global optimum (which again we will not hit exactly).
+
+\begin{itemize}   
+  \item If training set is small (e.g. less 2,000 observations), just use batch gradient descent since the whole training set can be processed quite quickly.
+  \item Otherwise, consider picking a mini-batch size equal to a power of two, such that hopefully data can 
+    be loaded and stored in cache (or GPU memory), perhaps in the set $\{2^6, \ldots, 2^9\}$. 
+\end{itemize}
+
+\subsection{Exponentially Weighted (moving) Averages} There are faster algorithms relative to mini-batch gradient descent.
+To understand them, we need to understand \href{https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average}{exponentially weighted averages}. Suppose we have a time-series dataset  $x_1, \ldots, x_T$; we might estimate a moving average as follows:
+\begin{align}
+  \label{eq: expmovavg}   v_0 &= 0 \nonumber \\
+  v_i &= 0.9 * v_{i-1} + 0.1 * x_i \hspace{35pt} \texttt{for } i > 0. \end{align}
+
+We can make this a little bit more interesting by choosing some $\beta$ and then setting our update rule to become $v_i = \beta * v_{i-1} + (1-\beta) * x_i$. It can be shown that $v_t$ is an average over approximately $\frac{1}{1-\beta}$ points of data. As we set $\beta \approx 1$, we average over more points of data and get a \emph{smoother} time-series. The downside of averaging over more points is that we learn the trend of our data \emph{slower} (and therein incur a higher latency bias).
+
+\paragraph{Math behind exponentially weighted averages} Let's unroll our formula to 
+gain an intuition for what's happening. Suppose we have 100 data points.
+\begin{align*}   v_{100} &= \beta v_{99} + (1-\beta) x_{100} \\
+  v_{99}  &= \color{purple} \beta v_{98} + (1-\beta) x_{99} \\ 
+  &\ldots \end{align*}
+Then we can rewrite our last value as 
+\[
+  v_{100} = (1-\beta) x_{100} + \beta \left( \color{purple} (1-\beta) x_{99} + \beta v_{98} \color{black} \right) 
+\]
+and continuing to unroll term-by-term we see that
+\[
+  v_{100} = (1-\beta) x_{100} + (1-\beta) \beta x_{99} + (1-\beta) \beta^2 x_{98} + (1-\beta) \beta^3 x_{97} + \ldots.
+\]
+
+Put differently, the time series of data-points $v_i$ are generated by taking the element-wise product of our original time series with an exponentially decaying function which places the most weight on the most recent data point (and decaying weight to older data points). The coefficients add up to one, less a bias term that will be discussed later. In practice, to compute \ref{eq: expmovavg}- we only need to store a single real number in memory which we continuously update to take on the latest value of 
+the moving average (based on its last value and the most recent data).
+
+\paragraph{Bias correction in exponentially weighted (moving) averages}
+
+\end{document}
