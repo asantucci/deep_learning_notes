@@ -825,7 +825,7 @@ route before approaching the global optimum (which again we will not hit exactly
     be loaded and stored in cache (or GPU memory), perhaps in the set $\{2^6, \ldots, 2^9\}$. 
 \end{itemize}
 
-\subsection{Exponentially Weighted (moving) Averages} There are faster algorithms relative to mini-batch gradient descent.
+\subsection{Momentum and Exponentially Weighted (moving) Averages} There are faster algorithms relative to mini-batch gradient descent.
 To understand them, we need to understand \href{https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average}{exponentially weighted averages}. Suppose we have a time-series dataset  $x_1, \ldots, x_T$; we might estimate a moving average as follows:
 \begin{align}
   \label{eq: expmovavg}   v_0 &= 0 \nonumber \\
@@ -862,6 +862,8 @@ When $t$ is large, this bias correction fades away, but when $t$ is small it can
 
 \paragraph{Gradient descent with momentum} The idea is to compute an exponentially weighted average of gradients, and to use this to update our weights; it's almost always faster when compared with vanilla gradient descent. As an example, let's consider the following cost function with corresponding contours; starting from an arbitrary point, we might expect (mini) batch gradient descent to behave in the following way.
 
+\begin{figure}[h]
+\centering
 \begin{tikzpicture}
   \draw[->] (-3.25,-2.25) to (-3.25, 1);
   \node at (-3.25, 1.2) {$w_2$};
@@ -877,13 +879,14 @@ When $t$ is large, this bias correction fades away, but when $t$ is small it can
   \draw[->,purple,dashed] (2.5,-1) to (2.25, 0);
   \draw[->,purple,dashed] (2.25,0) to (2, -1.75);
   \draw[<->] (4, .25) to (4, -.25);
-  \node at (6.75, 0) {\texttt{slower learning rate}}; \\
+  \node at (6.75, 0) {\texttt{slower learning rate}};
   \draw[<->] (3.75, -.5) to (4.25, -.5);
-  \node at (6.75, -.5) {\texttt{faster learning rate}}; \\
+  \node at (6.75, -.5) {\texttt{faster learning rate}};
   \draw[->,orange,dashed] (-2.75,-1) to (-2, -.75);
   \draw[->,orange,dashed] (-2, -.75) to (-1, -1.1);
   \draw[->,orange,dashed] (-1, -1.1) to (0, -1);
 \end{tikzpicture}
+\end{figure}
 
 Notice that initially in this gradient descent trajectory, 
 we tend to end up ``on the other side of the 
@@ -917,4 +920,45 @@ our ball from rolling too fast or out of control.
 0.9, which corresponds to averaging over the last $1/(1-.9) = 10$ 
 gradients.
 
+\subsection{RMSProp} Momentum was one method of speeding up gradient descent. There's another known as Root Mean Square Prop. On iteration $t$ of (mini) batch gradient descent, we compute the following (where here $\cdot^2$ denotes an element-wise squaring operation.
+\begin{align*}   S_{\d W} &= \beta S_{\d W} + (1-\beta) \d W^2 \\ %\hspace{15pt} \tcp{Element-wise square}
+  S_{\d b} &= \beta S_{\d b} + (1-\beta) \d b^2 \\ %\hspace{15pt} \tcp{Again, element-wise square}
+  W &:= W - \alpha \frac{\d W}{\sqrt{S_{\d W}} + \epsilon} \\
+  b &:= b - \alpha \frac{\d b}{\sqrt{S_{\d b}} + \epsilon} \end{align*}
+
+Adam stands for Adaptive Moment Estimation. $\beta_1$ is used to compute the mean of the gradients $\d W$ (first moment) and $\beta_2$ is used to compute the mean of the second moments $\d W^2$.
+
+\paragraph{Intuition}
+Notice that it's in the update step where a RMS term appears.
+Why does this work? Recall our previous example where in the vertical direction we wanted a smaller learning rate, but for the horizontal direction we wanted a larger learning rate. By incorporating the square of the gradient, we can achieve similar outcomes as with momentum (\emph{dampening gradients that oscillate wildly}).
+
+\paragraph{Implementation Details} In practice, we add some $\epsilon \approx 1e-8$ to the denominator such that we don't divide by something too close to zero (causing our update to blow up).
+
+\subsection{Adam} This is a rare instance of an algorithm that actually works; it works by combining momentum with RMSProp. We first initialize parameters:
+\begin{align*}   V_{\d W} = 0, S_{\d W} = 0, V_{\d b} = 0, S_{\d b} = 0 \end{align*}
+Then, on iteration $t$, we compute 
+$\d W$, $\d b$ using current mini-batch, and then
+\begin{align*}   V_{\d W} &= \beta_1 V_{\d W} + (1-\beta_1) \d W \\ 
+  V_{\d b} &= \beta_1 V_{\d b} + (1-\beta_1) \d b \\ 
+  S_{\d W} &= \beta_2 S_{\d W} + (1-\beta_2) \d W^2 \\
+  S_{\d b} &= \beta_2 S_{\d b} + (1-\beta_2) \d b^2 \end{align*}
+Typically, we do implement Adam by using $V^{\texttt{corrected}}_{\d W} = \frac{V_{\d W}}{1-\beta_1^t}$ and $V^{\texttt{corrected}}_{\d b} = \frac{V_{\d b}}{1 - \beta_1^t}$ and similarly we have
+$S^{\texttt{corrected}}_{\d W} = \frac{S_{\d W}}{1-\beta_2^t}$ and $S^{\texttt{corrected}}_{\d b} = \frac{S_{\d b}}{1-\beta_2^t}$. Then, we perform the updates
+\begin{align*}   W &:= W - \alpha \frac{V^{\texttt{corrected}}_{\d W}}{\sqrt{S^{\texttt{corrected}}_{\d W}} + \epsilon} \\
+  b &:= b - \alpha \frac{V^{\texttt{corrected}}_{\d b}}{\sqrt{S^{\texttt{corrected}}_{\d b}} + \epsilon} \end{align*}
+\paragraph{Hyperparameters}
+There are now multiple hyperparameters.
+\begin{itemize}   \item $\alpha$ is a hyperparameter that typically needs to be tuned.
+\item $\beta_1 \gets 0.9$, i.e. for $\d W$ we average over last ten gradients.
+\item $\beta_2 \gets 0.999$, i.e. for $\d W^2$ we average over the last $\frac{1}{1 - 0.999} = 1,000$ gradients.
+\item $\epsilon \gets 1e-8$ is typically fixed. \end{itemize}
+
+\subsection{Learning Rate Decay} The idea here is that we take larger steps at first (making steady progress toward the global minimum), but as we approach we start taking smaller steps so as to avoid the problem of dancing around in circles a far region away from the global minimum. To implement learning rate decay, we may choose a heuristic where $\alpha = \frac{1}{1 + \texttt{decay\_rate}*\texttt{epoch\_\#}} \alpha_0$. As a function of the epoch number, this formula (dependent on hyperparameter $\alpha_0$) decays steadily. Another few formulae people try are
+\begin{align*}   \alpha &= 0.95^{\texttt{epoch\#}} \cdot \alpha_0 \\
+  \alpha &= \frac{k}{\sqrt{\texttt{epoch\#}}} \cdot \alpha_0 \\
+  \alpha &= \frac{k}{\sqrt{t}} \cdot \alpha_0 \end{align*}
+
+\subsection{Local Optima} As the field of deep learning has evolved, so has the way we think about local optima. People used to examine low (three) dimensional plots in which it's easy to create many local optima that are significantly worse than the global optimum. In reality in deep learning our parameters $b, W$ live in very high dimensions; in these cases, we are much more likely to run into saddle points as opposed to local optimum. What is a problem in higher dimensions are \emph{plateaus}, and this slows down learning. It is in these cases of plateaus that faster learning algorithms like Adam can really help out.
+
 \end{document}
+
