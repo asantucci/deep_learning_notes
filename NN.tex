@@ -960,5 +960,109 @@ There are now multiple hyperparameters.
 
 \subsection{Local Optima} As the field of deep learning has evolved, so has the way we think about local optima. People used to examine low (three) dimensional plots in which it's easy to create many local optima that are significantly worse than the global optimum. In reality in deep learning our parameters $b, W$ live in very high dimensions; in these cases, we are much more likely to run into saddle points as opposed to local optimum. What is a problem in higher dimensions are \emph{plateaus}, and this slows down learning. It is in these cases of plateaus that faster learning algorithms like Adam can really help out.
 
+\subsection{Hyperparameter tuning} Changing a neural network can involve modifying many hyperparameters.
+This section is on how to systematically organize your hyperparameter tuning process. The sheer number of hyperparameters
+can feel overwhelming: learning rate $\alpha$, momentum term $\beta$, or even additional parameters $\beta_1, \beta_2$ and $\epsilon$ 
+if using Adam. Perhaps we additionally need to pick the number of layers, the number of hidden units, whether to use a learning
+rate decay, and additionally a mini-batch size.
+
+\paragraph{Random Search}
+It turns out that of the many hyperparameters, only a few consequentially matter. Perhaps $\alpha$, 
+the learning rate $\alpha$, is the 
+\emph{most} important. Momentum terms and mini-batch size are also often times worthwhile to consider next, 
+followed by the number of 
+hidden units. Lastly, a standard recommendation may be to finally 
+consider the number of layers and whether to use learning rate decay. 
+Whereas it used to 
+be common practice to conduct a \emph{grid-search}, it is now recommended to 
+search over the same space
+\emph{at random}. If we were going to sample $k$ points on a lattice before, we can still sample the same 
+number of points at 
+random, however by sampling at random we allow ourselves to try more \emph{unique} values of 
+each hyperparameter, which is 
+crucial since we don't know in advance which are important for a given task. For more details see
+\href{http://www.jmlr.org/papers/volume13/bergstra12a/bergstra12a.pdf}{Bergstra and Bengio '12}.
+
+\begin{minipage}{1.0\textwidth} 
+  \begin{multicols}{2} 
+    \begin{tikzpicture}[scale=0.75]
+      \draw[step=1cm,gray, very thin] (0, 0) grid (5, 5);
+      \node[rotate=90] at (-0.6, 2.5) {hyperparameter 1};
+      \node            at (2,5.6) {hyperparameter 2};
+      \foreach \x in {1, ..., 4} {
+        \foreach \y in {1, ..., 4} {
+          \node[circle, fill, red, scale=1/2] at (\x, \y) {};
+        }
+      }
+    \end{tikzpicture} 
+\vfill\null \columnbreak
+\begin{tikzpicture}[     
+  declare function={a(\x)=1.7;},     
+  declare function={b(\x)=0.1;} ] 
+  \begin{axis}[     
+    domain=0:2,     
+    axis lines=middle,     
+    axis equal image,     
+    xtick=\empty, 
+    ytick=\empty,     
+    enlargelimits=true,     
+    clip mode=individual, 
+    clip=false 
+    ] 
+    \addplot [red, only marks, mark=*, samples=16, mark size=1]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; 
+  \end{axis} 
+  \node[rotate=90] at (-0.2, 2.5) {hyperparameter 1};
+  \node            at (3.5,-.4)   {hyperparameter 2};
+\end{tikzpicture}
+\end{multicols} 
+\end{minipage}
+
+In practice, we search over more than two (hyperparameters) dimensions; if we search over a grid we suffer from
+ the curse of dimensionality.
+
+\paragraph{Coarse-to-fine sampling schemes} Andrew also recommends using a coarse-to-fine sampling schema.
+To do this, first apply random sampling to a larger region, and then once a sub-region has been identified
+which corresponds to low values of the cost function we can focus more compute resources on a smaller \color{blue}{area}\color{black}.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[     
+  declare function={a(\x)=1.7;},     
+  declare function={b(\x)=0.1;},
+  declare function={c(\x)=0.4;},
+  declare function={d(\x)=0.7;}
+] 
+\pgfmathsetseed{4}
+  \begin{axis}[     
+    domain=0:2,     
+    axis lines=middle,     
+    axis equal image,     
+    xtick=\empty, 
+    ytick=\empty,     
+    enlargelimits=true,     
+    clip mode=individual, 
+    clip=false 
+    ] 
+    \addplot [red, only marks, mark=*, samples=16, mark size=1]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; 
+    \addplot [domain=1:1.5, blue, only marks, mark=+, samples=25, mark size=1]     {0.5*(c(x)+d(x)) + 0.5*rand*(c(x)-d(x))}; 
+  \end{axis} 
+  \node[rotate=90] at (-0.2, 2.5) {hyperparameter 1};
+  \node            at (3.5,-.4)   {hyperparameter 2};
+  \draw[blue,dashed] (3.25, .75) -- (5,.75) -- (5, 1.75) -- (3.25, 1.75) -- (3.25, .75);
+\end{tikzpicture}
+\end{figure}
+
+\subsection{Using an appropriate scale to pick hyperparameters} Sampling at random doesn't in fact mean
+sampling \emph{uniformly} at random over the range of possible values, 
+but instead it's important to carefully select the \emph{scale} over which we search. If it's the case that our search space (in a single dimension) is small, it is acceptable to sample uniformly at random or even perform a grid search: e.g. if we know that the number of layers $L$ should be in the set $\{2, 3, 4\}$, or if we believe the right number of hidden neurons to be between 50 and 100. However, consider a learning rate parameter $\alpha$: we may believe its optimal value to lie somewhere in the interval $(0.001, 1)$. If we sample uniformly at random, we spend 90\% of our resources searching the interval $[0.1, 1)$ and only 10\% searching the smaller end of the interval. This could be problematic. Instead, we may search for (a learning rate) parameters on a \emph{log} scale which in our example might look like $\{0.0001, 0.001, 0.01, 0.1, 1\}$.
+
+\paragraph{Sampling on a log-scale}
+How do we implement sampling on a log-scale? It's simple, take the two endpoints of the interval 
+we wish to sample from and take the logarithm of each term. The resulting pair of real numbers gives another interval
+which we can sample over uniformly at random. Then, after sampling we can exponentiate to get back to our original scale. E.g. $\log_{10}(0.0001) = -4$ and $\log_{10}(1) = 0$. So, we sample from $[-4, 0]$ uniformly at random, and then take these values and apply the transform $f(x) = 10^x$ to recover our desired scale.
+
+\paragraph{Momentum and log scale sampling} Suppose we believe the best value of $\beta$ to lie in the interval
+$(0.9, 0.999)$. Realize that this corresponds to averaging over the last 10 or 1,000 values. Therefore, it doesn't make sense to sample uniformly at random from this interval.
+
 \end{document}
 
