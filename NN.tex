@@ -1064,5 +1064,182 @@ which we can sample over uniformly at random. Then, after sampling we can expone
 \paragraph{Momentum and log scale sampling} Suppose we believe the best value of $\beta$ to lie in the interval
 $(0.9, 0.999)$. Realize that this corresponds to averaging over the last 10 or 1,000 values. Therefore, it doesn't make sense to sample uniformly at random from this interval.
 
+\paragraph{Tips and tricks for organizing hyperparameter searches} Intuitions do get stale, so we must 
+re-evaluate them occasionally. There are two main methods for improving our models. The first is to ``babysit''
+a single model, e.g. we watch the loss function day by day and with each passing day we make a subtle change to our
+modeling architecture. On the other hand, we could train many models in parallel and overlay their loss functions
+in different colors, choosing the best accordingly. If you have enough compute to train models in parallel, take the ``Caviar'' approach whereby we train many models and choose the best according to a development set. If we don't have a lot of compute, we can babysit the model like a Panda with their offspring.
+
+\subsection{Batch Normalization}
+Batch normalization is an algorithm created by Sergey Ioffe and Christian Szegedy, which is designed to make the
+hyperparameter search problem a bit simpler whilst also making your network more robust to a \emph{wider range} 
+of hyperparameter values. Recall that when training
+a model like Logistic regression, we first normalized our input features such that a loss function 
+with elongated contours is transformed to one more round and bowl-like which is easier for gradient descent to
+optimize over.
+
+\begin{minipage}{1.0\textwidth} 
+\begin{multicols}{3}
+\begin{tikzpicture}
+  \node (x1) at (0, 1) {$x_1$};
+  \node (x2) at (0,.5) {$x_2$};
+  \node (x3) at (0, 0) {$x_3$};
+  \draw[->] (x1) to (1, .6);
+  \draw[->] (x2) to (1, .5);
+  \draw[->] (x3) to (1, .4);
+  \node[draw=black,circle] (z) at (1.25, .5) {};
+  \node (params) at (1, .9) {$w,b$};
+  \draw[->] (1.5,.5) to (1.8, .5);
+  \node at (2, .5) {$\hat y$};
+\end{tikzpicture}
+\columnbreak
+\begin{align*}   \mu &\gets \frac{1}{m} \sum_{i=1}^m x^{(i)} \\
+  x &\gets x - \mu \\
+  \sigma^2 &\gets \frac{1}{m} \sum_{i=1}^m (x^{(i)})^2 \hspace{10pt} {\footnotesize \texttt{element-wise squaring}} \\
+  x &\gets \frac{x}{\sigma^2} \end{align*}
+\vfill\null \columnbreak
+\begin{tikzpicture}
+  \draw (0,1) ellipse (3cm and .75cm); 
+  \draw (0,1) ellipse (2cm and .625cm);     
+  \draw (0,1) ellipse (1.25cm and .5cm); 
+  \draw (0,1) ellipse (.75cm and .375cm);
+  \draw[->] (0,0) to (0, -.35);
+  \draw (0,-1.5) circle (1cm);
+  \draw (0,-1.5) circle (.5cm);
+  \draw (0,-1.5) circle (.25cm);
+  \draw (0,-1.5) circle (.125cm);
+\end{tikzpicture}
+\end{multicols} 
+\end{minipage}
+
+Batch normalization is the idea of \emph{normalizing} outputs from hidden layers; there is some debate
+in the deep learning community about whether to apply the normalization before or after the activation function (i.e.
+do we apply to $z_i$ or $a_i$), but normalizing $z_i$'s is done more often. The core question at heart is: can we normalize $a^{[i]}$ (or $z^{[i]}$) in such a way that we train $W^{[i]}$ and $b^{[i]}$ faster.
+
+\subsubsection{Normalizing activations in a network} 
+To implement batch normalization, suppose that we are given some
+hidden unit values $z^{(1)}, \ldots, z^{(m)}$, where we have omitted the superscript square bracket $[\ell]$ indicating
+which layer we are concerned with since this example just focuses on an arbitrary layer; if we wanted to be rigorous we could write this out with full notation as $z^{[\ell](1)}, \ldots, z^{[\ell](m)}$. In any case, we compute a mean and variance for the inputs to the activation function for the layer and we normalize:
+\begin{align*}   \mu = \frac{1}{m} \sum_{i=1}^{m} z^{(i)}, \hspace{15pt}
+  \sigma^2 = \frac{1}{m} \sum_{i=1}^m \left(z_i - \mu\right)^2, \hspace{15pt}
+  z^{(i)}_{\texttt{norm}} = \frac{z^{(i)} - \mu}{\sqrt{\sigma^2 + \epsilon}} \end{align*}
+where we have taken care to inflate our denominator by some fixed $\epsilon$ in the event that an estimate for
+$\sigma^2$ turns out identically zero. After this transformation, each component of our vector $z$ will have 
+zero mean and unit variance. However, we don't \emph{always} want the hidden units to follow a distribution
+with these first two moments; instead, we compute
+\[
+\tilde{z^{(i)}} = \gamma z^{(i)}_{\texttt{norm}} + \beta
+\]
+where $\gamma$ and $\beta$ are learnable parameters of the model. I.e. for whatever optimization algorithm 
+we employ, whether it be gradient descent or RMSprop or Adam, we update $\gamma$ and $\beta$ in the same way that
+we update $W$'s and $b$'s. Notice that we could theoretically recover our original input to $a^{[\ell]}$ if we set 
+$\gamma$ to $\sqrt{\sigma^2+\epsilon}$ and $\beta$ to $\mu$. However, we're also free to learn
+parameters $\gamma$ and $\beta$ such that $\tilde{z^{(i)}}$ has an arbitrary mean and variance. 
+
+\paragraph{Why might we prefer
+the first two moments of $\tilde{z^{(i)}}$ to be different from zero and one?} Well, suppose we're using 
+a sigmoid activation function. Then, in order to take advantage of the non-linearities of the function we'd
+like \emph{not} to squish our input values to a range concentrated around the origin since this is where the 
+activation function behaves linearly.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+  \draw[->] (-3,0) -- (3,0) node[right] {};   
+  \draw[->] (0, 0) -- (0,1) node[above] {};
+  \draw[domain=-3:3,smooth,variable=\x,orange] plot ({\x},{1 / (1 + (exp(-\x)))}); 
+  \draw[domain=-1:1,smooth,variable=\x,purple] plot ({\x},{1/4*1 / sqrt(2*pi*1/10) * exp(-(\x)^2/(2*1/10))}); 
+  \draw[domain=-1:1,smooth,variable=\x,blue,dashed] plot ({\x},{1/4 * \x + 1/2}); 
+\end{tikzpicture}
+\end{figure}
+Instead, perhaps we might like to enforce a larger variance such that we can explore areas of the activation function which are non-linear. In any case, the learning algorithm is free to set $\gamma$ and $\beta$ in such a way that 
+it converges more quickly.
+
+\subsubsection{Fitting batch-norm into a neural network} 
+Recall that each neuron in a network computes two quantities:
+a linear combination using $W, b$ to yield $z$ which is then used as input to an activation function.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[darkstyle/.style={circle,draw,fill=gray!40,minimum size=20}]
+  \node (x1) at (-1.3, 1.5) {$x_1$};   \node (x2) at (-1.3, 0) {$x_2$};   
+  \foreach \x in {0, 1} {
+    \foreach \y in {0,...,1} {
+      \node[draw,circle,scale=2]  (\x\y) at (1.5*\x,1.5*\y) {};
+      \draw (1.5*\x,1.5*\y-.3) -- (1.5*\x,1.5*\y+.3);
+    }
+  }
+  \node[scale=0.5] at (-.2, 1.5) {$z^{[1]}_1$};
+  \node[scale=0.5] at (0.2, 1.5) {$a^{[1]}_1$};
+  \node[scale=0.5] at (-.2, 0) {$z^{[1]}_2$};
+  \node[scale=0.5] at (0.2, 0) {$a^{[1]}_2$};
+  \node[scale=0.5] at (1.5-.2, 1.5) {$z^{[2]}_1$};
+  \node[scale=0.5] at (1.5+0.2, 1.5) {$a^{[2]}_1$};
+  \node[scale=0.5] at (1.5-.2, 0) {$z^{[2]}_2$};
+  \node[scale=0.5] at (1.5+0.2, 0) {$a^{[2]}_2$};
+  \draw[->] (x1) to (00);
+  \draw[->] (x1) to (01);
+  \draw[->] (x2) to (00);
+  \draw[->] (x2) to (01);
+  \draw[->] (00) to (10);
+  \draw[->] (00) to (11);
+  \draw[->] (01) to (10);
+  \draw[->] (01) to (11);
+  \node[draw,circle] (outputneuron) at (3, .75) {}; 
+  \draw[->] (10) to (outputneuron);
+  \draw[->] (11) to (outputneuron);
+  \node (yhat) at (4, .75) {$\hat y$};
+  \draw[->] (outputneuron) to (yhat);
+\end{tikzpicture}
+\end{figure}
+
+Our computation graph for our input now through the first layer now looks like:
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}   \node (x) at (0,0) {$x$};
+  \node[right = 2cm of x] (z1) {$z^{[1]}$};
+  \node[right = 2cm of z1] (zt) {$\tilde z^{[1]}$};
+  \node[right = 1cm of zt] (a1) {$a^{[1]} = g^{[1]}(\tilde z^{[1]})$};
+  \node[above right = 0.125cm of x] (w) {$W^{[1]}, b^{[1]}$};
+  \node[above right = 0.125cm of z1] (beta) {$\gamma^{[1]}, \beta^{[1]}$};
+  \node[below right = 0.075cm of z1] (bn)   {{\small\texttt{batch-norm}}};
+  \draw[->] (x) to (z1);
+  \draw[->] (z1) to (zt);
+  \draw[->] (zt) to (a1);
+\end{tikzpicture}
+\end{figure}
+We then feed-forward the outputs of $a^{[1]}$ into the inputs of $z^{[2]}$, which is governed by 
+learnable parameters $W^{[2]}, b^{[2]}$, after which we perform another batch-norm governed by learnable
+parameters $\gamma^{[2]}$ and $\beta^{[2]}$. This normalized $\tilde z^{[2]}$ is used to compute $a^{[2]}$, and we 
+continue in this fashion through the remainder of the network if desired.
+
+\paragraph{Parameters for a batch-norm network}
+Note that the parameters of our network used to only contain $W^{[1]}, b^{[1]}, \ldots, W^{[L]}, b^{[L]}$ but now 
+additionally contain $\gamma^{[1]}, \beta^{[1]}, \ldots, \gamma^{[L]}, \beta^{[L]}$. To be clear, these $\beta$'s are 
+completely different from the terms used in momentum, Adam, and RMSProp.
+
+\paragraph{Working with mini-batches} So far, we've pretended that we are using vanilla gradient descent, 
+processing our entire dataset each iteration. In practice, batch-norm is often used alongside mini-batch gradient
+descent, for example. In this case, on our first iteration of mini-batch gradient descent we use
+$X^{\{1\}}$ as input and feed-forward through our network (applying batch-norm at each layer if desired). Then, on the
+second iteration of mini-batch gradient descent we use $X^{\{2\}}$ as input, where now the batch-norm computations depend only on this input (and its intermediary transforms) but no longer on $X^{\{1\}}$. I.e. batch-norm at each iteration of mini-batch gradient descent should only depend on the current mini-batch of data and none others.
+
+\paragraph{Parameters of a network which utilizes batch-norm} We've so far acted as though our parameters for a
+layer $\ell$ are $W^{[\ell]}$, $b^{[\ell]}$, $\gamma^{[\ell]}$, and $\beta^{[\ell]}$. However, realize that 
+$z^{[\ell]} = W^{[\ell]} a^{[\ell-1]} + b^{[\ell]}$, and that the subsequent step in batch-norm is to subtract out a mean and then later perform a translation via $\beta^{[\ell]}$; adding this constant $b^{[\ell]}$ is nullpotent since we later subtract out a common value from all elements in $z^{[\ell]}$. Therefore, if using batch-norm we can eliminate using $b^{[\ell]}$ (or we can think of permanently setting it to zero). Then, our transformations become 
+$z^{[\ell]} = W^{[\ell]} a^{[\ell-1]}$ and then we can compute $z^{[\ell]}_{\texttt{norm}}$, and then we compute 
+$\tilde z^{[\ell]} = \gamma^{[\ell]} z^{[\ell]}_{\texttt{norm}} + \beta^{[\ell]}$. In this case, $\beta^{[\ell]}$ controls our 
+bias term that gets added back in. Note that $\gamma^{[\ell]}, \beta^{[\ell]} \in (n^{[\ell]}, 1)$.
+
+\begin{algorithm}   \caption{Batch-norm}
+  \For{$t=1, \ldots, \texttt{numMiniBatches}$} {
+    Compute forward prop on $X^{\{t\}}$; in each hidden layer use Batch-norm to replace $z^{[\ell]}$ with $\tilde z^{[\ell]}$. \\
+    Use backpropagation to compute $\d W^{[\ell]}$, $\d \beta^{[\ell]}$, and $\d \gamma^{[\ell]}$. \\
+    Update parameters $W^{[\ell]}$, $\beta^{[\ell]}$, and $\gamma^{[\ell]}$ using {\small gradient descent (with momentum) / RMSProp / Adam}.
+  } \end{algorithm}
+
+\paragraph{Why does batch-norm work?}
+
 \end{document}
 
