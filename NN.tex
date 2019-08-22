@@ -1318,5 +1318,47 @@ $\mu, \sigma^2$ where we typically estimate these values using exponentially wei
 To make this concrete, fix attention to some layer $\ell$. As we train our network on different mini-batches $X^{\{1\}}, X^{\{2\}}, X^{\{3\}}, \ldots$, we accumulate different estimates for $\mu^{\{1\}[\ell]}, \mu^{\{2\}[\ell]}, \mu^{\{3\}[\ell]}, \ldots$. The exponentially weighted averages across mini-batches informs us of our estimate for $\mu$. Similarly for $\sigma^2$. So, as we train our neural network we accumulate a running average of these $\mu, \sigma^2$ parameters that we plan to use at test time. At test time, we modify \ref{eq: zinorm} to use our (exponentially weighted) estimates for 
 $\mu, \sigma^2$. We still apply the learned parameters $\gamma, \beta$ learned at train time to re-scale our $z^{(i)}_{\texttt{norm}}$. Lastly, we remark that there are many ways we could go about estimating $mu, \sigma^2$ to apply at test time, but that the performance of a network does not typically hinge on these hyperparameters too much.
 
+\subsection{Multi-class classification} 
+\paragraph{Generalization of Logistic regression: Softmax regression}
+So far, the examples we've used for classification have been 
+\emph{binary}, where there are only two possible labels. For instances where there are multiple possible classes,
+there is a generalization of logistic regression called \href{https://en.wikipedia.org/wiki/Softmax_function}{Softmax} regression. Denote by $C$ the number of classes we are trying to categorize our inputs into. We index into our classes from $\{0, 1, \ldots, C-1\}$. The goal is to build a new neural network where the output layer has $C$ units. We'd like for the output units to inform us of the probability of belonging to the corresponding class. To be explicit, in Python notation our output vector is now $(C, 1)$ dimensional.
+
+\paragraph{Multiple neurons in output layer}
+In the final layer of our network with $C$ nodes, each node still consists of two parts: a linear mapping and a non-linear mapping. We still compute $z^{[L]} = W^{[L]} a^{[L-1]} + b^{[L]}$, and once we have this we can now feed it into a Softmax activation function. The first step is to compute a temporary variable $\texttt{tmp} = e^{z^{[L]}}$ where the exponential function is applied element-wise. Then, the output for the final layer is given by
+\[
+a^{[L]} = \frac{e^{z^{[L]}}}{\sum_{j=1}^C \texttt{tmp}_j}.
+\]
+\paragraph{Output layer yields a probability distribution}
+In other words, each element $a_i^{[L]} = \frac{\texttt{tmp}_i}{\sum_{j=1}^C t_j}$ is an element of a probability 
+distribution since we've (i) mapped the real number line to the positive half-space and then (ii) 
+performed normalization by a sum such that the elements add to unit value. The unusual thing about the 
+Softmax activation function is that it takes as input a real vector and outputs a real vector, as opposed to our 
+previous activation functions which are scalar valued. One important aspect of a Softmax classifier is 
+that the decision boundary between any two classes is linear, 
+so if we don't use any non-linear transformations in our hidden layers then we will end up with a linear decision boundary between classes.
+
+\subsubsection{Training a Softmax classifier} Notice that the Softmax function maps the largest input value to the largest probability element. This is analagous to a hardmax function, which for a given vector $(x_1, \ldots, x_n)$,
+emits a binary vector of equal length consisting of all zeros except for the position corresponding to the maximum input, which consists of a unit value. E.g. hardmax would map $\begin{bmatrix}   12 & 4 & -3 \end{bmatrix}$ to $\begin{bmatrix}   1 & 0 & 0 \end{bmatrix}$.
+
+\paragraph{Loss and cost function} Let's consider our loss function for multi-class classification.
+\begin{equation}
+\label{eq: multiclassloss}
+\mathcal L (\hat y, y) = -\sum_{j=1}^C y_j \log \hat y_j.
+\end{equation}
+We can see why this makes sense on a toy example. Suppose we have our multi-class output layer ground-truth $y = \begin{bmatrix}
+0 & 1 & 0 & 0 \end{bmatrix}$, i.e. this is an example of the second class. Then notice that $y_1 = y_3 = y_4 = 0$, and our 
+loss function \ref{eq: multiclassloss} reduces to $-y_2 \log \hat y_2 = -\log \hat y_2$. Since we wish to minimize our
+loss function, this is equivalent to making $\hat y_2$ really large, i.e. we want to emit a large probability for this
+label. What about our \emph{cost} function? It's what you'd expect:
+\[
+J(W^{[1]}, b^{[1]}, \ldots) = \frac{1}{m} \sum_{i=1}^m \mathcal L(\hat y^{(i)}, y^{(i)}).
+\]
+
+\paragraph{Dimensions of output}
+Let's clarify our dimensions. We have $Y = \begin{bmatrix}   y^{(1)} & y^{(2)} & \ldots & y^{(m)} \end{bmatrix}$ where each $y^{(i)}$ is $(C, 1)$ dimensional. So, $Y, \hat Y \in (C, m)$.
+
+\paragraph{Backpropagation and gradient descent with Softmax} The key equation is that $\frac{\partial J}{\partial z^{[L]}} = \d z^{[L]} = \hat y - y$ which is a $(C, 1)$ dimensional vector.
+
 \end{document}
 
