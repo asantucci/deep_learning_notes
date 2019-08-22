@@ -629,7 +629,7 @@ Whereas if we first normalize our inputs, the loss function when plotted over th
 \subsection{Vanishing/Exploding gradients}
 Suppose for the sake of argument that we have a very deep neural network; we've drawn only two hidden neurons per layer but this is only for illustration sake.
 
-{
+\begin{figure}[h]
 \centering
 \begin{tikzpicture}[darkstyle/.style={circle,draw,fill=gray!40,minimum size=20}]
   \node (x1) at (-1.3, 1.5) {$x_1$};   \node (x2) at (-1.3, 0) {$x_2$};   
@@ -662,7 +662,7 @@ Suppose for the sake of argument that we have a very deep neural network; we've 
   \node (yhat) at (8, .75) {$\hat y$};
   \draw[->] (outputneuron) to (yhat);
 \end{tikzpicture}
-}
+\end{figure}
 
 Suppose we choose $g(z) = z$, i.e. a linear activation function, and suppose for sake of argument that we ignore our bias term, i.e. $b^{[\ell]} = 0$ for each layer. It's easy to see that $\hat y = W^{[L]} W^{[L-1]} \ldots W^{[2]} W^{[1]} W^{[0]} X$. Ignoring the last $W^{[L]}$ which is of different dimension, suppose each intermediary weight matrix is slightly larger than an identity matrix i.e. $\begin{bmatrix}   1 + \epsilon & 0 \\ 0 & 1 + \epsilon \end{bmatrix}$ then the value of $\hat y$ explodes with the number of layers,
 $\hat y = W^{[L]} \begin{bmatrix}   (1 + \epsilon)^{L-1} & 0 \\ 0 & (1 + \epsilon)^{L-1} \end{bmatrix}X$. Similarly, if the intermediary matrices are slightly smaller than an identity matrix, then the values of subsequent activation functions get exponentially smaller. This can start to become problematic if we have $L$ quite large; in 2018 Microsoft published state of the art results using $L \approx 150$, which is large enough for these problems to manifest by slowing down gradient descent.
@@ -1239,7 +1239,84 @@ bias term that gets added back in. Note that $\gamma^{[\ell]}, \beta^{[\ell]} \i
     Update parameters $W^{[\ell]}$, $\beta^{[\ell]}$, and $\gamma^{[\ell]}$ using {\small gradient descent (with momentum) / RMSProp / Adam}.
   } \end{algorithm}
 
-\paragraph{Why does batch-norm work?}
+\subsubsection{Why does batch-norm work?}
+One of the primary benefits of batch-norm is that it makes the weights in the \emph{later} layers of the network
+more robust to varying input values in \emph{earlier} layers of the network.
+To see this, consider an example whereby we train a computer-vision classifier to predict whether an image contains
+a cat. However, we only trained our network on images with \emph{black} cats, and in a new set of unseen test cases
+we are given images with cats of varying colors. Even though the true decision boundary may be the same, we wouldn't expect our learning algorithm to discover this if it were only trained on the input shown on the left below. Correspondingly, it may not perform so well on the perturbed data drawn on the right below. The notion of data distribution changing is given the name \emph{covariate shift}.
+
+\begin{minipage}{1.0\textwidth} 
+\begin{multicols}{3}
+\begin{tikzpicture}
+  \node (x1) at (0, 1) {$x_1$};
+  \node (x2) at (0,.5) {$x_2$};
+  \node (x3) at (0, 0) {$x_3$};
+  \draw[->] (x1) to (1, .6);
+  \draw[->] (x2) to (1, .5);
+  \draw[->] (x3) to (1, .4);
+  \node[draw=black,circle] (z) at (1.25, .5) {};  % \node (params) at (1, .9) {$w,b$};
+  \draw[->] (1.5,.5) to (1.8, .5);
+  \node at (2, .5) {$\hat y$};
+\end{tikzpicture}
+\vfill\null \columnbreak
+\begin{tikzpicture} \draw[->] (-1,0) -- (3,0) node[right] {};   
+\draw[->] (0,0) -- (0,1) node[above]  {};
+\draw[domain=-0:2,smooth,variable=\x,green] plot ({\x},{-(\x-1)^2 + 1});   
+\node[draw=red, rectangle,scale=1/2] at (1/2, 1/2) {};
+\node[draw=red, rectangle,scale=1/2] at (2/3, 3/4) {};
+\node[draw=red, rectangle,scale=1/2] at (1/3, 1/4) {};
+\node[draw=red, rectangle,scale=1/2] at (3/4, 1/4) {};
+\node[draw=blue, circle,scale=1/2] at (1/2, 3/2) {};
+\node[draw=blue, circle,scale=1/2] at (1/3, 5/4) {};
+\node[draw=blue, circle,scale=1/2] at (1/2, 1) {};
+\end{tikzpicture}
+\vfill\null \columnbreak
+\begin{tikzpicture} 
+\draw[->] (-1,0) -- (3,0) node[right] {};   
+\draw[->] (0,0) -- (0,1) node[above]  {};
+\draw[domain=-0:2,smooth,variable=\x,green] plot ({\x},{-(\x-1)^2 + 1});   
+\node[draw=red, rectangle,scale=1/2] at (1/2+1/5, 1/2) {};
+\node[draw=red, rectangle,scale=1/2] at (2/3+1/2, 3/4) {};
+\node[draw=red, rectangle,scale=1/2] at (1/3+1, 1/4-1/5) {};
+\node[draw=red, rectangle,scale=1/2] at (3/4+1/3, 1/4) {};
+\node[draw=blue, circle,scale=1/2] at (1, 3/2) {};
+\node[draw=blue, circle,scale=1/2] at (4/3, 5/4) {};
+\node[draw=blue, circle,scale=1/2] at (2, 1) {};
+\end{tikzpicture}
+\end{multicols}
+\end{minipage}
+
+The idea behind covariate shift is that if we learned some $X \leadsto Y$ mapping, then if the distribution of 
+$X$ changes we may need to retrain our learning algorithm. This remains true even if the ground truth function mapping $X \leadsto Y$ has remained static, as in our example above. Note that if the ground truth function \emph{also}
+shifts, then the problem of covariate shift becomes even more acute.
+
+\paragraph{Understanding batch-norm and how it enables learning between layers to be decoupled}
+Consider a multiple-layer neural network. The job of an intermediary layer is to take the output activations from the layer prior and learn a mapping (through tuning weights $W, b$) from these inputs to $\hat y$. But because the output activations from the layer prior also depend on learned weights, the distribution can change quite drastically during training. What batch-norm does is effectively mitigate the amount of covariate shift from previous layers by 
+ensuring that the input to the current layer has a fixed mean and variance. By limiting how updates in the network to earlier layers can affect the distribution of inputs to later layers, we cause the input values to later nodes of the network to become more stable and this really improves learning. So, even \emph{if} our input data does shift distribution, the learned parameters $\gamma, \beta$ in earlier layer will ensure that the values input to latter layers remains more stable. From the perspective of the latter layers, the inputs haven't shifted \emph{as} much. 
+Put differently, we \emph{decouple} learning between layers, allowing each to learn by itself. 
+
+\paragraph{Unintended side-effect: regularization}
+Another interesting note is that batch-norm can be viewed as a form of regularization. To see this, first understand
+that in each mini-batch $X^{\{t\}}$ of data we process, the values $z^{[\ell]}$ are re-scaled based only on $X^{\{t\}}$
+ which may only consist of 64, 128, or 256 examples. So, our calculations for mean and variances are a little 
+bit noisy as a result, and this in turn means that our scaling process of going from $z^{[\ell]}$ to $\tilde z^{[\ell]}$ is also a bit noisy. By adding some noise to inputs of hidden units, its forcing downstream hidden units not to rely too much on any one hidden unit. Similar to dropout, it adds noise to the hidden layers and therefore has a slight regularization effect. Note that if we choose a larger mini-batch size, our estimates for $\mu$ and $\sigma^2$ become more stable and the effect of regularization is reduced. This all said, the primary intent of batch-norm is to 
+speed up training, not to encourage regularization.
+
+\subsubsection{Batch-norm at Test time} Batch-norm processes our data one mini-batch at a time. But, at test time
+we might need to process examples one at a time. How can we adapt our network to do that? Recall that during training,
+we use the following equations to implement batch-norm; we use $m$ to denote the number of examples in the mini-batch (\emph{not} the whole training set).
+\begin{align}   \mu &= \frac{1}{m}\sum_{i=1}^m z^{(i)} \nonumber \\
+  \sigma^2 &= \frac{1}{m} \sum_{i=1}^m \left(z^{(i)} - \mu\right)^2 \nonumber \\
+  \label{eq: zinorm}
+  z^{(i)}_{\texttt{norm}} &= \frac{z^{(i)} - \mu}{\sqrt{\sigma^2 + \epsilon}} \\
+  \tilde z^{(i)} &= \gamma z^{(i)}_{\texttt{norm}} + \beta \nonumber \end{align}
+
+Notice that $\mu, \sigma^2$ are both computed on the entire mini-batch. But at test time, we may not have a mini-batch
+of size 64, 128, or 256 examples to process at a time. What's actually done? We come up with separate estimates of
+$\mu, \sigma^2$ where we typically estimate these values using exponentially weighted averages across mini-batches.
+To make this concrete, fix attention to some layer $\ell$. As we train our network on different mini-batches $X^{\{1\}}, X^{\{2\}}, X^{\{3\}}, \ldots$, we accumulate different estimates for $\mu^{\{1\}[\ell]}, \mu^{\{2\}[\ell]}, \mu^{\{3\}[\ell]}, \ldots$. The exponentially weighted averages across mini-batches informs us of our estimate for $\mu$. Similarly for $\sigma^2$. So, as we train our neural network we accumulate a running average of these $\mu, \sigma^2$ parameters that we plan to use at test time. At test time, we modify \ref{eq: zinorm} to use our (exponentially weighted) estimates for 
+$\mu, \sigma^2$. We still apply the learned parameters $\gamma, \beta$ learned at train time to re-scale our $z^{(i)}_{\texttt{norm}}$. Lastly, we remark that there are many ways we could go about estimating $mu, \sigma^2$ to apply at test time, but that the performance of a network does not typically hinge on these hyperparameters too much.
 
 \end{document}
 
