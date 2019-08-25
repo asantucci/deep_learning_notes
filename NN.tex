@@ -1360,5 +1360,48 @@ Let's clarify our dimensions. We have $Y = \begin{bmatrix}   y^{(1)} & y^{(2)} &
 
 \paragraph{Backpropagation and gradient descent with Softmax} The key equation is that $\frac{\partial J}{\partial z^{[L]}} = \d z^{[L]} = \hat y - y$ which is a $(C, 1)$ dimensional vector.
 
+\section{Structuring Machine Learning Projects}
+\subsection{Introduction to ML Strategy}
+\paragraph{Why ML Strategy?} Suppose you're working on a cat classifier, which in spite of having 90\% accuracy
+is not good enough for your application. You start to brainstorm ideas: collect more data, collect more diverse 
+data, train the algorithm longer, or try a different algorithm, or we could also think about network sizes (either smaller or bigger), trying dropout, adding $\ell_2$ regularization, rewiring the network architecture including
+activation functions and the \# of hidden units. What if we spend 6 months acquiring more training data, only to realize that it barely helps our model? Wouldn't it be nice if we could know which techniques are worthwhile and which
+we can safely discard? This course is about strategy, motivated by practical learnings from Andrew Ng. 
+
+\subsubsection{Orthogonalization} There are many hyperparameters we can tune.Orthogonalization is the notion of being clear-eyed about what exactly we're tuning in order to have a particular desired effect. Consider as an example an old-school television set, with many knobs. One enlarges the picture vertically, another horizontally, another controls 
+how trapezoidal the image appears, whilst others allow vertical and horizontal translation as well as rotation. It's an important UI/UX feature that each knob controls an interpretable function. Imagine how hard it would be to tune a
+television where the first knob controls a linear combination of the adjusters we listed above (e.g.
+$0.1 \times \texttt{height} + 0.3 \times \texttt{trapezoidal} + \ldots$). 
+
+In the context of the television designers,
+orthogonalization refers to designing each knob to achieve a single outcome. This makes it easier to tune the television and center the picture. Another example could be in the context of a car: we have a steering wheel to control left-and-right direction, as well as a gas and brake pedal to control speed. Theoretically, if we had a joystick that controlled $0.3 \times \texttt{steering\_angle} - 0.8 \times \texttt{speed}$ and another joystick which controlled 
+$2 \times \texttt{steering angle} + 0.9 \times \texttt{speed}$, this would suffice to control the car however we'd like. But it's much harder to control than if we had separate controls for each function. 
+
+\paragraph{We tune knobs to satisfy the following four conditions}
+For a supervised learning system, we'd like to tune knobs so that the following hold true:
+performance is acceptable on the training set (perhaps relative to human level performance), 
+the development set, the test set, and finally we'd like for our cost
+function when applied to the test set to correlate well with real world performance.
+\begin{enumerate}   \item If we're not fitting to the training set well on the cost function, we might train a bigger network, or a better optimization algorithm like Adam.
+  \item If we're not fitting well on the development set but it is on the training set, we might consider a set of knobs around regularization or getting a larger training set.
+  \item If we're not fitting well on the test set but we are on the development set, it probably means the development set was too small (i.e. we've overfitted to it) and so we need to acquire a larger development dataset.
+  \item If we're not performing well in the real world but we are on the test set, then we need to go back and change either the development set or the cost function. \end{enumerate}
+
+One example of a knob that is \emph{not} orthogonalized is \emph{early-stopping}: this is an operation that simultaneously affects performance on training set (stopping early you fit the training set less well) but its often intended to improve performance on the development set.
+
+\paragraph{Single (real) number evaluation metric} Progress will be much faster if you have a single real number evaluation metric which lets you tell if your new idea is making an improvement (or not). As a motivating example, consider
+a cat classifier; it's reasonable to examine both precision (the percentage of predictions labeled as cats that actually are cats) and recall (the percentage of the cat population that was correctly classified as a cat). There is often
+a tradeoff between precision and recall, and it turns out we'd like to have both: when the classifier says something
+is a cat, we'd like there to be a high chance of this being true, but similarly for all the images of cats we'd want
+our classifier to correctly label most of them as cats as well. Having
+two real numbers makes it tough to evaluate many different models against each other. In machine learning, it's traditional to combine both of these metrics into an \href{https://en.wikipedia.org/wiki/F1_score}{F1 score}, which is the \href{https://en.wikipedia.org/wiki/Harmonic_mean}{harmonic mean} of \href{https://en.wikipedia.org/wiki/Precision_and_recall}{precision and recall}.
+\[
+F_1 = \frac{2}{\texttt{recall}^{-1} + \texttt{precision}^{-1}} = 2 \cdot \frac{\texttt{precision} \cdot \texttt{recall}}{\texttt{precision} + \texttt{recall}}.
+\]
+ 
+\paragraph{Satisficing and Optimizing Metrics} 
+What if we're considering not only the accuracy of a classifier, but also its cost in compute time? It might seem artificial to come up with a linear combination of these metrics in order to derive a single real number, e.g. \texttt{accuracy - 0.5 x runningTime}. Instead, we might decide that we'd like to \emph{maximize} accuracy \emph{subject to}
+the latency of our algorithm being below some threshold. Then, we say that accuracy is an optimizing metric and
+ latency is a satisficing metric. 
 \end{document}
 
