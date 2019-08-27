@@ -1486,7 +1486,16 @@ training set error not with 0\% error rate but with Bayes error rate or a proxy 
 Then, once we have an idea of the magnitude of avoidable bias as well as the difference between dev/test error, we can
 choose the larger problem to focus our efforts on.
 
-\paragraph{Surpassing human-level performance}
+\paragraph{Surpassing human-level performance} What happens if an algorithm outperforms a team of human experts working together, and simultaneously achieves low dev/test error gap? Here, it's not obvious whether to focus on the bias or variance problem, since we have no estimate for Bayes error: we simply know that it's at or below what our model is performing on the development (and test) sets. What are some example problems where ML has significantly surpassed human-level performance? Some instances are in online advertising (estimating likelihood of a person clicking an ad), another is product recommendations, logistics (predicting transit times), or loan approvals. It's noteworthy that all
+these datasets are based on structured data, and none of the problems are based on \emph{natural perception}
+tasks such as computer vision or natural language processing. Lastly, each of the examples where algorithms surpass human level performance have enjoyed massive amounts of data. 
 
+\paragraph{Two fundamental assumptions of supervised learning}
+\begin{enumerate}   \item You can fit the training set pretty well (avoidable bias).
+  \item The training set performance generalizes pretty well to the dev/test set. \end{enumerate}
+To improve the performance of an ML system, first get a notion of avoidable bias
+by looking at the difference between human-level performance and training error.
+Then, get a notion of magnitude of the variance problem by examining the difference
+between dev/test error. To reduce avoidable bias, tactics like training larger models, training longer, using a better optimization algorithm, or even rewiring the network architecture.  If variance is a problem, you can get more training data (to help generalize to dev/test sets), regularization ($\ell_2$, dropout, data augmentation), or rewiring the network architecture. 
 \end{document}
 
