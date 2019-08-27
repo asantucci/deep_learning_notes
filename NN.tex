@@ -1,7 +1,13 @@
 \documentclass[12pt]{article}  
-\usepackage[boxruled,lined]{algorithm2e} \usepackage{booktabs}
-\usepackage{amsmath} \usepackage{amsthm} \usepackage{amsfonts} 
-\usepackage{xparse} \usepackage{bbm} \usepackage{color,soul} \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
+\usepackage[boxruled,lined]{algorithm2e} 
+\usepackage{booktabs}
+\usepackage{amsmath} 
+\usepackage{amsthm} 
+\usepackage{amsfonts} 
+\usepackage{xparse} 
+\usepackage{bbm} 
+\usepackage{color,soul} 
+\usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
 \usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
@@ -1389,6 +1395,7 @@ function when applied to the test set to correlate well with real world performa
 
 One example of a knob that is \emph{not} orthogonalized is \emph{early-stopping}: this is an operation that simultaneously affects performance on training set (stopping early you fit the training set less well) but its often intended to improve performance on the development set.
 
+\subsection{Setting up your goal}
 \paragraph{Single (real) number evaluation metric} Progress will be much faster if you have a single real number evaluation metric which lets you tell if your new idea is making an improvement (or not). As a motivating example, consider
 a cat classifier; it's reasonable to examine both precision (the percentage of predictions labeled as cats that actually are cats) and recall (the percentage of the cat population that was correctly classified as a cat). There is often
 a tradeoff between precision and recall, and it turns out we'd like to have both: when the classifier says something
@@ -1402,6 +1409,84 @@ F_1 = \frac{2}{\texttt{recall}^{-1} + \texttt{precision}^{-1}} = 2 \cdot \frac{\
 \paragraph{Satisficing and Optimizing Metrics} 
 What if we're considering not only the accuracy of a classifier, but also its cost in compute time? It might seem artificial to come up with a linear combination of these metrics in order to derive a single real number, e.g. \texttt{accuracy - 0.5 x runningTime}. Instead, we might decide that we'd like to \emph{maximize} accuracy \emph{subject to}
 the latency of our algorithm being below some threshold. Then, we say that accuracy is an optimizing metric and
- latency is a satisficing metric. 
+ latency is a satisficing metric.
+
+If we have $N$ metrics we really care about, Andrew recommends making one of them an optimizing metric and
+the reamining $N-1$ satisficing.
+
+\paragraph{Train/dev/test distributions} Note that the development set is 
+sometimes called the cross-validation dataset in other literatures. The core workflow in machine learning is
+\begin{itemize} \item Try a lot of ideas by training different models on the \emph{train}ing set.
+\item Use the development set to evaluate the different ideas and select one.\footnote{Andrew states that it's permissible to keep innovating by improving development set performance.}
+\item Evaluate the efficacy of your approach via the test set. \end{itemize}
+
+It's critical that the development and test sets come from the same distribution. As an example, consider training a classifier to predict the likelihood of a loan application being processed on data restricted to \emph{medium} income
+postal codes; such a classifier may not perform well at all when evaluated on data drawn from \emph{low} income
+postal codes.
+
+\paragraph{Size of development and test sets} We've emphasized that development and test sets should come from the same distribution. But how large should they be? In the past when datasets were smaller, using a rule of thumb like
+allocating 60/20/20 for train/dev/test was reasonable. But modern datasets are so large that it might be quite reasonable to allocate 98\% for training, and another 1\% for development and test each. Since many algorithms have an appetite for data, it's reasonable to allocate more toward training. Remember as well that the purpose of the test set is simply to get an unbiased estimate of error; unless you need to have a very accurate measurement of how your final system is performing, you might not need millions (and millions) of examples but instead maybe 10-100k. It's worth noting that the size of the development set must be large enough that we overfit to it.
+
+\paragraph{When to change dev/test sets and metrics} Sometimes, partway through a project you realize you may have
+set up your dev/test sets incorrectly; in this case, you should move your target accordingly. Consider two cat classifiers where one has slightly lower test error than another but allows pornographic images to also be shown to users.
+This would be totally unacceptable, and so in light of this we might want to change either our dev/test sets or our
+evaluation criterion. Suppose we define error as $\frac{1}{m_{\texttt{dev}}} \sum_{i=1}^{m_{\texttt{dev}}} \mathbbm 1_{\{\hat y^{(i)} \neq y^{(i)}\}}$, then we may wish to modify our criterion for error to instead be something like
+\begin{align*}   & \hspace{10pt} \frac{1}{\sum_{i=1}^{m_{\texttt{dev}}} w^{(i)}} \sum_{i=1}^{m_{\texttt{dev}}} \color{orange}{w^{(i)}} \color{black} \mathbbm 1_{\{\hat y^{(i)} \neq y^{(i)}\}}, \textrm{ where } \\
+  w^{(i)} &= \begin{cases}     1 & \textrm{if } x^{(i)} \textrm{ is non-pornographic} \\
+    100 & \textrm{if } x^{(i)} \textrm{ is pornographic}   \end{cases} \end{align*} where we've added weights to properly penalize presenting a pornographic 
+image and we've also updated our loss function's normalization constant such that error lies in the unit interval.
+Recall the concept of orthogonalization: we (i) define a metric that captures we'd like to achieve and then (ii) 
+worry about how to optimize over that metric. One example of when to change dev/test sets is if we're training an image classifier on professional photographs but users are interfacing with our model by providing as inputs more blurry
+and less focused photos; we might consider switching dev/test sets in this case.
+
+\subsection{Comparing to human-level performance}
+A lot more machine learning teams are starting to compare their performance to that of what humans can achieve.
+There are two main reasons: (i) advances in deep learning mean that it's actually feasible for an algorithm to
+achieve human level performance, and (ii) the workflow of designing and building a machine learning system is more 
+efficient when you're trying to emulate something a human can also do. In these settings, it becomes natural to compare the performance of an algorithm with a human (figure \ref{fig: progress-over-time}).
+\begin{figure}[h]
+  \centering   \begin{tikzpicture}[scale=1.75]     \draw[->] (0,0) -- (3,0) node[right] {\textrm{time}};   
+    \draw[->] (0,0) -- (0,1.25) node[above] {\textrm{accuracy}};
+    \draw[domain=0:3,smooth,variable=\x,orange] plot ({\x},{(tanh(\x))});     \draw[domain=0:3.25,smooth,variable=\x,purple, dashed] plot ({\x},{1}); 
+    \draw[domain=0:3.25,smooth,variable=\x,purple, dashed] plot ({\x},{0.85}); 
+    \draw[<-] (3.25, 1) -- (3.5, 1.5);
+    \draw[<-] (3.25, 0.85) -- (3.5, 0.85);
+    \node at (3.5, 1.5) [right] {\textrm{theoretical optimum level of perf.}};
+    \node at (3.5, 0.85) [right] {\textrm{human level performance}};
+  \end{tikzpicture}
+  \label{fig: progress-over-time}
+  \caption{A typical plot of progress on a problem within a machine learning team. Progress is rapid until
+    human level performance is surpassed, at which point progress may still continue but at a slower rate.
+    Eventually and in an ideal world, performance of an algorithm approaches the theoretical upper bound on 
+    performance which is dictated by the Bayes error rate.} \end{figure}
+
+It's important to emphasize that no matter how hard you work on a problem, you can never surpass \href{https://en.wikipedia.org/wiki/Bayes_error_rate}{Bayes error rate}, and further no human can outperform Bayes error 
+rate by definition.\footnote{An algorithm only outperforms the Bayes error rate on a training dataset if its overfitting.}
+But it also turns out that progress is quite fast until human level performance is surpassed. Why is this?  One reason
+is that for many tasks, human level performance is not that far off from Bayes optimal error, i.e. people are very 
+good at various tasks. But a more fundamental reason is that tools that can help improve model accuracy that are available to use for models performing below human level performance become intractable to use when the model has surpassed human level performance. Specifically, so long as your machine learning algorithm is performing worse than what humans, you can higher humans to create labeled data to feed your algorithm. By asking raters to classify inputs that your
+algorithm is likely to get wrong, you (or your algorithm) can gain an insight as to where you went wrong; this helps
+to improve model performance. Once your algorithm starts outperforming humans, this option is no longer efficacious.
+
+\paragraph{Avoidable bias} Sometimes, understanding how accurately humans can perform a task can inform us of whether
+we should focus on reducing bias or variance in our model. For example, suppose we have a task of classifying whether
+a cat is in an image. Perhaps a human error rate is 1\%, but our model shows 8\% error on development set and 10\% on
+the test test; in this case, we'd like to focus on reducing the bias of our algorithm by training a larger network,
+or running our training algorithm longer (the point is to focus on 
+things that increase performance on the \emph{training} set). But what if the input images are really blurry and
+humans can only achieve a 7.5\% error rate?  In this case we might be wise to focus on reducing the variance of our algorithm, e.g. trying regularization or getting more training data to close the gap between dev/test error. Andrew coins the gap between Bayes error and training error to be \emph{avoidable bias}.
+\begin{equation*}   \texttt{AvoidableBias} = \texttt{BayesError} - \texttt{TrainingError}. \end{equation*}
+
+\paragraph{Understanding human-level performance} How can we define the phrase ``human-level performance'' more 
+precisely? We'll start with an example of medical image classification: given a radiology image make a diagnosis 
+decision; suppose an untrained human achieves 3\% error, a doctor 1\% error, an experience doctor 0.7\% error, and a panel of doctors who discuss the image by committee can earn a 1/2\% error. The question becomes, which benchmark serves as human level performance? We know that Bayes error is less than or equal to 1/2\%, and since we like to proxy Bayes error by human level performance, it makes sense to say that human level performance is 1/2\% in this example. But it also could be the case that for the purpose of deploying a system in practice, that we'd only need to outperform a typical doctor; this could be a very useful result if accomplished and so in some cases it could make sense to argue toward defining human level performance as 1\% in the example above. The point is that we should be clear about what our intentions are when defining human level performance: is it to approximate Bayes error or is it to put a machine learning system into deployment?
+
+So, to summarize, when we consider the bias-variance problem(s) and which to focus on first, it's important to compare
+training set error not with 0\% error rate but with Bayes error rate or a proxy thereof, via human-level performance.
+Then, once we have an idea of the magnitude of avoidable bias as well as the difference between dev/test error, we can
+choose the larger problem to focus our efforts on.
+
+\paragraph{Surpassing human-level performance}
+
 \end{document}
 
