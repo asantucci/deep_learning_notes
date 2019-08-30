@@ -4,6 +4,7 @@
 \usepackage{amsmath} 
 \usepackage{amsthm} 
 \usepackage{amsfonts} 
+\usepackage{enumitem}
 \usepackage{xparse} 
 \usepackage{bbm} 
 \usepackage{color,soul} 
@@ -11,6 +12,7 @@
 \usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
+\usepackage[normalem]{ulem}
 \usepackage{pgfplots}  
 \usetikzlibrary{positioning}
 \usetikzlibrary{calc}
@@ -1497,5 +1499,146 @@ To improve the performance of an ML system, first get a notion of avoidable bias
 by looking at the difference between human-level performance and training error.
 Then, get a notion of magnitude of the variance problem by examining the difference
 between dev/test error. To reduce avoidable bias, tactics like training larger models, training longer, using a better optimization algorithm, or even rewiring the network architecture.  If variance is a problem, you can get more training data (to help generalize to dev/test sets), regularization ($\ell_2$, dropout, data augmentation), or rewiring the network architecture. 
+
+\subsection{Error Analysis} Suppose you are trying to get a learning algorithm to accomplish what a human can,
+but your algorithm has not yet achieved human level performance. Then, inspecting mistakes that your algorithm
+has made can give insight into what to do next; this process is known as error analysis.
+
+\paragraph{Carrying out error analysis} Suppose you have a hunch that your classifier is making a particular type
+of mistake that you can envision fixing with diligent effort. The question becomes is it possible to know in advance
+whether it's ``worth it'' to embark on such a project. An error analysis might consist of getting 100 mislabeled
+development set examples, and counting how many are attributable to the type of mistake you're interested in.
+This yields an upper bound on how much performance could be improved if we were to correctly classify these examples. In just a few minutes, this gives an estimate of whether its worth tackling a particular type of problem.
+
+\begin{table}[h]
+\centering \begin{tabular}{c|c c c | c}
+Image & Dog & Great Cats & Blurry & Comments \\
+\hline
+1 & \checkmark & & & Pitbull \\
+2 & & & \checkmark & \\
+3 & & \checkmark & \checkmark & Rainy day at zoo\\
+$\vdots$ & $\vdots$ &$\vdots$ &$\vdots$ & \\
+\hline
+\% of total \end{tabular}  
+\caption{Often, we have multiple ideas for how to improve an algorithm. Andrew recommends making a spreadsheet tracking the
+error analysis for each idea in parallel; e.g. the table above.
+The conclusion of this process informs us where to direct our efforts, as well as upper bounds for how much we can
+expect to improve performance.} 
+\end{table}
+
+\paragraph{Cleaning up incorrectly labeled data}
+A supervised learning problem comprises of a mapping $X \leadsto Y$.
+Suppose we dig through our data and find that some output labels in $Y$ are incorrect.
+Is it worth your time to fix some of these labels? Note that we make a semantic distinction here:
+an algorithm that doesn't predict the right label is said to \emph{mislabel} an example, but an example
+that is incorrectly marked in the (training/dev/test) data itself is said to be an \emph{incorrect} label
+
+If the errors are reasonably random it's not worth worrying about as learning algorithms tend to be robust to random errors.
+So long as the total dataset size is large enough, and the actual percentage of incorrectly labeled examples is not \emph{too} high,
+it's probably not worth your time to fix the mistakes. If the errors are systematic it's a different story. Andrew recommends proceeding with an error analysis as described above, by adding a column counting the number of incorrect labels among mislabeled predictions, so that we can estimate an upper bound on the benefit we'd get from fixing the labels ourselves.
+
+If you do decide to correct labels in your dev set, you should apply the same procedure to your test set and at the same time. This
+is in order to preserve the similarity in distribution between the two datasets. That said, we don't always need to apply the same
+procedure to the training data, for several reasons: the training data are much larger and so this can be a much more onerous task, and learning algorithms can handle cases where they are trained on data from a slightly different distribution than what they are evaluated on (so long as dev/test are consistent, our estimates for which algorithm is best and its performance are unbiased).
+
+\paragraph{Build your first system quickly, then iterate} This is a piece of advice from Andrew 
+that applies less if (i) you have significant domain experience or (ii) there is a body of academic literature
+you can draw upon that addresses the same problem. 
+Suppose you're building a speech recognition system: there are many directions you could go in terms of how to prioritize 
+improvements. E.g. you would focus on
+\begin{itemize}[topsep=2pt,itemsep=0.5pt,partopsep=1pt,parsep=1pt]
+  \item Noisy backgrounds (where in fact caf\'e noise is different from car noise),
+  \item Accented speech, for which there are particular ways to make the recognition system more robust,
+  \item Far from microphone (known as far-field speech recognition),
+  \item Young children's speech (how they pronounce words, and which words are used), or
+  \item Stuttering (and how to handle nonsensical phrases like ``oh'', ``ah'', ``um''). \end{itemize}
+It's not obvious where to focus your efforts. Instead, build quickly then iterate: set up a dev/test set and
+a metric, then build an initial machine learning system and train it. The key is to
+\begin{enumerate}[topsep=2pt,itemsep=0.5pt,partopsep=1pt,parsep=1pt] \item Understand performance on dev/test, 
+\item Apply corresponding bias-variance analysis, and lastly
+\item Set up an error analysis \end{enumerate}
+in order to prioritize next steps. By having first built a quick-and-dirty system, 
+we can now \emph{localize} the problem: e.g. does the error
+analysis inform us that far-field speech recognition techniques could greatly benefit our performance?
+
+\subsubsection{Mismatched Training and Dev/Test Set} Deep learning algorithms have a huge hunger for 
+labeled training data. Sometimes, teams are tempted to throw more and more training data at an algorithm
+in spite of it not coming from the same distribution as their dev/test set; there are some subtleties
+in how we can deal with this.
+
+\paragraph{Training and testing on different distributions} Suppose you're building a mobile application whereby users will
+upload photos taken from cell phones, and you'd like to recognize whether the photograph contains a cat. For the sake of simplicity,
+suppose there are two main sources of data you can obtain: (i) the distribution of data you really care about, which tends to be
+less professionally shot, less well-framed, and perhaps even blurrier because it is shot by amateur users, or (ii) crawling the web
+and downloading a lot of professional, high-resolution, and well-framed cat photographs. Perhaps our mobile app doesn't yet have
+a lot of users, and so we have 10,000 photographs from our app but crawling the web gets us another 200,000 images.
+
+What we care about in the end is how well our algorithm performs on the set of images drawn from the mobile phone 
+distribution, because in the end that's how our users will upload their photos. But you don't \emph{just} want to train
+on 10,000 images, because that's just perhaps too small a training set. One thing we could do, is take \emph{all} of the 210,000
+images we have (drawn from different distributions) and shuffle them into train/dev/test sets. There are advantages and disadvantages to this approach. The advantage is that your train/dev/test sets all come from the same distribution. But, the (huge) disadvantage
+is that our dev set is likely to contain a disproportionate amount of professional photographs relative to mobile uploads. In expectation, $\frac{200}{210} \times 100 \%$ of our development set will come from professional photographs, and only $\frac{10}{210} \times 100\%$ will come from mobile uploads. Therefore, Andrew recommends \emph{against} this option of randomly shuffling our data together.
+
+Instead, we can still use the same number of images in the training set: we'll use \emph{all} of the data drawn from the distribution we \emph{don't} care about in addition to some of the data we \emph{do} (e.g. we'll use 200,000 professional images from the web and another 5,000 from our mobile phone uploads) and then the dev/test shall consist \emph{only} of images that we actually care about (e.g. the remaining 5,000 mobile phone uploads). The advantage of this method is we're now being more precise in how we specify
+our dev/test set performance and how it relates to real-world performance. The disadvantage is that the distribution of our
+\emph{training} data is different from that of dev/test. However, this split of data yields better performance in the long term.
+
+Let's consider a second example. Suppose we're building a speech recognition system which replaces a rear-view mirror in a car into
+a smart-device. Perhaps we've worked on speech recognition before, and we have a lot of data from other speech recognition applications but not from a \emph{speech-activated rear-view mirror}. Our training set shall consist of all speech recognition data we've
+accumulated over the years (which comes in $(x,y)$ pairs where $x$ is an audio-clip and $y$ is a transcript), perhaps this includes
+smart voice activated speakers, keyboards, etc. But crucially, \emph{our} rear-view mirror application will involve a lot more
+\emph{navigation} requests because the device is situated in a car. Therefore, 
+the distribution of our dev/test sets shall be drawn from speech activated rear-view mirrors, and will be different from our 
+training data which will consist of all other data.\footnote{Perhaps if we don't think we need \emph{all} the speech-activated rear-view mirror examples in our dev/test sets (i.e. they are already sufficiently large), then we can place some examples in our training set.}
+
+\paragraph{Bias and variance with mismatched data distributions} Estimating the bias and variance of your learning algorithm
+can greatly inform what to prioritize next. But the way you analyze bias and variance changes when your training set is drawn from a different distribution than your dev/test set. Suppose we're in the realm of cat classification for images, and so Bayes optimal error is nearly zero. To carry out bias-variance analysis, we typically examine training error in conjunction with error on the dev set. Suppose training error is 1\% and development set error is 10\%. \emph{If} your training and development sets are drawn from the \emph{same} distribution, then you have a variance problem and that our algorithm is not generalizing well from the training set. However, if the data are drawn from different distributions this is no loner a safe conclusion: perhaps the development set is just much harder to classify on. The problem with this analysis was that as we changed from looking at training error to dev error, two things changed at one time: (i) the algorithm saw data in the training set but not the dev set, and (ii) the distribution of dev data 
+is different. Because we changed two things at a time, it's difficult to know if the 9\% increase in error is due to the algorithm
+not having seen the examples before (part of the variance problem) \emph{or} if its just because the dev set data is different.
+
+In order to tease out these differences, we'll define a new piece of data called the \texttt{training-dev} set. This will be a new
+subset of data that we carve out which will have the \emph{same} distribution as our training data \emph{but} we will \emph{not}
+explicitly train our network on this data. So, to be explicit: the setting is that our dev/test sets are drawn from the same distribution but our training set is drawn from a different distribution. We'll take a partition our training data with a smaller piece 
+going to the \texttt{training-dev} set, so now just as the dev/test sets have the same distribution so do the training data alongside the \texttt{training-dev} set. To carry out error analysis, you should now look at misclassified examples from \emph{each} of
+the training set, the \texttt{training-dev} set, \emph{and} the development set.
+
+Suppose we have 1\% training error, 9\% \texttt{training-dev} error, and 10\% dev set error. We can \emph{now} conclude that we have a large variance problem, since all that changed when moving from measuring error on training set to the \texttt{training-dev} set
+was that our network hadn't yet seen the examples (but the distribution remained the same). So, our network isn't generalizing well
+to examples drawn from the same distribution.
+
+Suppose as a different example that we have a 1\% training error, a 1.5\% \texttt{training-dev} error, but when we go to the development set we get a 10\% error. Now, our variance problem is relatively low: the error only increased slightly in moving to unseen examples drawn from the same distribution. What we have here is a data mismatch problem.
+
+Suppose as another example the training error is 10\%, \texttt{training-dev} is 11\%, and development set error is 12\%. Here, our largest problem is \emph{avoidable bias}, since our proxy for Bayes optimal error is zero in the cat classifying example. As a last example, suppose training error is 10\%, \texttt{training-dev} error is 11\%, and dev error is 20\%. Here, we have two issues: the avoidable bias is high, and although the variance problem is small (difference between \texttt{training-dev} and training error is small), there is a large discrepancy between \texttt{training-dev} and development set error which indicates a data mismatch problem.  
+
+\begin{figure}[h]
+\centering
+\label{fig: relationshipsbwdifferrs}
+\begin{tikzpicture}   \node (hlp) at (0, 0) {\textrm{Human level performance}};
+  \node[below = 0.5 cm of hlp] (train) {\textrm{Training set error}}; 
+  \draw[<->] (hlp) -- (train) node[midway,right] {\textrm{avoidable bias}};
+  \node[below = 0.5 cm of train] (traindev) {\textrm{\texttt{Training-dev} set error}};
+  \draw[<->] (train) -- (traindev) node[midway,right] {\textrm{variance}};
+  \node[below = 0.5 cm of traindev] (dev) {\textrm{Dev error}};
+  \draw[<->] (traindev) -- (dev) node[midway,right] {\textrm{data mismatch}};
+  \node[below = 0.5 cm of dev] (test) {\textrm{Test error}};
+  \draw[<->] (dev) -- (test) node[midway, right] {\textrm{over-fitting to dev set}}; \end{tikzpicture}
+\caption{The relationship between different types of data and the problems we may run into when there are measurable gaps in error between adjacent levels.}
+\end{figure}
+
+Andrew also cautions that it's possible for the dev/test error to be lower than that of our training error or our \texttt{training-dev} error. Consider the following table which generalizes the above analysis:
+\begin{table}[h]
+\centering
+\begin{tabular}{c| c c }
+ & $\substack{\textrm{General speech} \\ \textrm{recognition}}$ & $\substack{\textrm{Rearview mirror} \\ \textrm{speech data}}$ \\
+\hline
+Human level & ``Human level'' & \\
+$\substack{\textrm{Error for} \\ \textrm{output trained on}}$ & ``Training error'' & \\
+$\substack{\textrm{Error for} \\ \textrm{examples \uline{not}} \\ \textrm{trained on}}$ & ``\texttt{Training-dev} error'' & ``Dev/test error''\\ \end{tabular}
+\end{table}
+
+We've seen the relationships between filled in entries in figure \ref{fig: relationshipsbwdifferrs}. If we fill in the remaining missing entries, we can sometimes gain additional insights such as, ``if human level performance varies from one problem to another, then its indicative one problem may be \emph{harder} than another''. Or, we can understand bias-variance and data mismatch problems in different degrees.
+
+\paragraph{Addressing data mismatch}
+
 \end{document}
 
