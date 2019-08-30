@@ -1615,13 +1615,13 @@ Suppose as another example the training error is 10\%, \texttt{training-dev} is 
 \label{fig: relationshipsbwdifferrs}
 \begin{tikzpicture}   \node (hlp) at (0, 0) {\textrm{Human level performance}};
   \node[below = 0.5 cm of hlp] (train) {\textrm{Training set error}}; 
-  \draw[<->] (hlp) -- (train) node[midway,right] {\textrm{avoidable bias}};
+  \draw[<->] (hlp) -- (train) node[midway,right,scale=0.7] {\textrm{avoidable bias}};
   \node[below = 0.5 cm of train] (traindev) {\textrm{\texttt{Training-dev} set error}};
-  \draw[<->] (train) -- (traindev) node[midway,right] {\textrm{variance}};
+  \draw[<->] (train) -- (traindev) node[midway,right,scale=0.7] {\textrm{variance}};
   \node[below = 0.5 cm of traindev] (dev) {\textrm{Dev error}};
-  \draw[<->] (traindev) -- (dev) node[midway,right] {\textrm{data mismatch}};
+  \draw[<->] (traindev) -- (dev) node[midway,right,scale=0.7] {\textrm{data mismatch}};
   \node[below = 0.5 cm of dev] (test) {\textrm{Test error}};
-  \draw[<->] (dev) -- (test) node[midway, right] {\textrm{over-fitting to dev set}}; \end{tikzpicture}
+  \draw[<->] (dev) -- (test) node[midway, right,scale=0.7] {\textrm{over-fitting to dev set}}; \end{tikzpicture}
 \caption{The relationship between different types of data and the problems we may run into when there are measurable gaps in error between adjacent levels.}
 \end{figure}
 
@@ -1638,7 +1638,21 @@ $\substack{\textrm{Error for} \\ \textrm{examples \uline{not}} \\ \textrm{traine
 
 We've seen the relationships between filled in entries in figure \ref{fig: relationshipsbwdifferrs}. If we fill in the remaining missing entries, we can sometimes gain additional insights such as, ``if human level performance varies from one problem to another, then its indicative one problem may be \emph{harder} than another''. Or, we can understand bias-variance and data mismatch problems in different degrees.
 
-\paragraph{Addressing data mismatch}
+\paragraph{Addressing data mismatch} What if your training set comes from a different distribution than your dev/test sets, and furthermore your error analysis shows that you have a data mismatch problem. What can you do? Andrew recommends carrying out a \emph{manual} error analysis and trying to understand the differences between the training set and the dev set.\footnote{We remark that to avoid overfitting to your test set, for the sake of error analysis you should only manually inspect the development set.} E.g. in
+the context of the speech-activated rear-view mirror application, you might listen to examples in your development set to try
+and figure out how they're different from your training set: perhaps car noise is a problem that arises, or mis-classification of
+numbers involved in the parsing of street numbers. Once you've identified how the development set may be harder than the training
+set, you can look into ways to making the training set more similar, or perhaps collect more data that is similar to your dev/test
+sets. E.g. you could simulate noisy in-car data, or you could get more data of people speaking out numbers. 
+These are rough guidelines, and not systematic recommendations.
+
+\paragraph{Artificial data synthesis}
+If the goal is to make your training data more similar to your development set, one technique you could use is artificial data synthesis. In the context of the car noise problem, this could mean taking clean (background noise-free) audio examples and super-imposing them with background car noise to generate a new example. This simple audio synthesis can create more data that is more similar to your dev/test distribution. There's one caveat: suppose you have 10k hours of clean audio but only 1 hour of car noise. If we naively re-apply this one hour of car noise to all 10k hours of clean audio, our learning algorithm may over-fit to this particular
+type of background noise. You could imagine that our synthesized data only simulates a very small subset of the space of all possible audio clips with background car noise.
+
+As another example, consider self-driving cars and the sub-problem of car detection (or drawing bounding boxes around cars within still images). Some people have thought before: can we render computer generated graphics (possibly from video games) to generate additional data? The problem is that our rendered simulation may only cover a small subset of the possible space of all cars and graphics that are required by a real application. I.e. to the human eye a video game simulation with 20 unique cars may look very realistic and as though we aren't running into repeat cars and designs, but a neural network may very quickly learn to overfit to this small subset of the space of data.
+
+\subsection{Learning from Multiple Tasks}
 
 \end{document}
 
