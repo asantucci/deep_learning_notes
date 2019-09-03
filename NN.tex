@@ -1888,5 +1888,39 @@ are not. In this setting, it's still valid to perform multi-task learning. In pa
     that multi-task learning hurts performance compared to training separate neural networks is if your 
     neural network isn't big enough. If you can train a large enough network, multi-task learning shouldn't hurt performance. \end{enumerate}
 
+\subsection{End-to-End Deep Learning} One of the most exciting recent developments in deep learning has been the rise
+of end-to-end deep learning. What does this mean? Briefly, it means learning systems that require multiple stages of processing
+and replacing it by a single neural network. Consider an example of speech recognition, where the goal is to take an input $x$
+such as an audio clip and map it to a transcript $y$. Traditional speech recognition methods require many stages of processing,
+e.g. \href{https://en.wikipedia.org/wiki/Mel-frequency_cepstrum}{MFCC} which is an algorithm for extracting hand designed features
+of audio. Having extracted these low level features, you might apply a machine learning algorithm to find the \href{https://en.wikipedia.org/wiki/Phoneme}{phonemes} in the audio clip, the basic units of sound; e.g. the word ``cat'' consists of three sounds: ``cu'', ``ah'', and ``tu''. After phonemes are extracted, we can string them together to form words, and finally stringing together words
+we get a transcript.
+\begin{figure}   \centering
+  \begin{tikzpicture}     \node (x) at (0.15,0) {$x$};
+    \node[below=0.15cm of x] (a) {audio};
+    \node[right=0.5cm of a] (f) {features};
+    \node[right=0.5cm of f] (p) {phonemes};
+    \node[right=0.5cm of p] (w) {words};
+    \node[right=0.5cm of w] (t) {transcript};
+    \draw[->] (a) -- (f) node[midway,above,scale=0.7] {\textrm{MFCC}};
+    \draw[->] (f) -- (p) node[midway,above,scale=0.7] {\textrm{ML}};     \draw[->] (p) -- (w) node[midway,above,scale=0.7] {``cat''}; 
+    \draw[->] (w) -- (t) node[midway,above,scale=0.7] {}; 
+  \end{tikzpicture}
+  \caption{\footnotesize A classical pipeline for processing audio into transcripts. Such a sequential system of algorithms is no longer necessary with end-to-end deep learning: a neural network can accept as input an audio clip and return as output a transcript.\footnote{Andrew admits that end-to-end deep learning systems have made obsolete many sub-fields which used to exist and which were predicated on delicate feature engineering for their particular sub-task.}} \end{figure}
+
+One downside of end-to-end learning is that you might need a lot of data before it starts to work well; for smaller sized data sets,
+the hand-engineered approaches can be quite competitive. If you have a medium amount of data, there are intermediary approaches
+where perhaps in our example you input the audio and bypass the features and just learn to output phonemes, and then there would be some other steps involved as well: this would be a step towards end-to-end learning.
+
+Let's consider an interesting example of face recognition at turnstiles in public transit systems: if the system recognizes the face
+it shall allow the person to pass without needing to scan an RFID card. The input here is an image which contains a person approaching the turnstile, and we could try to learn a mapping from this raw image $X$ to the identity of the person $Y$, but this turns out to \emph{not} be the best approach: the person can approach the turnstile from different directions and they can be at varying distances from the camera whereby their face appears much larger. The best approach to date is a multi-step approach where first one piece of software is run to detect \emph{where} the person's face is within the image, and as a secondary step the image is cropped 
+and centered to a new neural network that tries to learn the person's \emph{identity}. 
+Researchers have found that breaking the problem into two stages has resulted in the best performance.\footnote{The way the second neural network works is that it takes as input two images, and it returns whether the images contain the same person or not. In our application, the background database would consist of facial images for all employees on file: the algorithm would then scan through
+all the background images and see whether the input image contains a face that matches a face contained in the database.}
+Why does the two step approach work better? There are two reasons.
+\begin{itemize}   \item Each subproblem is much simpler.
+  \item Each sub-task is amenable to producing a lot of data. \end{itemize}
+In particular, there's a lot of data one could obtain that maps input images $X$ to bounded boxes $y$ describing where a persons face in the image lie. Separately, there's a lot of data for looking at two images and determining whether its the same person. But in contrast, if you try to learn everything at the same time, there is much less data of the form $(X,Y)$ where $X$ is an input image
+from a turnstile, and $Y$ is the identity of the person. One example where end-to-end deep learning does work well is in machine translation, since for any arbitrary pair of countries we have a lot of mappings or translations.
 \end{document}
 
