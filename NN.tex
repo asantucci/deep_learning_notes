@@ -16,6 +16,8 @@
 \usepackage{pgfplots}  
 \usetikzlibrary{positioning}
 \usetikzlibrary{calc}
+\usetikzlibrary{fit}
+\usetikzlibrary{shapes}
 
 \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
@@ -1652,7 +1654,69 @@ type of background noise. You could imagine that our synthesized data only simul
 
 As another example, consider self-driving cars and the sub-problem of car detection (or drawing bounding boxes around cars within still images). Some people have thought before: can we render computer generated graphics (possibly from video games) to generate additional data? The problem is that our rendered simulation may only cover a small subset of the possible space of all cars and graphics that are required by a real application. I.e. to the human eye a video game simulation with 20 unique cars may look very realistic and as though we aren't running into repeat cars and designs, but a neural network may very quickly learn to overfit to this small subset of the space of data.
 
-\subsection{Learning from Multiple Tasks}
+\subsection{Learning from Multiple Tasks} One of the most powerful ideas in deep learning is that you can sometimes take
+knowledge learned by a neural network from one task, and apply that (part of that) knowledge to a separate task; this is called 
+\href{https://en.wikipedia.org/wiki/Transfer_learning}{transfer learning}. Suppose as an example that you've trained your neural
+network on image recognition, where $(x,y)$ pairs where $x$ is an image and $y$ is some object (e.g. a dog, cat, bird, etc.). Suppose we're interested in adapting this neural network to make a diagnosis in radiology.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[darkstyle/.style={circle,draw,fill=gray!40,minimum size=20}]
+  \node (x) at (0, 0) {$x$};
+  \node[draw, circle, right = 0.5cm of x] (l10) {};
+  \node[draw, circle, above = .3cm of l10] (l11) {};
+  \node[draw, circle, below = .3cm of l10] (l12) {};
+  \node[draw, fit = (l10) (l11) (l12)] (layer1) {};
+  \draw[->] (x) to (layer1);
+  \node[draw, circle, right = 0.5cm of layer1] (l20) {};
+  \node[draw, circle, above = .1cm of l20] (l21) {};
+  \node[draw, circle, above = .1cm of l21] (l22) {};
+  \node[draw, circle, above = .1cm of l22] (l23) {};
+  \node[draw, circle, below = .1cm of l20] (l24) {};
+  \node[draw, circle, below = .1cm of l24] (l25) {};
+  \node[draw, circle, below = .1cm of l25] (l26) {};
+  \node[draw, fit = (l23) (l26)] (layer2) {};
+  \draw[->] (layer1) to (layer2);  
+  \node[draw, circle, right = 0.5cm of layer2] (l30) {};
+  \node[draw, circle, above = .1cm of l30] (l31) {};
+  \node[draw, circle, above = .1cm of l31] (l32) {};
+  \node[draw, circle, above = .1cm of l32] (l33) {};
+  \node[draw, circle, below = .1cm of l30] (l34) {};
+  \node[draw, circle, below = .1cm of l34] (l35) {};
+  \node[draw, circle, below = .1cm of l35] (l36) {};
+  \node[draw, fit = (l33) (l36)] (layer3) {};
+  \draw[->] (layer2) to (layer3);  
+  \node[draw, circle, right = 0.5cm of layer3] (l40) {};
+  \node[draw, circle, above = .3cm of l40] (l41) {};
+  \node[draw, circle, below = .3cm of l40] (l42) {};
+  \node[draw, fit = (l40) (l41) (l42)] (layer4) {};
+  \draw[->] (layer3) to (layer4);
+  \node[draw, circle, right = 0.5cm of layer4] (l50) {};
+  \node[draw, circle, above = .3cm of l50] (l51) {};
+  \node[draw, circle, below = .3cm of l50] (l52) {};
+  \node[draw, fit = (l50) (l51) (l52)] (layer5) {};
+  \draw[->] (layer4) to (layer5);
+  \node[draw, circle, right = 0.5cm of layer5] (fnode) {};
+  \node[draw, fit = (fnode)] (fnodebox) {};
+  \draw[->] (layer5) to (fnodebox);
+  \node[right = 0.5cm of fnodebox] (yhat) {$\hat y$};
+  \draw[->] (fnodebox) to (yhat);
+  \node[right = 0.5cm of yhat] (imagerecog) {\color{orange} \textrm{image recognition}};
+  \node[draw, ultra thick, orange, right = 0.435cm of layer5, cross out, scale = 1.75] {};
+  \node[below = 0.75cm of fnode, draw, circle] (newnode) {};
+  \node[draw, fit = (newnode)] (newnodebox) {};
+  \draw[->, purple] (layer5) to (newnodebox);
+  \node[right = 0.5cm of newnodebox] (newyhat) {$\hat y$};
+  \draw[->, purple] (newnodebox) to (newyhat);
+  \node[right = 1cm of newyhat] {\color{purple} radiology};
+\end{tikzpicture}
+\caption{\footnotesize To adapt a neural network, we can simply delete the last output layer of our old network and also the weights feeding into the last layer. We create a new set of randomly initialized weights just for the last layer $(W^{[L]}, b^{[L]})$ and set the last layer to output
+a radiology diagnosis. After training the old network on $(X,Y)$ pairs of images and objects, we can train a new network where the $X$'s are radiology images and the $Y$'s are diagnoses.}
+\end{figure}
+
+Now, when we re-train the network on new $(X,Y)$ pairs (radiology images and diagnoses, in our example), we have several options for how exactly to update our weights. If we have a small radiology dataset, we may choose to update the weights only in the last layer
+$W^{[L]}$ and $b^{[L]}$ (or maybe the last two layers) and keep the remaining parameters fixed. If you have enough radiology data, you could also retrain all of the other layers in the network as well; in this case the initial phase of training on original ($X,Y$) pairs is known as pre-training
+because we are using these $(X,Y)$ pairs to pre-initialize our weights and the training on radiology data is known as \emph{fine-tuning}. In this example, we've taken what we've learned from image recognition and applied it to radiology diagnosis. Why does this work? A lot of the low level features consist of things such as detecting edges and curves. If we can learn from a very large image recognition data set how to create these features, might help our learning algorithm do better in radiology diagnosis since the network has learned to understand the structure and nature of how images look.
 
 \end{document}
 
