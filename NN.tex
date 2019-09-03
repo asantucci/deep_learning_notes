@@ -1718,5 +1718,175 @@ Now, when we re-train the network on new $(X,Y)$ pairs (radiology images and dia
 $W^{[L]}$ and $b^{[L]}$ (or maybe the last two layers) and keep the remaining parameters fixed. If you have enough radiology data, you could also retrain all of the other layers in the network as well; in this case the initial phase of training on original ($X,Y$) pairs is known as pre-training
 because we are using these $(X,Y)$ pairs to pre-initialize our weights and the training on radiology data is known as \emph{fine-tuning}. In this example, we've taken what we've learned from image recognition and applied it to radiology diagnosis. Why does this work? A lot of the low level features consist of things such as detecting edges and curves. If we can learn from a very large image recognition data set how to create these features, might help our learning algorithm do better in radiology diagnosis since the network has learned to understand the structure and nature of how images look.
 
+\paragraph{Adding new intermediary layers when transfer learning}
+Let's consider another example. Suppose you've trained a speech recognition system, so now our $(X,Y)$ mapping is from audio snippets to transcripts. Suppose now that we want to build a ``wake-words'' or ``trigger words'' detection system for applications like
+waking up Google Home, Amazon Alexa, etc. In order to construct a new neural network, we can again take out the last layer of our
+old network, reset the weights $W^{[L]}$ and $b^{[L]}$, create a new output node, and then finally train on new $(X,Y)$ pairs. But
+another thing we can do is to actually create several new layers in order to better predict labels for your wake-work prediction
+problem.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[darkstyle/.style={circle,draw,fill=gray!40,minimum size=20}]
+  \node (x) at (0, 0) {$x$};
+  \node[draw, circle, right = 0.5cm of x] (l10) {};
+  \node[draw, circle, above = .3cm of l10] (l11) {};
+  \node[draw, circle, below = .3cm of l10] (l12) {};
+  \node[draw, fit = (l10) (l11) (l12)] (layer1) {};
+  \draw[->] (x) to (layer1);
+  \node[draw, circle, right = 0.5cm of layer1] (l20) {};
+  \node[draw, circle, above = .1cm of l20] (l21) {};
+  \node[draw, circle, above = .1cm of l21] (l22) {};
+  \node[draw, circle, above = .1cm of l22] (l23) {};
+  \node[draw, circle, below = .1cm of l20] (l24) {};
+  \node[draw, circle, below = .1cm of l24] (l25) {};
+  \node[draw, circle, below = .1cm of l25] (l26) {};
+  \node[draw, fit = (l23) (l26)] (layer2) {};
+  \draw[->] (layer1) to (layer2);  
+  \node[draw, circle, right = 0.5cm of layer2] (l30) {};
+  \node[draw, circle, above = .1cm of l30] (l31) {};
+  \node[draw, circle, above = .1cm of l31] (l32) {};
+  \node[draw, circle, above = .1cm of l32] (l33) {};
+  \node[draw, circle, below = .1cm of l30] (l34) {};
+  \node[draw, circle, below = .1cm of l34] (l35) {};
+  \node[draw, circle, below = .1cm of l35] (l36) {};
+  \node[draw, fit = (l33) (l36)] (layer3) {};
+  \draw[->] (layer2) to (layer3);  
+  \node[draw, circle, right = 0.5cm of layer3] (l40) {};
+  \node[draw, circle, above = .3cm of l40] (l41) {};
+  \node[draw, circle, below = .3cm of l40] (l42) {};
+  \node[draw, fit = (l40) (l41) (l42)] (layer4) {};
+  \draw[->] (layer3) to (layer4);
+  \node[draw, circle, right = 0.5cm of layer4] (l50) {};
+  \node[draw, circle, above = .3cm of l50] (l51) {};
+  \node[draw, circle, below = .3cm of l50] (l52) {};
+  \node[draw, fit = (l50) (l51) (l52)] (layer5) {};
+  \draw[->] (layer4) to (layer5);
+  \node[draw, circle, right = 0.5cm of layer5] (fnode) {};
+  \node[draw, fit = (fnode)] (fnodebox) {};
+  \draw[->] (layer5) to (fnodebox);
+  \node[right = 0.5cm of fnodebox] (yhat) {$\hat y$};
+  \draw[->] (fnodebox) to (yhat);
+  \node[right = 0.5cm of yhat] (imagerecog) {\color{orange} \textrm{audio detection}};
+  \node[draw, ultra thick, orange, right = 0.435cm of layer5, cross out, scale = 1.75] {};
+  \node[below = 1cm of fnode, draw, circle] (newnode) {};
+  \node[above = 0.25cm of newnode, draw, circle] (newnodep1) {};
+  \node[below = 0.25cm of newnode, draw, circle] (newnodem1) {};
+  \node[draw, fit = (newnodem1) (newnodep1)] (newnodebox) {};
+  \draw[->, purple] (layer5) to (newnodebox);
+  \node[right = 0.5cm of newnode, draw, circle] (lastlayercentered) {};
+  \node[below = 0.25cm of lastlayercentered, draw, circle] (lastlayerminus) {};
+  \node[above = 0.25cm of lastlayercentered, draw, circle] (lastlayerplus) {};
+  \node[draw, fit = (lastlayerminus) (lastlayerplus)] (lastlayer) {};
+  \node[right = 0.5cm of lastlayercentered, draw, circle] (lastnode) {};
+  \node[draw, fit = (lastnode)] (penultimate) {};
+  \node[right = 0.5cm of lastnode] (newyhat) {$\hat y$};
+  \draw[->, purple] (newnodebox) to (lastlayer);
+  \draw[->, purple] (lastlayer) to (penultimate);
+  \draw[->, purple] (penultimate) to (newyhat);
+  \node[right = 0.25cm of newyhat] {\color{purple} wake-words};
+\end{tikzpicture}
+\caption{\footnotesize In another example, we demonstrate transfer learning with wake-words. Here, we not only modify the last output layer to 
+output a prediction in wake-word space, but we also incorporate several additional intermediary layers. Depending on how much
+wake-words data we have available to train on, we can choose to either only train the weights of the newly incorporated/modified layers \emph{or} we can choose to re-train the entire network.}
+\end{figure}
+
+\paragraph{When does transfer learning make sense?}
+It only makes sense to apply transfer learning when the inputs for both tasks are the same. E.g. in our examples above, the inputs were images in one example and audio clips in another. Further, transfer learning makes sense when we have a lot of data for the problem you're transfer learning from, and relatively less data for the problem you're transferring to. Let's reconsider our examples. In the context of image recognition, it's not uncommon to end up with a million examples for a particular task, which is quite a lot of data to learn low-level and useful features in earlier layers of our network. On the other hand, we may only have a few hundred examples for our radiology diagnosis
+problem. A lot of the knowledge that we learned from image recognition can be transferred and can greatly help radiology
+diagnosis even without a lot of radiology data. In the context of our speech recognition example, 
+we might have 10,000 hours of data which is quite a lot, but for trigger words perhaps we only have one hour of data. In this case,
+a lot of what the network learns about what human voices sound like, what the components of speech are, and so on,
+can be really helpful in building a good wake-words detector. It \emph{doesn't} make sense to use transfer learning when we have little data to pre-train our network on and relatively more data to fine-tune the network on; in these cases we need to remember what
+our core task is and recognize which training examples are the most informative.
+
+\subsubsection{Multi-task Learning} In transfer learning, we have a sequential process: we start learning how to perform task A
+and then transfer that knowledge to task B. In multi-task learning, we start simultaneously and try to have one neural network do several things at the same time (with the hope that each of these tasks helps in solving the other tasks).
+\begin{table}[h]
+  \centering
+  \begin{tabular}{l | c}     & $y^{(i)}$ \\
+    \hline
+    Pedestrians & 0 \\
+    Cars & 1 \\
+    Stop-signs & 1 \\
+    Traffic-lights & 0     \end{tabular}
+\caption{\footnotesize In multi-task learning, our input is an image $x^{(i)}$ and our output
+  $y^{(i)}$ may have one entry for each task we are interested in. Suppose you're building a self-driving car, which needs to be able to detect several types of objects like pedestrians, other cars, stop signs, traffic lights,
+and maybe even other things.
+ If we have an image of a car at a stop-sign, then we would
+  expect the following output vector to be associated with the example.} 
+\end{table} 
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[darkstyle/.style={circle,draw,fill=gray!40,minimum size=20}]
+  \node (x) at (0, 0) {$x$};
+  \node[draw, circle, right = 0.5cm of x] (l10) {};
+  \node[draw, circle, above = .3cm of l10] (l11) {};
+  \node[draw, circle, below = .3cm of l10] (l12) {};
+  \node[draw, fit = (l10) (l11) (l12)] (layer1) {};
+  \draw[->] (x) to (layer1);
+  \node[draw, circle, right = 0.5cm of layer1] (l20) {};
+  \node[draw, circle, above = .1cm of l20] (l21) {};
+  \node[draw, circle, above = .1cm of l21] (l22) {};
+  \node[draw, circle, above = .1cm of l22] (l23) {};
+  \node[draw, circle, below = .1cm of l20] (l24) {};
+  \node[draw, circle, below = .1cm of l24] (l25) {};
+  \node[draw, circle, below = .1cm of l25] (l26) {};
+  \node[draw, fit = (l23) (l26)] (layer2) {};
+  \draw[->] (layer1) to (layer2);  
+  \node[draw, circle, right = 0.5cm of layer2] (l30) {};
+  \node[draw, circle, above = .1cm of l30] (l31) {};
+  \node[draw, circle, above = .1cm of l31] (l32) {};
+  \node[draw, circle, above = .1cm of l32] (l33) {};
+  \node[draw, circle, below = .1cm of l30] (l34) {};
+  \node[draw, circle, below = .1cm of l34] (l35) {};
+  \node[draw, circle, below = .1cm of l35] (l36) {};
+  \node[draw, fit = (l33) (l36)] (layer3) {};
+  \draw[->] (layer2) to (layer3);  
+  \node[draw, circle, right = 0.5cm of layer3] (l40) {};
+  \node[draw, circle, above = .3cm of l40] (l41) {};
+  \node[draw, circle, below = .3cm of l40] (l42) {};
+  \node[draw, fit = (l40) (l41) (l42)] (layer4) {};
+  \draw[->] (layer3) to (layer4);
+  \node[draw, circle, right = 0.5cm of layer4] (l50) {};
+  \node[draw, circle, above = .3cm of l50] (l51) {};
+  \node[draw, circle, below = .3cm of l50] (l52) {};
+  \node[draw, fit = (l50) (l51) (l52)] (layer5) {};
+  \draw[->] (layer4) to (layer5);
+  \node[draw, circle] (fnode) at (6.25, 0.25) {};
+  \node[draw, circle, above = 0.1cm of fnode] (fnodep) {};
+  \node[draw, circle, below = 0.1cm of fnode] (fnodeb) {};
+  \node[draw, circle, below = 0.1cm of fnodeb] (fnodebb) {};
+  \node[draw, fit = (fnodebb) (fnodep)] (fnodebox) {};
+  \draw[->] (layer5) to (fnodebox);
+  \node[right = 0.5cm of fnodebox] (yhat) {$\hat y$};
+  \draw[->] (fnodebox) to (yhat);
+\end{tikzpicture}
+\caption{\footnotesize Note that here our last layer has as many nodes as there are tasks we trying to solve, and correspondingly
+the dimension of $\hat y$ will be the same as well.}
+\end{figure}
+
+\paragraph{Loss for a multi-task problem} Let $|y|$ denote the dimension of our output vector. We could define a cost function to be
+\begin{equation*}   \sum_{i=1}^m \sum_{j=1}^{|y|} \mathcal L(\hat y_j^{(i)}, y_j^{(i)}) \end{equation*}
+where $\mathcal L(\cdot, \cdot)$ is our usual Logistic loss function for a binary prediction problem. What's the difference between this and using softmax regression? In softmax regression, we assign a single label to each (training) example, whereas in multi-task
+learning each example can have multiple labels. Note that we could have trained $|y|$ separate neural networks to each solve one task. But, if some of the earlier features in the neural network can be shared between different tasks, then you might find that training a single neural network to solve multiple tasks results in better performance.
+
+\paragraph{Multi-task learning works even if inputs aren't ``fully'' labeled} Suppose we are still in the setting of self-driving cars and we have an image of a car at a stop-sign, but that our human-labeler didn't bother to mark the image as having both
+a car and a stop-sign (just one of them). Maybe we're in the setting where some of our examples \emph{are} fully labeled, but others
+are not. In this setting, it's still valid to perform multi-task learning. In particular, we modify our loss-function to only sum over the indices of $j$ which correspond to having been labeled. I.e.
+\begin{equation*}   
+  \sum_{i=1}^m \sum_{j=1}^{|y|} \mathcal L(\hat y_j^{(i)}, y_j^{(i)}) \mathbbm 1_{\{\textrm{Category } j \textrm{ was labeled on example } i\}} 
+\end{equation*}
+
+\paragraph{When does multi-task learning make sense?} It makes sense in general when three things are true.
+\begin{enumerate}   \item  If the set of tasks could benefit from having shared low-level features. E.g. in the context of autonomous driving, being able to recognize traffic lights, cars, and pedestrians may help us learn features that also distinguish stop signs.
+  \item If the amount of data available for each task is similar. As a soft rule, we expect a single task to benefit from multi-task
+    learning if the amount of data available from all other tasks is at least as large as the amount of data we have at hand
+    for one task; the reasons why are similar to when transfer learning does and doesn't work.
+  \item Can train a big enough network to do well on all tasks. From researcher Rich Carona, the only times 
+    that multi-task learning hurts performance compared to training separate neural networks is if your 
+    neural network isn't big enough. If you can train a large enough network, multi-task learning shouldn't hurt performance. \end{enumerate}
+
 \end{document}
 
