@@ -1952,5 +1952,229 @@ to map $X$ to $Y$.
 As an example of the boundary between end-to-end learning, consider self-driving cars. If we don't take an end-to-end approach,
 we could take as input an image of what's in front of the car (perhaps obtained through picture, radar, lidar, or other sensor readings) and (i) try to figure out what objects are in the image, (ii) how to navigate the car safely around the pedestrians and cars spotted, and (iii) execute the plan with appropriate steering as well as acceleration and braking. Step two is usually not performed by a neural network, but instead by a piece of software called \href{https://en.wikipedia.org/wiki/Motion_planning}{Motion Planning}. As of this writing, Andrew believes that end-to-end learning is less effective than more sophisticated hand-engineered approaches.
 
+\section{Convolutional Neural Networks} Computer vision is an area with a rapidly growing research body. E.g.,
+computer vision can
+\begin{itemize} \item Help self-driving cars figure out where the other cars and pedestrians are in order to avoid them.
+\item Allow an individual to unlock a phone or door with just their face.
+\item Show you the most attractive, beautiful, or relevant pictures. \end{itemize}
+
+Deep learning is even helping new types of art to be created (see \href{https://en.wikipedia.org/wiki/Neural_Style_Transfer}{Neural Style Transfer}). Rapid advances in computer vision enable new applications
+that were impossible just a few years ago. Lastly, computer vision researchers are quite cunning and there is a lot of
+inspiration to be drawn from this sub-field. Let's start by reviewing some examples of computer vision.
+\begin{itemize}   \item Image classification: you're given a 64x64 pixel image and asked to output a single bit describing 
+    whether it contains a cat.
+  \item Object Detection: you're given an image and you must determine what objects are in the picture but also draw bounding boxes around them. \end{itemize}
+
+\paragraph{Size of input data $\leadsto$ Convolution Operation} 
+If we work with a 64x64 image, and since we have three color channels RGB, each image or input is
+$64^2 \cdot 3 = 12,288$ dimensional. But, this was a tiny image, what if we had a $1,000 x 1,000$ pixel image (one megapixel)? Then
+each input has $1e3^2 \cdot 3 = 3e6 = 3,000,000$ or three million dimensions. What if we have 1,000 hidden units in our first layer?
+Then $W^{[1]}$ will be of size $1k x 3M$ which is 3 billion parameters; with that many parameters it's difficult to get enough
+data to prevent overfitting, and further the computational (and memory) requirements to train a neural network with three billion
+parameters is not yet feasible. All of this is to say that if you want to use large images, you need to better implement the
+convolution operation.
+
+\subsection{Edge detection example} Earlier layers of a neural network might detect edges, later layers may detect parts
+of objects, and later layers still may detect complete objects such as a person's face. In this section, we'll focus on edge 
+detection. 
+\subsubsection{Filters and kernels}
+Suppose that we have a simple $6 \times 6$ matrix that represents a grey-scale image (we don't need the three RGB channels).
+\begin{equation*}   \begin{bmatrix}     3 & 0 & 1 & 2 & 7 & 4 \\
+    1 & 5 & 8 & 9 & 3 & 1 \\     2 & 7 & 2 & 5 & 1 & 3 \\     
+    0 & 1 & 3 & 1 & 7 & 8 \\     
+    4 & 2 & 1 & 6 & 2 & 8 \\     
+    2 & 4 & 5 & 2 & 3 & 9 \\ 
+  \end{bmatrix} \end{equation*}
+
+How can we extract vertical edges? We start by constructing a $3 \times 3$ \emph{filter} matrix (also sometimes referred to as a kernel).
+\begin{equation*}   \begin{bmatrix}     1 & 0 & -1 \\     1 & 0 & -1 \\
+    1 & 0 & -1 \\
+  \end{bmatrix} \end{equation*}
+
+Now, what we'll do is take our original image and \emph{convolve} it with the filter; the symbol used to denote convolution is $*$,
+which is distinguished from multiplication by context. The output of convolving our $6 \times 6$ image is a $4 \times 4$ matrix. Let's consider how to apply the convolution to our input image to yield the first element in the output; to do this we'll examine the first few rows and columns of our input:
+
+\begin{equation*}   
+  \begin{bmatrix}     
+    3 & 0 & 1 \\
+    1 & 5 & 8 \\     
+    2 & 7 & 2 \\     
+  \end{bmatrix} 
+  *
+  \begin{bmatrix}     
+    1 & 0 & -1 \\     
+    1 & 0 & -1 \\
+    1 & 0 & -1 \\
+  \end{bmatrix}
+  = 3\cdot 1 + 1 \cdot 1 + 2\cdot 1 + 0\cdot 0 + 5 \cdot 0 + 7 \cdot 0 + 1 \cdot -1 + 8 \cdot -1 + 2 \cdot -1 = -5.
+\end{equation*}
+Notice that this is a simple element-wise product followed by a summation. To continue the process, we move the filter
+over by one column and repeat the same process (element-wise multiplication followed by summation) 
+to get the output for the second item in the first row. Continuing on, we get
+
+\begin{equation*}   
+  \begin{bmatrix}     
+    3 & 0 & 1 & 2 & 7 & 4 \\
+    1 & 5 & 8 & 9 & 3 & 1 \\     
+    2 & 7 & 2 & 5 & 1 & 3 \\     
+    0 & 1 & 3 & 1 & 7 & 8 \\     
+    4 & 2 & 1 & 6 & 2 & 8 \\     
+    2 & 4 & 5 & 2 & 3 & 9 \\ 
+  \end{bmatrix} 
+  *
+  \begin{bmatrix}     
+    1 & 0 & -1 \\     
+    1 & 0 & -1 \\
+    1 & 0 & -1 \\
+  \end{bmatrix}
+  = \begin{bmatrix}     -5 & -4 & 0 & 8 \\
+    -10 & -2 & 2 & 3 \\
+    0 & -2 & -4 & -7 \\
+    -3 & -2 & -3 & -16   \end{bmatrix}.
+\end{equation*}
+
+This turns out to detect (vertical) edges. Why? Let's first consider a simpified example
+\begin{equation*}   \begin{bmatrix}
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0
+  \end{bmatrix} \end{equation*}
+Mathematically,
+\begin{equation*}   \begin{bmatrix}
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0 \\
+ 10 & 10 & 10 & 0 & 0 & 0
+  \end{bmatrix} 
+  * 
+  \begin{bmatrix}     
+    1 & 0 & -1 \\     
+    1 & 0 & -1 \\
+    1 & 0 & -1 \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}     0 & 30 & 30 & 0 \\
+    0 & 30 & 30 & 0 \\
+    0 & 30 & 30 & 0 \\
+    0 & 30 & 30 & 0 \\
+  \end{bmatrix} \end{equation*}
+If we were to visualize this image, it might look as follows:
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}[scale=0.5]     \draw[fill = white, black] (1,0) rectangle (2, 2);     \draw[fill = white] (0,0) rectangle (1, 2); 
+  \end{tikzpicture} \end{figure} The larger values yield brighter pixel intensive values. In this image, there is very clearly a vertical edge right down the middle.
+We can visualize our filter or kernel matrix as well.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[scale=0.5]     \draw[fill = white] (0,0) rectangle (1, 2); 
+    \draw[fill = white, black] (1,0) rectangle (2, 2);     
+    \node at (3, 1) {*};
+    \draw[fill = white] (4,0) rectangle (4.6666, 2); 
+    \draw[fill = gray]  (4.6666,0) rectangle (5.3333, 2);
+    \draw[fill = black] (5.3333,0) rectangle (6, 2);     
+    \node at (7, 1) {=};
+    \draw[fill = black] (8,0) rectangle (8.6666, 2); 
+    \draw[fill = white]  (8.6666,0) rectangle (9.3333, 2);
+    \draw[fill = black] (9.3333,0) rectangle (10, 2);     
+  \end{tikzpicture} \end{figure}
+
+Two remarks: (i) since our image is small ($64 \times 64$), the vertical edge detected appears ``quite wide'', but this is simply
+an artifact of having a small-resolution image, and (ii) the enhanced pixel intensity in the middle of the output is a way of
+saying that there exists a strong vertical edge in this part of the original image.
+
+\paragraph{Edge Detection: a second example} 
+We define a positive edge as one where the light goes from light to dark, versus a negative edge
+which goes from a dark to a light transition. We will learn about other edge detectors, and also have a chance to understand
+how an algorithm can learn to construct a filter (rather than creating one by hand).
+
+Note that the filter we used above does take into account positive versus negative edges. If our input image was flipped
+then the signs of the entries would inform us whether the edge is positive or negative.
+\begin{equation*}   \begin{bmatrix}
+ 0 & 0 & 0 & 10 & 10 & 10 \\
+ 0 & 0 & 0 & 10 & 10 & 10 \\
+ 0 & 0 & 0 & 10 & 10 & 10 \\
+ 0 & 0 & 0 & 10 & 10 & 10 \\
+ 0 & 0 & 0 & 10 & 10 & 10 \\
+ 0 & 0 & 0 & 10 & 10 & 10
+  \end{bmatrix} 
+  * 
+  \begin{bmatrix}     
+    1 & 0 & -1 \\     
+    1 & 0 & -1 \\
+    1 & 0 & -1 \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}     0 & -30 & -30 & 0 \\
+    0 & -30 & -30 & 0 \\
+    0 & -30 & -30 & 0 \\
+    0 & -30 & -30 & 0 \\
+  \end{bmatrix} 
+\end{equation*}
+
+As a picture, this might look like:
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[scale=0.5]
+    \draw[fill = gray] (0,0) rectangle (1, 2); 
+    \draw[fill = white] (1,0) rectangle (2, 2);     
+    \node at (3, 1) {*};
+    \draw[fill = white] (4,0) rectangle (4.6666, 2); 
+    \draw[fill = gray]  (4.6666,0) rectangle (5.3333, 2);
+    \draw[fill = black] (5.3333,0) rectangle (6, 2);     
+    \node at (7, 1) {=};
+    \draw[fill = gray] (8,0) rectangle (8.6666, 2); 
+    \draw[fill = black]  (8.6666,0) rectangle (9.3333, 2);
+    \draw[fill = gray] (9.3333,0) rectangle (10, 2);     
+\end{tikzpicture} 
+\end{figure}
+
+Since the shade of transitions is now reversed, so are the signs on the values
+in our matrix. IF you don't care whether the edge is positive or negative,
+it's reasonable to take absolute values of the output.
+
+\paragraph{Horizontal Edges} It may not be surprising to learn that the filter
+matrix used to detect horizontal edges is simply a transpose of the filter matrix
+used to detect vertical edges. I.e.
+\begin{equation*} \begin{bmatrix}   1 & 1 & 1 \\ 0 & 0 & 0 \\ -1 & -1 & -1 \end{bmatrix}   \end{equation*}
+Let's consider a more interesting example. The matrix
+\begin{equation}   \begin{bmatrix}     10 & 10 & 10 & 0 & 0 & 0 \\
+    10 & 10 & 10 & 0 & 0 & 0 \\
+    10 & 10 & 10 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 10 & 10 & 10 \\
+    0 & 0 & 0 & 10 & 10 & 10 \\
+    0 & 0 & 0 & 10 & 10 & 10 \\   \end{bmatrix} \end{equation}
+As applied to our filter:
+\begin{equation*}   \begin{bmatrix}     
+    10 & 10 & 10 & 0 & 0 & 0 \\
+    10 & 10 & 10 & 0 & 0 & 0 \\
+    10 & 10 & 10 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 10 & 10 & 10 \\
+    0 & 0 & 0 & 10 & 10 & 10 \\
+    0 & 0 & 0 & 10 & 10 & 10 \\       \end{bmatrix}
+  *
+  \begin{bmatrix}   1 & 1 & 1 \\ 0 & 0 & 0 \\ -1 & -1 & -1 \end{bmatrix}.
+  =
+  \begin{bmatrix}     0 & 0 & 0 & 0 \\
+    30 & 10 & -10 & 30 \\
+    30 & 10 & -10 & 30 \\
+    0 & 0 & 0 & 0   \end{bmatrix} \end{equation*}
+Graphically, our input image is ``lit-up'' in the upper left and lower right hand corners.
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}     \draw[fill=gray] (0,0) rectangle (1,1);
+    \draw (0,1) rectangle (1,2);      \draw[fill=gray] (1,1) rectangle (2,2);
+    \draw (1,0) rectangle (2,1);
+  \end{tikzpicture} \end{figure}
+Andrew comments that the fact we see intermediate values in the middle columns is an artifact of using a low-resolution
+input image. In the cases where the filter outputs $\pm 10$ in our example above, this reflects the fact that the filter
+captures positive edges on one side and negative edges on the other, and so blending these together gives an intermediary value.
+
+There is another filter matrix we could use, called a Sobel filter. It's shaped like
+\begin{equation*}   \begin{bmatrix}     1 & 2 & 1 \\ 0 & 0 & 0 \\ -1 & -2 & -1   \end{bmatrix}. \end{equation*}
 \end{document}
+
+
 
