@@ -18,6 +18,7 @@
 \usetikzlibrary{calc}
 \usetikzlibrary{fit}
 \usetikzlibrary{shapes}
+\usetikzlibrary{patterns}
 
 \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
@@ -2133,7 +2134,7 @@ As a picture, this might look like:
 \end{figure}
 
 Since the shade of transitions is now reversed, so are the signs on the values
-in our matrix. IF you don't care whether the edge is positive or negative,
+in our matrix. If you don't care whether the edge is positive or negative,
 it's reasonable to take absolute values of the output.
 
 \paragraph{Horizontal Edges} It may not be surprising to learn that the filter
@@ -2173,8 +2174,67 @@ input image. In the cases where the filter outputs $\pm 10$ in our example above
 captures positive edges on one side and negative edges on the other, and so blending these together gives an intermediary value.
 
 There is another filter matrix we could use, called a Sobel filter. It's shaped like
-\begin{equation*}   \begin{bmatrix}     1 & 2 & 1 \\ 0 & 0 & 0 \\ -1 & -2 & -1   \end{bmatrix}. \end{equation*}
+\begin{equation*}   
+  \begin{bmatrix}     1 & 2 & 1 \\ 0 & 0 & 0 \\ -1 & -2 & -1     \end{bmatrix}
+\end{equation*}
+
+The advantage of this filter is that it places more weight on the central pixel, and this can make
+the filter a bit more robust. Computer vision researchers will try other weights as well. E.g. the Scharr filter,
+
+\begin{equation*}   
+  \begin{bmatrix}     3 & 10 & 3 \\ 0 & 0 & 0 \\ -3 & -10 & -3     \end{bmatrix}
+\end{equation*}
+This filter has other properties. What we've shown above is just for \emph{vertical} edge detection,
+but we can also transpose each of these filters to get a \emph{horizontal} edge detector.
+With the rise of deep learning, perhaps we don't need to pick these numbers by hand: we can instead treat these
+as parameters and have the neural network learn weights through back propagation, where the goal is to learn nine
+parameters so that when you take the image and convolve it with the filter, we yield a ``good'' edge detector.
+If the network wants, it can learn the same values as what are in a Sobel or Scharr filter, but its more likely they
+will learn something else that is even more effective at detecting edges. Further, perhaps we can learn filters which
+detect edges at arbitrary angles (e.g. an edge at 45 degrees). Underlying all these computations is the convolution,
+which allows back propagation to learn whatever filter it wants.
+
+\paragraph{Padding} One modification we can make to the basic convolutional operation is padding. In general, if we have
+an $n \times n$ matrix with an $f \times f$ size filter, the output will be of size $(n-f+1) \times (n-f+1)$. There are two downsides
+here:
+\begin{enumerate} \item Every time we apply a convolution operator, our image shrinks. Perhaps we don't want our image to shrink each time
+  we detect edges or other features; if we have many layers in our network then the latter layers take as input
+  a shrunken image which could end up being a $1 \times 1$ pixel in the end.
+\item If we examine corner pixels, we notice that the filter only \emph{touches} the pixel once, whereas for a pixel
+in the middle of the image there are many $f \times f$ regions that overlap with the pixel. And so, it's as if pixels on
+the corners of the image are used much less in the output; it's as though we're throwing away a lot of information
+for these corner pixels. \end{enumerate}
+
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}[scale=0.5]     \draw[step=1.0, very thick] (0,0) grid (5,5);
+    \filldraw[pattern=north west lines,pattern color=orange] (0,4) rectangle(1,5);
+    \draw[step=1.0, thick, orange] (0,2) grid (3,5);
+    \draw[step=1.0, very thick] (6,0) grid (11, 5);
+    \filldraw[pattern=north east lines, pattern color = purple] (8,2) rectangle (9,3);
+    \draw[step=1.0, very thick, purple] (8,3) rectangle (11,0);
+    \draw[step=1.0, very thick, purple] (6,5) rectangle (9,2);
+  \end{tikzpicture}
+  \caption{\footnotesize On the left, we visualize how the upper-left pixel can only be touched once by a filter. On the right,
+    we highlight a central cell and visualize how it can be touched by more than one filter.} \end{figure}
+
+To fix both of these problems, we can \emph{pad} our input image.
+\begin{figure}   \centering
+  \begin{tikzpicture}     \draw[step=1.0, very thick, orange] (-1,-1) grid (6,6);
+    \draw[step=1.0, very thick]         (0, 0) grid (5,5);
+    \filldraw[pattern=north west lines,pattern color=purple] (0,4) rectangle(1,5);
+    \draw[->] (7.5, 3) -- (8.5, 3);
+    \draw[step=1.0, very thick]         (10, 0) grid (15,5);
+    \filldraw[pattern = north west lines, pattern color = purple] (10,5) rectangle (12,3);   \end{tikzpicture}
+  \caption{\footnotesize If we pad our input image with two additional rows and two additional columns (depicted on the left), 
+    we preserve the size of the image
+    in the output. Further, corner cells are able to \emph{influence} the more than just one value in the output image 
+    (depicted on the right).} \end{figure}
+
+Now, if we take our \emph{padded} image and apply a convolution operation, we manage
+to preserve the size of the input image. I.e. the convolution outputs an image of the same size
+as the input. By convention, we pad with zeros. In general, if we pad with $p$ additional cells
+on each side of the image, then our input image has dimension $(n+2p) \times (n+2p)$, and if we apply a convolution
+operation we end up with a $(n+2p-f+1) \times (n+2p-f+1)$ output image.
+
 \end{document}
-
-
 
