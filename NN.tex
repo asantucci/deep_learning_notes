@@ -2234,7 +2234,213 @@ Now, if we take our \emph{padded} image and apply a convolution operation, we ma
 to preserve the size of the input image. I.e. the convolution outputs an image of the same size
 as the input. By convention, we pad with zeros. In general, if we pad with $p$ additional cells
 on each side of the image, then our input image has dimension $(n+2p) \times (n+2p)$, and if we apply a convolution
-operation we end up with a $(n+2p-f+1) \times (n+2p-f+1)$ output image.
+operation we end up with a $(n+2p-f+1) \times (n+2p-f+1)$ output image. If we want
+our output image to be $n \times n$, then we can set up a simple equation and solve for $p$:
+\begin{equation*}   n + 2p - f + 1 = n \implies p = \frac{f-1}{2}, \end{equation*}
+which means that if $f$ is odd this means we have a symmetric padding around the image.\footnote{Note that if $f$ is odd, it has a central pixel. This can sometimes be handy to reference.}
+
+\subsubsection{Strided Convolutions}
+
+\paragraph{Types of Convolution} There are two common choices for padding,
+called Valid convolutions and Same convolutions. A valid convolution
+uses no padding. The other choice is Same convolutions, in which the output
+image is the same size as the input image.
+
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}[scale=0.7]       \draw[step=1cm] (0, 0) grid (7, 7);
+      % Starting from bottom row, working left to right.
+      \node at (0.5, 0.5) {0};
+      \node at (1.5, 0.5) {1};
+      \node at (2.5, 0.5) {3};
+      \node at (3.5, 0.5) {9};
+      \node at (4.5, 0.5) {2};
+      \node at (5.5, 0.5) {1};
+      \node at (6.5, 0.5) {4};
+      % second row from bottom.
+      \node at (0.5, 1.5) {3};
+      \node at (1.5, 1.5) {2};
+      \node at (2.5, 1.5) {4};
+      \node at (3.5, 1.5) {1};
+      \node at (4.5, 1.5) {9};
+      \node at (5.5, 1.5) {8};
+      \node at (6.5, 1.5) {3};
+      % Third from bottom.
+      \node at (0.5, 2.5) {4};
+      \node at (1.5, 2.5) {2};
+      \node at (2.5, 2.5) {1};
+      \node at (3.5, 2.5) {8};
+      \node at (4.5, 2.5) {3};
+      \node at (5.5, 2.5) {4};
+      \node at (6.5, 2.5) {6};
+      % Fourth from bottom.
+      \node at (0.5, 3.5) {7};
+      \node at (1.5, 3.5) {8};
+      \node at (2.5, 3.5) {3};
+      \node at (3.5, 3.5) {6};
+      \node at (4.5, 3.5) {6};
+      \node at (5.5, 3.5) {3};
+      \node at (6.5, 3.5) {4};
+      % Fifth from bottom
+      \node at (0.5, 4.5) {3};
+      \node at (1.5, 4.5) {4};
+      \node at (2.5, 4.5) {8};
+      \node at (3.5, 4.5) {3};
+      \node at (4.5, 4.5) {8};
+      \node at (5.5, 4.5) {9};
+      \node at (6.5, 4.5) {7};
+      % Second from top.
+      \node at (0.5, 5.5) {6};
+      \node at (1.5, 5.5) {6};
+      \node at (2.5, 5.5) {9};
+      \node at (3.5, 5.5) {8};
+      \node at (4.5, 5.5) {7};
+      \node at (5.5, 5.5) {4};
+      \node at (6.5, 5.5) {3};
+      % Top row.
+      \node at (0.5, 6.5) {2};
+      \node at (1.5, 6.5) {3};
+      \node at (2.5, 6.5) {7};
+      \node at (3.5, 6.5) {4};
+      \node at (4.5, 6.5) {6};
+      \node at (5.5, 6.5) {2};
+      \node at (6.5, 6.5) {9};
+      \node at (3.5, -.5) {$7 \times 7$};
+      \node at (7.5, 3.5) {*};
+      \filldraw[pattern=north east lines, pattern color = purple!33] (0, 4) rectangle (3,7);
+      % Filter
+      \draw[step=1cm] (8, 2) grid (11, 5);
+      % Bottom row of filter.
+      \node at (8.5, 2.5) {-1};
+      \node at (9.5, 2.5) {0};
+      \node at (10.5, 2.5) {3};
+      % Middle row of filter.
+      \node at (8.5, 3.5) {1};
+      \node at (9.5, 3.5) {0};
+      \node at (10.5, 3.5) {2};
+      % Top row of filter.
+      \node at (8.5, 4.5) {3};
+      \node at (9.5, 4.5) {4};
+      \node at (10.5, 4.5) {4};
+      \node at (11.5, 3.5) {=};
+      \node at (9.5, 1.5) {$3 \times 3$};
+      \draw[step=1cm,gray, very thin] (12, 2) grid (15, 5);
+      \node at (12.5, 4.5) {91};
+      \filldraw[pattern=north east lines, pattern color = purple!33] (12, 4) rectangle (13,5);
+  \end{tikzpicture} \end{figure}
+
+To compute the upper-left most entry in the output, we applied our usual element-wise multiplication
+followed by summation:
+\begin{equation*}   2\times 3 + 3 \times 4 + 7 \times 4 + 6 \times 1 + 6 \times 0 + 9 \times 2 + 3 \times -1 + 4\times 0 + 8 \times 3 = 91. \end{equation*}
+
+Now, what's different about strided convolutions is that we don't simply slide our filter over by one position, but instead
+by $k$ positions, where $k$ is the stride-length. To compute the second entry in the first row, we slide our filter over two
+positions, since in this example we're considering a stride length of two.
+
+\begin{figure}[h]   
+  \centering
+  \begin{tikzpicture}[scale=0.7]       
+      \draw[step=1cm] (0, 0) grid (7, 7);
+      % Starting from bottom row, working left to right.
+      \node at (0.5, 0.5) {0};
+      \node at (1.5, 0.5) {1};
+      \node at (2.5, 0.5) {3};
+      \node at (3.5, 0.5) {9};
+      \node at (4.5, 0.5) {2};
+      \node at (5.5, 0.5) {1};
+      \node at (6.5, 0.5) {4};
+      % second row from bottom.
+      \node at (0.5, 1.5) {3};
+      \node at (1.5, 1.5) {2};
+      \node at (2.5, 1.5) {4};
+      \node at (3.5, 1.5) {1};
+      \node at (4.5, 1.5) {9};
+      \node at (5.5, 1.5) {8};
+      \node at (6.5, 1.5) {3};
+      % Third from bottom.
+      \node at (0.5, 2.5) {4};
+      \node at (1.5, 2.5) {2};
+      \node at (2.5, 2.5) {1};
+      \node at (3.5, 2.5) {8};
+      \node at (4.5, 2.5) {3};
+      \node at (5.5, 2.5) {4};
+      \node at (6.5, 2.5) {6};
+      % Fourth from bottom.
+      \node at (0.5, 3.5) {7};
+      \node at (1.5, 3.5) {8};
+      \node at (2.5, 3.5) {3};
+      \node at (3.5, 3.5) {6};
+      \node at (4.5, 3.5) {6};
+      \node at (5.5, 3.5) {3};
+      \node at (6.5, 3.5) {4};
+      % Fifth from bottom
+      \node at (0.5, 4.5) {3};
+      \node at (1.5, 4.5) {4};
+      \node at (2.5, 4.5) {8};
+      \node at (3.5, 4.5) {3};
+      \node at (4.5, 4.5) {8};
+      \node at (5.5, 4.5) {9};
+      \node at (6.5, 4.5) {7};
+      % Second from top.
+      \node at (0.5, 5.5) {6};
+      \node at (1.5, 5.5) {6};
+      \node at (2.5, 5.5) {9};
+      \node at (3.5, 5.5) {8};
+      \node at (4.5, 5.5) {7};
+      \node at (5.5, 5.5) {4};
+      \node at (6.5, 5.5) {3};
+      % Top row.
+      \node at (0.5, 6.5) {2};
+      \node at (1.5, 6.5) {3};
+      \node at (2.5, 6.5) {7};
+      \node at (3.5, 6.5) {4};
+      \node at (4.5, 6.5) {6};
+      \node at (5.5, 6.5) {2};
+      \node at (6.5, 6.5) {9};
+      \node at (3.5, -.5) {$7 \times 7$};
+      \node at (7.5, 3.5) {*};
+      \filldraw[pattern=north east lines, pattern color = orange!33] (2, 4) rectangle (5,7);
+      % Filter
+      \draw[step=1cm] (8, 2) grid (11, 5);
+      % Bottom row of filter.
+      \node at (8.5, 2.5) {-1};
+      \node at (9.5, 2.5) {0};
+      \node at (10.5, 2.5) {3};
+      % Middle row of filter.
+      \node at (8.5, 3.5) {1};
+      \node at (9.5, 3.5) {0};
+      \node at (10.5, 3.5) {2};
+      % Top row of filter.
+      \node at (8.5, 4.5) {3};
+      \node at (9.5, 4.5) {4};
+      \node at (10.5, 4.5) {4};
+      \node at (11.5, 3.5) {=};
+      \node at (9.5, 1.5) {$3 \times 3$};
+      \draw[step=1cm,gray, very thin] (12, 2) grid (15, 5);
+      \node at (12.5, 4.5) {91};
+      \node at (13.5, 4.5) {100};
+      \node at (14.5, 4.5) {83};
+      \node at (12.5, 3.5) {69};
+      \node at (13.5, 3.5) {91};
+      \node at (14.5, 3.5) {127};
+      \node at (12.5, 2.5) {44};
+      \node at (13.5, 2.5) {72};
+      \node at (14.5, 2.5) {74};
+      \filldraw[pattern=north east lines, pattern color = orange!33] (13, 4) rectangle (14,5);
+      \path[->] (0, 7) edge[bend left] (2, 7);
+  \end{tikzpicture}
+  \caption{\footnotesize An example of stride-length of size two. We highlight how we calculate the element in the output residing
+in the second column of the first row. Similar rules apply when we wish to obtain the elements from the second row: we will slide our filter down by two positions
+before taking an element-wise product and summing.}
+\end{figure}
+
+In general, if we have an $n \times n$ input matrix, an $f \times f$ filter, padding of size $p$, and a stride-length of $s$,
+the number of elements in the output is
+\begin{equation*}   \left(\floor{\frac{n + 2p - f}{s} + 1}\right) \times \left(\floor{\frac{n + 2p - f}{s} + 1}\right) \end{equation*}
+We've taken the floor operation $\floor{\cdot}$ to ensure that if our stride-length doesn't evenly divide
+our (padded) input matrix that we still have an output with well defined dimension.\footnote{
+There is one more point worth mentioning: some fields mirror the filter by flipping once in each direction (with the first flip, the first row becomes the first column, and with the second flip this first column becomes the last row with the elements reversed). In the deep learning community, this is not often done; it's worth knowing that this technique is
+known as cross-correlation.}
+
 
 \end{document}
 
