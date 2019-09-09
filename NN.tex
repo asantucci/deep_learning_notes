@@ -2725,9 +2725,9 @@ we're also going to use a stride-length of two, no padding, and twenty filters.
     \draw[black] (11,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
     \draw[black] (11,0,0) -- ++(-\cubex/3,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/3,0,0) -- cycle;
     \draw[->] (7, 0, 1) -- (10.5, 0, 1) node[below left] {$\substack{f^{[2]} = 5 \\ s^{[2]} = 2 \\ p^{[2]} = 0 \\ \textrm{20 filters}}$};
-    \node at (1.75, 0, -0.5) {$17 \times 17 \times 20$};
-    \node at (1.75, 0, -1) {$n_H^{[2]} = n_W^{[2]} = 17$};
-    \node at (1.75, 0, -1.5) {$n_c^{[2]} = 20$};
+    \node at (13, 0, 0) {$17 \times 17 \times 20$};
+    \node at (13, -.75, 0) {$n_H^{[2]} = n_W^{[2]} = 17$};
+    \node at (13, -1.5, 0) {$n_c^{[2]} = 20$};
   \end{tikzpicture} 
 \end{figure}
 Notice that because we used a stride-length of two on the second layer, that the size of our input shrunk very fast, it went from
@@ -2742,6 +2742,59 @@ into a nice long vector, which can then be fed as input into a logistic regressi
 
 \paragraph{Trends in ConvNets} As you go deeper into a neural network, the height and width of the input shrinks gradually; on
 the other hand, the number of channels will generally increase. 
+
+\subsection{Pooling Layers} Other than convolutional layers, ConvNets also often use pooling to reduce the size of the representation, to speed up computation, and to make some of the features more robust. We start with an example which motivates why we might
+want to consider a pooling strategy. We start by taking our $4 \times 4$ input and breaking it into different regions. The output will be $2 \times 2$ and each cell will take on the max value of the corresponding region in the input.
+
+\begin{figure}
+  \centering   \begin{tikzpicture}
+    \draw[ultra thick, draw = black, fill=purple] (0,0) grid (2,2) rectangle (0,0);
+    \draw[ultra thick, draw = black, fill=blue]   (0,2) grid (2,4) rectangle (0,2);
+    \draw[ultra thick, draw = black, fill=green]  (2,0) grid (4,2) rectangle (2,0);
+    \draw[ultra thick, draw = black, fill=orange] (2,2) grid (4,4) rectangle (2,2);
+    \node at (0.5, 0.5) {5};
+    \node at (1.5, 0.5) {6};
+    \node at (0.5, 1.5) {1};
+    \node at (1.5, 1.5) {3};
+    \node at (2.5, 0.5) {1};
+    \node at (3.5, 0.5) {2};
+    \node at (2.5, 1.5) {2};
+    \node at (3.5, 1.5) {3};
+    \node at (0.5, 2.5) {2};
+    \node at (1.5, 2.5) {9};
+    \node at (0.5, 3.5) {1};
+    \node at (1.5, 3.5) {3};
+    \node at (2.5, 2.5) {1};
+    \node at (2.5, 3.5) {2};
+    \node at (3.5, 2.5) {1};
+    \node at (3.5, 3.5) {1}; 
+    \draw[->] (5, 2) -- (7, 2) node[align=center, above left] {\textrm{Max-pooling}};
+    \draw[ultra thick, draw=black, fill = purple] (8,1) grid (9, 2) rectangle (8,1);
+    \node at (8.5, 1.5) {6};
+    \draw[ultra thick, draw=black, fill = green] (9,1) grid (10, 2) rectangle (9,1);
+    \node at (9.5, 1.5) {3};
+    \draw[ultra thick, draw=black, fill = blue] (8,2) grid (9, 3) rectangle (8,2);
+    \node at (8.5, 2.5) {9};
+    \draw[ultra thick, draw=black, fill = orange] (9,2) grid (10, 3) rectangle (9,2);
+    \node at (9.5, 2.5) {2};
+  \end{tikzpicture}
+  \caption{With max-pooling, we partition our input and then take the maximum value within each
+    disjoint set of elements. In the example above, it's as if we applied a filter of size two,
+since we're taking $2 \times 2$ regions and using a stride-length of two. Filter size and stride length
+are hyperparameters of max pooling.} \end{figure}
+
+\paragraph{Intuition behind max-pool} If you consider the $4 \times 4$ region as a set of features or activations in the network,
+then a large number means it has perhaps detected a particular feature. E.g. the upper-left quadrant maybe capturing a vertical edge, or a whisker if we're trying to detect a cat. Max pooling effectively preserves detected features through to the subsequent layer.
+
+\paragraph{Gradient descent and max pooling} It's interesting to note that max-pooling has a set of hyperparameters, but it has no
+parameters to learn. Once the filter size $f$ and stride length $s$ are fixed, there's nothing to learn; it's just a fixed 
+computation. The same formulae apply for dimensions, where the size of he subsequent layer is given by $\floor{\frac{n+2p - f}{s} + 1}$. If you have an image with multiple channels, then the output of the max-pooling operation will have just as many channels.
+The way it works is that we apply max-pooling to each channel independently and write the results to a table; finally, we can stack up the results into a 3-D data structure.
+
+\paragraph{Average pooling} This is exactly what you would expect. Max pooling is used much more often with one exception:
+sometimes very deep in a neural network you may wish to collapse your representation.
+
+\paragraph{Common choices of hyperparameters} Many set $f=2$ and $s=2$, and this has the effect of roughly halving the height and width of the representation by a factor of two. When you do max-pooling, you usually \emph{never} pad. It's reasonable to try a few values of these hyperparameters and see which works best by cross-validation.
 
 \end{document}
 
