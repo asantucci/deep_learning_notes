@@ -19,6 +19,7 @@
 \usetikzlibrary{fit}
 \usetikzlibrary{shapes}
 \usetikzlibrary{patterns}
+\usetikzlibrary{decorations.pathreplacing}
 
 \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
@@ -2554,12 +2555,12 @@ an output that is 3-D. Let's consider an example where we have two filters.
     \node at (10, 2) {=};
     \node at (10, 5) {=};
     \draw[step = 0.5cm, ultra thick, draw = purple] (10.99, 3.99) grid (13, 6);
-    \draw[step = 0.5cm, ultra thick, draw = orange] (10.99, .99) grid (13, 3);
+    \draw[step = 0.5cm, ultra thick, draw = blue  ] (10.99, .99) grid (13, 3);
     % superimposition to get a 3-d output.
     \draw[purple] (14, 3) rectangle (16, 5);
-    \draw[orange] (13.7, 2.7) rectangle (15.7, 4.7);
+    \draw[blue] (13.7, 2.7) rectangle (15.7, 4.7);
     \draw[->,purple] (13, 6) -- (14, 5);
-    \draw[->,orange] (13, 3) -- (13.7, 2.7);
+    \draw[->,blue] (13, 3) -- (13.7, 2.7);
   \end{tikzpicture}
   \caption{\footnotesize To apply multiple filters simultaneously, we first apply each filter to the input image and obtain an output. We then ``stack'' these outputs into a new stack of matrices. In this example, we've computed both vertical and horizontal edge detectors which each yield 2-D outputs of the same size which can be combined in a final step.} 
 \end{figure}
@@ -2569,6 +2570,178 @@ and we convolve it with an $f \times f \times n_c$, we yield an output of size $
 where $n_f$ denotes the number of filters we wish to apply. Note that we've assumed no padding and unit stride-length.
 In deep learning literature, $n_f$ is often referred to as the depth of the 3-D volume.
 
+\subsubsection{One layer of a CNN}
+
+\begin{figure}[h]   
+  \centering
+  \begin{tikzpicture}[scale=0.8]       
+    \draw[ultra thick, draw = black, fill = blue ] (0.5, 0.5) grid (5.5, 5.5) rectangle (0.5, 0.5);     
+    \draw[ultra thick, draw = black, fill = green] (0.25, 0.25) grid (5.25, 5.25) rectangle (0.25, 0.25);     
+    \draw[ultra thick, draw = black, fill = red  ] (0, 0) grid (5, 5) rectangle (0, 0);
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}] (0,-0.5) -- (5.5, -0.5) node[midway,below,yshift=-.4cm] {``$a^{[0]}$''};
+    \node at (6.25, 4) {*};
+    \node at (8.75, 6.5) {$\substack{\footnotesize{\textrm{vertical}} \\ \footnotesize{\textrm{edge-detector}}}$};
+    \draw[step = 0.5cm, ultra thick, draw = black, fill = yellow] (8, 4.5) grid (9.5, 6) rectangle (8, 4.5); 
+    \draw[step = 0.5cm, ultra thick, draw = black, fill = yellow] (7.5, 4) grid (9, 5.5) rectangle (7.5, 4);       
+    \draw[step = 0.5cm, ultra thick, draw = black, fill = yellow] (7, 3.5) grid (8.5, 5) rectangle (7, 3.5); 
+    \node at (6.25, 2) {*};
+    \node at (8.75, 3) {$\substack{\footnotesize{\textrm{horizontal}} \\ \footnotesize{\textrm{edge-detector}}}$};
+    \draw[step = 0.5cm, ultra thick, draw = black, fill = orange] (8, 1)      grid (9.5, 2.5) rectangle (8, 1); 
+    \draw[step = 0.5cm, ultra thick, draw = black, fill = orange] (7.49, 0.5) grid (9, 2)     rectangle (7.49, 0.5);       
+    \draw[step = 0.5cm, ultra thick, draw = black, fill = orange] (7, 0)      grid (8.5, 1.5) rectangle (7, 0); 
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}] (7,-0.5) -- (9.5, -0.5) node[midway,below,yshift=-.4cm] {``$W^{[1]}$''};
+    \node at (10, 2) {=};
+    \node at (10, 5) {=};
+    \node at (11, 2) {\textrm{ReLU} $\bigg($};
+    \node at (11, 5) {\textrm{ReLU} $\bigg($};
+    \draw[step = 0.5cm, ultra thick, draw = purple] (11.99, 3.99) grid (14, 6);
+    \draw[step = 0.5cm, ultra thick, draw = blue  ] (11.99, .99) grid (14, 3);
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}] (11.99,0.75) -- (14, 0.75) node[midway,below,yshift=-.4cm] {``$W^{[1]} a^{[0]}$''};
+    \node at (14.5, 2) {$+ b_2$};
+    \node at (14.5, 5) {$+ b_1$};
+    \node at (15, 2) {$\bigg)$};
+    \node at (15, 5) {$\bigg)$};
+    \draw[purple] (16,     3) rectangle (18, 5);
+    \draw[blue]   (15.7, 2.7) rectangle (17.7, 4.7);
+    \draw[->, purple] (15.1, 5.1) -- (15.9, 5);
+    \draw[->, blue  ] (15.1, 2.1) -- (15.6, 2.7);
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}] (10.5,-0.5) -- (15, -0.5) node[midway,below,yshift=-.4cm] {``$Z^{[1]}$''};
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}] (15.75,2.7) -- (18, 2.7) node[midway,below,yshift=-.4cm] {``$a^{[1]}$''};
+  \end{tikzpicture}
+  \caption{\footnotesize Here we relate parameters of a CNN to what we've seen previously. Our input image, sometimes demoted
+by $X$, is really the zeroth activation. We then have filters which act as weight matrices, and we compute $W^{[1]} a^{[0]} + b_i$
+which is a \emph{linear} function. To incorporate non-linearity, we choose an appropriate activation function, and computing this
+gives us the analogous $Z^{[1]} = \texttt{ReLU}(W^{[1]} a^{[0]} + b_i)$. As a last step, we combine or stack the outputs into a tensor.}
+\end{figure}
+
+If we want, we can think about a mapping from a 3-D volume $A^{[0]}$, our input image, into another 3-D volume which is $A^{[1]}$,
+the output of the first layer.
+\begin{figure}[h]   \centering   \begin{tikzpicture}[scale=0.5]
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \node at (-2, -1.25) {$a^{[0]}$}; 
+    \draw[black] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (0,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez) -- ++(\cubex,0,0) -- cycle; 
+    \draw[->] (1, 0, 1) -- (2, 0, 1);
+    \node at (3, -1.25) {$a^{[1]}$}; 
+    \draw[black] (3,0,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (3,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (3,0,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle; 
+  \end{tikzpicture}
+  \caption{\footnotesize We can think about each layer as transforming one 3-D volume into another.}
+\end{figure}
+
+\paragraph{Though exercise} If we have 10 filters that are each $3 \times 3 \times 3$ in one layer of a neural network, how many
+parameters does that layer have? Each filter contains $3^3 = 27$ parameters we need to learn, plus a bias term yielding a total of 
+28 learnable parameters per filter. With 10 filters, we have a total of 280 parameters in the first layer of our neural network.
+Notice that the number of parameters we have to learn \emph{does not} depend on the size of the input. This is a property of CNN's: so long as you learn feature detectors that work, you can apply this to very large images while keeping the number of parameters fixed and relatively small.
+
+\paragraph{Notation for CNN's}
+We will say that
+\begin{align*}   f^{[\ell]} &= \textrm{filter size} \\
+  p^{[\ell]} &= \textrm{padding} \\
+  s^{[\ell]} &= \textrm{stride} \end{align*}
+The input has dimension $n \times n \times n_c$ where recall $n_c$ is the number of channels. To generalize the notation to a 
+deep neural network, we add superscript square brackets to indicate what layer we're examining. Further, our images might not be square, so we add subscripts to indicate whether we are referring to height or width. I.e. we say that the input
+to each layer can be described by
+\[
+n_H^{[\ell-1]} \times n_W^{[\ell-1]} \times n_c^{[\ell-1]}.
+\]
+
+Note that the output volume size is given by 
+\[
+n_H^{[\ell]} = \floor{\frac{n_H^{[\ell-1]} + 2p^{[\ell]} - f^{[\ell]}}{s^{[\ell]}} + 1}
+\]
+The same is true for the width, replacing $n_H$ with $n_W$ in the formula above. Note that $n_c^{[\ell]}$, the number of channels in layer $\ell$ of the network, is given by the number of filters we are applying in the previous layer.
+Each filter is size $f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]}$. Activations will be of dimension $a^{[\ell]} = n_H^{[\ell]} \times n_W^{[\ell]} \times n_c^{[\ell]}$. If we're using vectorized implementation, e.g. batch gradient descent, we have
+\[
+A^{[\ell]} = m \times n_H^{[\ell]} \times n_W^{[\ell]} \times n_c^{[\ell]}.
+\]
+
+Next, consider the weights. We've mentioned above that th dimension of a single filter is $f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]}$, so to get the total number of weights we need 
+\[
+f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]} \times n_c^{[\ell]}
+\]
+where the last term is synonymous with the number of filters in layer $\ell$.
+Lastly, consider the bias parameters. We have a single scalar value for each filter. The bias will be a vector of dimension $n_c^{[\ell]}$.\footnote{Note that the order of height, width, then channel is arbitrary and different authors in the deep learning community use different conventions. They key is to be consistent, in spite of there not being consensus in the deep learning literature.}
+
+\subsubsection{Deep convolutional Neural Network} Suppose we have an image and we want to perform image recognition, e.g.
+does the picture contain a cat? Suppose our input is size $39 \times 39 \times 3$. This means that 
+\begin{align*}   
+  n_H^{[0]} &= n_W^{[0]} = 39 \\
+  n_c^{[0]} &= 3 
+\end{align*}
+Let's say the first layer uses a set of $3 \times 3$ filters to detect features, and further suppose we have unit stride length
+and no padding. Further suppose that you have 10 filters. Then, we have the following transformation:
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}[scale=0.9]     \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \node at (-1, -1.25) {$39 \times 39 \times 3$}; 
+    \node at (-1, -2)  {$n_H^{[0]} = n_W^{[0]} = 39$};
+    \node at (-1, -2.75) {$n_c^{[0]} = 3$};
+    \draw[black] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (0,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez) -- ++(\cubex,0,0) -- cycle; 
+    \draw[->] (1, 0, 1) -- (4, 0, 1) node[below left] {$\substack{f^{[1]} = 3 \\ s^{[1]} = 1 \\ p^{[1]} = 0 \\ \textrm{10 filters}}$};
+    \draw[black] (6,0,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (6,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (6,0,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle;
+    \node at (6, -1, 0.5) {$37 \times 37 \times 10$};
+    \node at (6, -1.5, 0.5) {$n_H^{[1]} = n_W^{[1]} = 37$};
+    \node at (6, -2, 0.5) {$n_c^{[1]} = 10$};   \end{tikzpicture} \end{figure}
+
+Notice that the 37 comes from the formula $\floor{\frac{n + 2p - f}{s} + 1} = \floor{\frac{39 + 0 - 3}{1} + 1} = 37$.
+Further realize this is a Valid convolution. In this example, $n_H^{[1]} = n_W^{[1]} = 37$, and $n_c^{[1]} = 10$ since we have
+10 filters. We know now the dimensions of the activation at the first layer.
+Note that $f^{[1]} = 3$ simply because we're using $3 \times 3$ filters. 
+
+\paragraph{Adding another convolution layer}
+Let's say we have another convolution layer, but this time we're using $5 \times 5$ filters; in our notation $f^{[2]} = 5$. Further,
+we're also going to use a stride-length of two, no padding, and twenty filters.
+
+\begin{figure}[h]   
+  \centering
+  \begin{tikzpicture}[scale=0.9]     
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \node at (-1, -1.25) {$39 \times 39 \times 3$}; 
+    \node at (-1, -2)  {$n_H^{[0]} = n_W^{[0]} = 39$};
+    \node at (-1, -2.75) {$n_c^{[0]} = 3$};
+    \draw[black] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (0,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez) -- ++(\cubex,0,0) -- cycle; 
+    \draw[->] (1, 0, 1) -- (4, 0, 1) node[below left] {$\substack{f^{[1]} = 3 \\ s^{[1]} = 1 \\ p^{[1]} = 0 \\ \textrm{10 filters}}$};
+    \draw[black] (6,0,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (6,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (6,0,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle;
+    \node at (6, -1.1, 0.5) {$37 \times 37 \times 10$};
+    \node at (6, -1.6, 0.5) {$n_H^{[1]} = n_W^{[1]} = 37$};
+    \node at (6, -2.1, 0.5) {$n_c^{[1]} = 10$};   
+    \draw[black] (11,0,0) -- ++(-\cubex/3,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/3,0,0) -- cycle; 
+    \draw[black] (11,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (11,0,0) -- ++(-\cubex/3,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/3,0,0) -- cycle;
+    \draw[->] (7, 0, 1) -- (10.5, 0, 1) node[below left] {$\substack{f^{[2]} = 5 \\ s^{[2]} = 2 \\ p^{[2]} = 0 \\ \textrm{20 filters}}$};
+    \node at (1.75, 0, -0.5) {$17 \times 17 \times 20$};
+    \node at (1.75, 0, -1) {$n_H^{[2]} = n_W^{[2]} = 17$};
+    \node at (1.75, 0, -1.5) {$n_c^{[2]} = 20$};
+  \end{tikzpicture} 
+\end{figure}
+Notice that because we used a stride-length of two on the second layer, that the size of our input shrunk very fast, it went from
+$39 \leadsto 17$; since we're using twenty channels, we have the last dimension as 20.
+
+\paragraph{Final convolution and transformation into fitted probabilities}
+Lastly, let's apply one more convolution. We'll again use a $5 \times 5$ filter and so
+$f^{[3]} = 5$. We will use a stride length of $2$ and fourty filters with no padding. The math works out 
+such that we output a $7 \times 7 \times 40$ \emph{features} describing a 3-D volume. What's commonly done 
+next is to realize that $7 \times 7 \times 40 = 1,960$, and so we can unravel our 3-D data structure
+into a nice long vector, which can then be fed as input into a logistic regression or softmax unit.
+
+\paragraph{Trends in ConvNets} As you go deeper into a neural network, the height and width of the input shrinks gradually; on
+the other hand, the number of channels will generally increase. 
 
 \end{document}
 
