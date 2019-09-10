@@ -24,6 +24,8 @@
 \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
 
+\tableofcontents
+\newpage
 \section{Logistic Regression}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter \begin{description} \item[Intro] 
 This model assumes that the log odds-ratio can be fit by a linear model. We start with the probability mass function for a \href{https://en.wikipedia.org/wiki/Bernoulli_distribution}{Bernoulli trial}: $f(y;p) = p^y \times (1-p)^{(1-y)}$ for $y \in \{0, 1\}$. We are interested in estimating what $p$ is, and so it's natural to conceive of a maximum likelihood estimator; since $\log$ monotone we can apply this transformation without changing the maximizer. The log-likelihood is given by $y \log p + (1-y) \log (1-p)$ using \href{https://en.wikipedia.org/wiki/Logarithm#Logarithmic_identities}{properties of logarithms}. In optimization, we generally work to minimize objective functions, and so it's then natural to set our (objective) \emph{loss function}
 to be $- \left[y \log p + (1-y) \log (1-p)\right]$. In summary, we 
@@ -1251,7 +1253,7 @@ bias term that gets added back in. Note that $\gamma^{[\ell]}, \beta^{[\ell]} \i
     Update parameters $W^{[\ell]}$, $\beta^{[\ell]}$, and $\gamma^{[\ell]}$ using {\small gradient descent (with momentum) / RMSProp / Adam}.
   } \end{algorithm}
 
-\subsubsection{Why does batch-norm work?}
+\subsubsection{Why does batch-norm work? It minimizes effects of covariate shift}
 One of the primary benefits of batch-norm is that it makes the weights in the \emph{later} layers of the network
 more robust to varying input values in \emph{earlier} layers of the network.
 To see this, consider an example whereby we train a computer-vision classifier to predict whether an image contains
