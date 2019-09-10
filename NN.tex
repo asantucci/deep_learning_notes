@@ -2907,5 +2907,42 @@ A few points are worth mentioning.
   \item The number of parameters used in fully-connected layers is quite large.
   \item The activation size decreases as we get deeper into the network.\footnote{If we reduce the size of the representation of data too quickly when moving across layers, performance will suffer.} \end{itemize}
 
+\subsection{Why Convolutions?} Why are convolutions to include in a network? There are two main advantages.
+\begin{itemize}   \item Parameter sharing, and
+  \item Sparsity of connections. \end{itemize}
+
+Suppose you have a $32 \times 32 \times 3$ image, and then we apply six $5 \times 5$ filters to yield a $28 \times 28 \times 6$ output. If we multiply out the dimensions, we see that there are $3,072$ dimensions in the input image and another $4,704$ in the output. If we were to create a fully connected layer in between, we would have $3,072 \times 4,704 \approx 14M$ parameters to train, which is quite a lot for a small image. If the image was $1,000 \times 1,000$, the weight matrix becomes infeasibly large. On the other hand, if we use six $5 \times 5$ filters plus a bias term, we end up with only $6 \times (5\times 5 \times 3 + 1) = 456$ parameters; so our convolutional layer remains quite small. Let's go over the reasons for this.
+
+\paragraph{Parameter Sharing} A feature detector (such as a vertical edge detector) that's useful in one part of the image is probably useful in another part of the image. In particular, we have a fixed filter matrix that we convolve across the image; i.e.
+the feature detectors parameters are shared across parts of the image. Intuitively, if a feature detector works well
+on one part of an image, it should work well on a different part.\footnote{It's of course possible that the pixel values in one corner of the image follow a different distribution from other parts of the image, but we'll wave our hands at this for now.}
+\paragraph{Sparsity of Connections} In each layer, Let's consider how we obtain a single output element: we apply a filter to a region of an image and collapse all pixel values into a scalar number, and so its as if this single output element is only 
+\emph{connected} to the region of the image spanned by the filter.
+
+\begin{equation*}   \begin{bmatrix}
+ \color{purple} 10 & \color{purple} 10 & \color{purple} 10 & 0 & 0 & 0 \\
+ \color{purple} 10 & \color{purple} 10 & \color{purple} 10 & 0 & 0 & 0 \\
+ \color{purple} 10 & \color{purple} 10 & \color{purple} 10 & 0 & 0 & 0 \\
+ \color{orange} 10 & \color{orange} 10 & \color{orange} 10 & 0 & 0 & 0 \\
+ \color{orange} 10 & \color{orange} 10 & \color{orange} 10 & 0 & 0 & 0 \\
+ \color{orange} 10 & \color{orange} 10 & \color{orange} 10 & 0 & 0 & 0
+  \end{bmatrix} 
+  * 
+  \begin{bmatrix}     
+    1 & 0 & -1 \\     
+    1 & 0 & -1 \\
+    1 & 0 & -1 \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}     
+    \color{purple} 0 & 30 & 30 & 0 \\
+    0 & 30 & 30 & 0 \\
+    0 & 30 & 30 & 0 \\
+    \color{orange} 0 & 30 & 30 & 0 \\
+  \end{bmatrix} 
+\end{equation*}
+ Notice that the output value in the upper left corner is only influenced by 9 out of 36 values in the input image. Similarly for
+each other value in the output layer.
+Taken together, this means we can train our algorithms faster, on smaller datasets, and without worry of over-fitting.
 \end{document}
 
