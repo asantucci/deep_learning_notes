@@ -1976,7 +1976,7 @@ data to prevent overfitting, and further the computational (and memory) requirem
 parameters is not yet feasible. All of this is to say that if you want to use large images, you need to better implement the
 convolution operation.
 
-\subsection{Edge detection example} Earlier layers of a neural network might detect edges, later layers may detect parts
+\subsection{Edge detection} Earlier layers of a neural network might detect edges, later layers may detect parts
 of objects, and later layers still may detect complete objects such as a person's face. In this section, we'll focus on edge 
 detection. 
 \subsubsection{Filters and kernels}
@@ -2088,7 +2088,7 @@ Two remarks: (i) since our image is small ($64 \times 64$), the vertical edge de
 an artifact of having a small-resolution image, and (ii) the enhanced pixel intensity in the middle of the output is a way of
 saying that there exists a strong vertical edge in this part of the original image.
 
-\paragraph{Edge Detection: a second example} 
+\subsubsection{Positive and negative edges} 
 We define a positive edge as one where the light goes from light to dark, versus a negative edge
 which goes from a dark to a light transition. We will learn about other edge detectors, and also have a chance to understand
 how an algorithm can learn to construct a filter (rather than creating one by hand).
@@ -2138,7 +2138,7 @@ Since the shade of transitions is now reversed, so are the signs on the values
 in our matrix. If you don't care whether the edge is positive or negative,
 it's reasonable to take absolute values of the output.
 
-\paragraph{Horizontal Edges} It may not be surprising to learn that the filter
+\subsubsection{Horizontal Edges} It may not be surprising to learn that the filter
 matrix used to detect horizontal edges is simply a transpose of the filter matrix
 used to detect vertical edges. I.e.
 \begin{equation*} \begin{bmatrix}   1 & 1 & 1 \\ 0 & 0 & 0 \\ -1 & -1 & -1 \end{bmatrix}   \end{equation*}
@@ -2195,7 +2195,7 @@ will learn something else that is even more effective at detecting edges. Furthe
 detect edges at arbitrary angles (e.g. an edge at 45 degrees). Underlying all these computations is the convolution,
 which allows back propagation to learn whatever filter it wants.
 
-\paragraph{Padding} One modification we can make to the basic convolutional operation is padding. In general, if we have
+\subsection{Padding} One modification we can make to the basic convolutional operation is padding. In general, if we have
 an $n \times n$ matrix with an $f \times f$ size filter, the output will be of size $(n-f+1) \times (n-f+1)$. There are two downsides
 here:
 \begin{enumerate} \item Every time we apply a convolution operator, our image shrinks. Perhaps we don't want our image to shrink each time
@@ -2231,16 +2231,20 @@ To fix both of these problems, we can \emph{pad} our input image.
     in the output. Further, corner cells are able to \emph{influence} the more than just one value in the output image 
     (depicted on the right).} \end{figure}
 
+\subsubsection{Dimension of padded images}
 Now, if we take our \emph{padded} image and apply a convolution operation, we manage
 to preserve the size of the input image. I.e. the convolution outputs an image of the same size
 as the input. By convention, we pad with zeros. In general, if we pad with $p$ additional cells
 on each side of the image, then our input image has dimension $(n+2p) \times (n+2p)$, and if we apply a convolution
-operation we end up with a $(n+2p-f+1) \times (n+2p-f+1)$ output image. If we want
+operation we end up with a $(n+2p-f+1) \times (n+2p-f+1)$ output image. 
+
+\paragraph{Preserving input size with padding}
+If we want
 our output image to be $n \times n$, then we can set up a simple equation and solve for $p$:
 \begin{equation*}   n + 2p - f + 1 = n \implies p = \frac{f-1}{2}, \end{equation*}
 which means that if $f$ is odd this means we have a symmetric padding around the image.\footnote{Note that if $f$ is odd, it has a central pixel. This can sometimes be handy to reference.}
 
-\subsubsection{Strided Convolutions}
+\subsection{Strided Convolutions}
 
 \paragraph{Types of Convolution} There are two common choices for padding,
 called Valid convolutions and Same convolutions. A valid convolution
@@ -2248,7 +2252,7 @@ uses no padding. The other choice is Same convolutions, in which the output
 image is the same size as the input image.
 
 \begin{figure}[h]   \centering
-  \begin{tikzpicture}[scale=0.7]       \draw[step=1cm] (0, 0) grid (7, 7);
+  \begin{tikzpicture}[scale=0.5]       \draw[step=1cm] (0, 0) grid (7, 7);
       % Starting from bottom row, working left to right.
       \node at (0.5, 0.5) {0};
       \node at (1.5, 0.5) {1};
@@ -2434,6 +2438,7 @@ in the second column of the first row. Similar rules apply when we wish to obtai
 before taking an element-wise product and summing.}
 \end{figure}
 
+\subsubsection{Dimension for padded images with stride}
 In general, if we have an $n \times n$ input matrix, an $f \times f$ filter, padding of size $p$, and a stride-length of $s$,
 the number of elements in the output is
 \begin{equation*}   \left(\floor{\frac{n + 2p - f}{s} + 1}\right) \times \left(\floor{\frac{n + 2p - f}{s} + 1}\right) \end{equation*}
@@ -2442,7 +2447,7 @@ our (padded) input matrix that we still have an output with well defined dimensi
 There is one more point worth mentioning: some fields mirror the filter by flipping once in each direction (with the first flip, the first row becomes the first column, and with the second flip this first column becomes the last row with the elements reversed). In the deep learning community, this is not often done; it's worth knowing that this technique is
 known as cross-correlation.}
 
-\subsubsection{Convolutions over Volume} Let's consider a convolution over 3D volumes. Suppose we have a $6 \times 6$ matrix
+\subsection{Convolutions over Volume} Let's consider a convolution over 3D volumes. Suppose we have a $6 \times 6$ matrix
 which encodes the RGB representation of the image. We can actually think about this as a ``stack of matrices''.
 
 \begin{figure}[h]   \centering
@@ -2565,7 +2570,8 @@ an output that is 3-D. Let's consider an example where we have two filters.
   \caption{\footnotesize To apply multiple filters simultaneously, we first apply each filter to the input image and obtain an output. We then ``stack'' these outputs into a new stack of matrices. In this example, we've computed both vertical and horizontal edge detectors which each yield 2-D outputs of the same size which can be combined in a final step.} 
 \end{figure}
 
-\paragraph{Dimensions summary} If you have an $n \times n \times n_c$ where $n_c$ denotes the number of channels,
+\subsubsection{Dimension of output from 3-D convolution without padding and unit stride length} 
+If you have an $n \times n \times n_c$ where $n_c$ denotes the number of channels,
 and we convolve it with an $f \times f \times n_c$, we yield an output of size $(n-f+1) \times (n-f+1) \times n_f$
 where $n_f$ denotes the number of filters we wish to apply. Note that we've assumed no padding and unit stride-length.
 In deep learning literature, $n_f$ is often referred to as the depth of the 3-D volume.
@@ -2633,12 +2639,12 @@ the output of the first layer.
   \caption{\footnotesize We can think about each layer as transforming one 3-D volume into another.}
 \end{figure}
 
-\paragraph{Though exercise} If we have 10 filters that are each $3 \times 3 \times 3$ in one layer of a neural network, how many
+\paragraph{Example: \# parameters in a 3-D convolution with multiple filters} If we have 10 filters that are each $3 \times 3 \times 3$ in one layer of a neural network, how many
 parameters does that layer have? Each filter contains $3^3 = 27$ parameters we need to learn, plus a bias term yielding a total of 
 28 learnable parameters per filter. With 10 filters, we have a total of 280 parameters in the first layer of our neural network.
 Notice that the number of parameters we have to learn \emph{does not} depend on the size of the input. This is a property of CNN's: so long as you learn feature detectors that work, you can apply this to very large images while keeping the number of parameters fixed and relatively small.
 
-\paragraph{Notation for CNN's}
+\subsubsection{Notation for CNN's}
 We will say that
 \begin{align*}   f^{[\ell]} &= \textrm{filter size} \\
   p^{[\ell]} &= \textrm{padding} \\
@@ -2650,6 +2656,7 @@ to each layer can be described by
 n_H^{[\ell-1]} \times n_W^{[\ell-1]} \times n_c^{[\ell-1]}.
 \]
 
+\subsubsection{Output volume size: general formula}
 Note that the output volume size is given by 
 \[
 n_H^{[\ell]} = \floor{\frac{n_H^{[\ell-1]} + 2p^{[\ell]} - f^{[\ell]}}{s^{[\ell]}} + 1}
@@ -2660,14 +2667,15 @@ Each filter is size $f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]}$. Activa
 A^{[\ell]} = m \times n_H^{[\ell]} \times n_W^{[\ell]} \times n_c^{[\ell]}.
 \]
 
-Next, consider the weights. We've mentioned above that th dimension of a single filter is $f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]}$, so to get the total number of weights we need 
+\subsubsection{Number of learnable parameters for 3-D convolutions}
+Next, consider the weights. We've mentioned above that the dimension of a single filter is $f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]}$, so to get the total number of weights we need 
 \[
-f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]} \times n_c^{[\ell]}
+\left(f^{[\ell]} \times f^{[\ell]} \times n_c^{[\ell-1]} + 1 \right) \times n_c^{[\ell]}
 \]
 where the last term is synonymous with the number of filters in layer $\ell$.
-Lastly, consider the bias parameters. We have a single scalar value for each filter. The bias will be a vector of dimension $n_c^{[\ell]}$.\footnote{Note that the order of height, width, then channel is arbitrary and different authors in the deep learning community use different conventions. They key is to be consistent, in spite of there not being consensus in the deep learning literature.}
+Lastly, consider the bias parameters. We have a single scalar value \emph{for each filter}. The bias will be a vector of dimension $n_c^{[\ell]}$.\footnote{Note that the order of height, width, then channel is arbitrary and different authors in the deep learning community use different conventions. They key is to be consistent, in spite of there not being consensus in the deep learning literature.}
 
-\subsubsection{Deep convolutional Neural Network} Suppose we have an image and we want to perform image recognition, e.g.
+\subsection{Deep convolutional neural network example} Suppose we have an image and we want to perform image recognition, e.g.
 does the picture contain a cat? Suppose our input is size $39 \times 39 \times 3$. This means that 
 \begin{align*}   
   n_H^{[0]} &= n_W^{[0]} = 39 \\
@@ -2746,7 +2754,7 @@ the other hand, the number of channels will generally increase.
 \subsection{Pooling Layers} Other than convolutional layers, ConvNets also often use pooling to reduce the size of the representation, to speed up computation, and to make some of the features more robust. We start with an example which motivates why we might
 want to consider a pooling strategy. We start by taking our $4 \times 4$ input and breaking it into different regions. The output will be $2 \times 2$ and each cell will take on the max value of the corresponding region in the input.
 
-\begin{figure}
+\begin{figure}[h]
   \centering   \begin{tikzpicture}
     \draw[ultra thick, draw = black, fill=purple] (0,0) grid (2,2) rectangle (0,0);
     \draw[ultra thick, draw = black, fill=blue]   (0,2) grid (2,4) rectangle (0,2);
@@ -2788,7 +2796,7 @@ then a large number means it has perhaps detected a particular feature. E.g. the
 
 \paragraph{Gradient descent and max pooling} It's interesting to note that max-pooling has a set of hyperparameters, but it has no
 parameters to learn. Once the filter size $f$ and stride length $s$ are fixed, there's nothing to learn; it's just a fixed 
-computation. The same formulae apply for dimensions, where the size of he subsequent layer is given by $\floor{\frac{n+2p - f}{s} + 1}$. If you have an image with multiple channels, then the output of the max-pooling operation will have just as many channels.
+computation. The same formulae apply for dimensions, where the size of the subsequent layer is given by $\floor{\frac{n+2p - f}{s} + 1}$. If you have an image with multiple channels, then the output of the max-pooling operation will have just as many channels.
 The way it works is that we apply max-pooling to each channel independently and write the results to a table; finally, we can stack up the results into a 3-D data structure.
 
 \paragraph{Average pooling} This is exactly what you would expect. Max pooling is used much more often with one exception:
@@ -2796,7 +2804,8 @@ sometimes very deep in a neural network you may wish to collapse your representa
 
 \paragraph{Common choices of hyperparameters} Many set $f=2$ and $s=2$, and this has the effect of roughly halving the height and width of the representation by a factor of two. When you do max-pooling, you usually \emph{never} pad. It's reasonable to try a few values of these hyperparameters and see which works best by cross-validation.
 
-\subsection{CNN Example} We now have the building blocks for constructing a full convolutional neural network, and so we next
+\subsection{Convolutional neural nets for digit recognition} 
+We now have the building blocks for constructing a full convolutional neural network, and so we next
 consider an example. Suppose you're given an input image with dimension $32 \times 32 \times 3$, i.e. an RGB image, and you would
 like to perform handwritten digit recognition. E.g. maybe we have a number like seven in a $32 \times 32$ RGB image.
 \begin{figure}[h]   \centering
@@ -2880,35 +2889,40 @@ the first layer will be $28 \times 28 \times 6$. We'll call this first layer \te
 
 It's worth re-hashing that in general, as we progress to deeper layers of the network the size of the input shrinks, i.e.
 both of $n_H, n_W \downarrow$, whereas on the other hand there is a tendency for number of channels $n_c \uparrow$ as we get
-to deeper layers. The pattern of $\texttt{Conv} \leadsto \texttt{Pool} \leadsto \texttt{Conv} \leadsto \texttt{Pool} \leadsto \texttt{FC} \leadsto \texttt{FC} \leadsto \texttt{FC} \leadsto \texttt{softmax}$ is very common in computer vision.
+to deeper layers. The pattern of $\texttt{Conv} \leadsto \texttt{Pool} \leadsto \texttt{Conv} \leadsto \texttt{Pool} \leadsto \texttt{FC} \leadsto \texttt{FC} \leadsto \texttt{FC} \leadsto \texttt{softmax}$ is very common in computer vision; for details on how the \# parameters is computed, see following section.
 
-\subsubsection{Number of Parameters in a Convolution Layer}
-We remark that there are some differences in the number of filters used in the table below when compared with the example above,
-but the structure of the network remains the same. For a convolutional layer, the number of parameters to learn is given by
-\[
-\texttt{NumParams} = \left(f^{[\ell]} \times f^{[\ell]} \times n_C^{[\ell-1]} + 1 \right) \times n_C^{[\ell]}.
-\]
 \begin{table}[h]
-  \centering   \begin{tabular}{l | c | c | c}
+  \centering
+  \scalebox{0.7}{   \begin{tabular}{l | c | c | c}
     & Activation Shape & Activation Size & \# Parameters \\
     \hline
   Input: & $(32, 32, 3)$ & $3,072$ & 0 \\
-  \texttt{Conv1} ($f=5,s=1$) & $(28, 28, 8)$ & $4,704$ & $456$ \\
+  \texttt{Conv1} ($f=5,s=1$) & $(28, 28, 8)$ & $6,272$ & $456$ \\
   \texttt{Pool1} ($f=2,s=2$) & $(14,14,6)$   & $1,176$ & 0 \\
   \texttt{Conv2} ($f=5,s=1$) & $(10,10,16)$  & $1,600$ & $2,416$ \\
   \texttt{Pool2} ($f=2,s=2$) & $(5,5,16)$    & $400$   & 0 \\
   \texttt{FC3}               & $(120,1)$     & $120$   & $48,120$ \\
   \texttt{FC4}               & $(84,1)$      & $84$    & $10,164$ \\
-  \texttt{Softmax}           & $(10,1)$      & $10$    & $850$   \end{tabular} \end{table}
+  \texttt{Softmax}           & $(10,1)$      & $10$    & $850$   \end{tabular}} \end{table}
+
+\subsubsection{Number of Parameters in a Convolution Layer}
+We remark that there are some differences in the number of filters used in the table below when compared with the example above,
+but the structure of the network remains the same. For a convolutional layer, the number of parameters to learn is given by
+
+\[
+\texttt{NumParams} = \left(f^{[\ell]} \times f^{[\ell]} \times n_C^{[\ell-1]} + 1 \right) \times n_C^{[\ell]}.
+\]
 
 A few points are worth mentioning.
-\begin{itemize}   \item Components of the network involving Pooling have no parameters to learn.
+\begin{itemize} \itemsep0em 
+  \item Components of the network involving Pooling have no parameters to learn.
   \item The number of parameters used in convolutional layers is relatively small.
   \item The number of parameters used in fully-connected layers is quite large.
   \item The activation size decreases as we get deeper into the network.\footnote{If we reduce the size of the representation of data too quickly when moving across layers, performance will suffer.} \end{itemize}
 
 \subsection{Why Convolutions?} Why are convolutions to include in a network? There are two main advantages.
-\begin{itemize}   \item Parameter sharing, and
+\begin{itemize} \itemsep0em 
+  \item Parameter sharing, and
   \item Sparsity of connections. \end{itemize}
 
 Suppose you have a $32 \times 32 \times 3$ image, and then we apply six $5 \times 5$ filters to yield a $28 \times 28 \times 6$ output. If we multiply out the dimensions, we see that there are $3,072$ dimensions in the input image and another $4,704$ in the output. If we were to create a fully connected layer in between, we would have $3,072 \times 4,704 \approx 14M$ parameters to train, which is quite a lot for a small image. If the image was $1,000 \times 1,000$, the weight matrix becomes infeasibly large. On the other hand, if we use six $5 \times 5$ filters plus a bias term, we end up with only $6 \times (5\times 5 \times 3 + 1) = 456$ parameters; so our convolutional layer remains quite small. Let's go over the reasons for this.
