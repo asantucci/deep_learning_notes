@@ -2796,5 +2796,116 @@ sometimes very deep in a neural network you may wish to collapse your representa
 
 \paragraph{Common choices of hyperparameters} Many set $f=2$ and $s=2$, and this has the effect of roughly halving the height and width of the representation by a factor of two. When you do max-pooling, you usually \emph{never} pad. It's reasonable to try a few values of these hyperparameters and see which works best by cross-validation.
 
+\subsection{CNN Example} We now have the building blocks for constructing a full convolutional neural network, and so we next
+consider an example. Suppose you're given an input image with dimension $32 \times 32 \times 3$, i.e. an RGB image, and you would
+like to perform handwritten digit recognition. E.g. maybe we have a number like seven in a $32 \times 32$ RGB image.
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}[scale=0.5]     \draw (0.5, 0.5)   rectangle (3.5, 3.5);     
+    \draw (0.25, 0.25) rectangle (3.25, 3.25); 
+    \draw (0, 0)       rectangle (3, 3);    
+    \node at (1.5, 1.5) {7};   \end{tikzpicture} \end{figure}
+We'd like to recognize which of the digits in the set $\{0, 1, \ldots, 9\}$ this image contains. We're going to implement a neural
+network inspired by \href{http://yann.lecun.com/exdb/lenet/}{LeNet-5}, which itself was created by 
+\href{http://yann.lecun.com/}{Yann LeCun}. Suppose that for the first layer we use a $5 \times 5$ filter and unit stride-length
+with no padding. From our formula we know the output will be $n-f+1 \leadsto 28 \times 28$, and if we use 6 filters our output from
+the first layer will be $28 \times 28 \times 6$. We'll call this first layer \texttt{Conv1}: it's the result of applying six filters, adding a bias, then applying a non-linearity.
+
+\begin{figure}[h]
+  \centering   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \node at (-2, -1.25) {$\scriptstyle 32 \times 32 \times 3$}; 
+    \draw[black] (-1,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (-1,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (-1,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez) -- ++(\cubex,0,0) -- cycle; 
+    \draw[->] (-.5, 0, 1) -- (1, 0, 1) node[below left] {$\substack{f = 5 \\ s = 1 \\ p = 0 \\ \textrm{6 filters}}$};
+    \draw[black] (1.75,0,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (1.75,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (1.75,0,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle;
+    \node at (1.75, 1, 0.5) {\texttt{Conv1}};
+    \node at (1.75, -1.1, 0.5) {$\scriptstyle 28 \times 28 \times 6$};
+    \draw[->] (2, 0, 1) -- (4.25, 0, 1) node[below left] {$\substack{\texttt{max-pool} \\ f = 2 \\ s = 2 \\ p = 0}$};
+    \draw[black] (5,0,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (5,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (5,0,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle;
+    \node at (5, -1.1, 0.5) {$\scriptstyle 14 \times 14 \times 6$};
+    \node at (5, 1, .5) {\texttt{Pool1}};
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}] (0.5,-1.7) -- (5.6, -1.7) node[midway,below,yshift=-.4cm] {\texttt{Layer 1}};
+    \draw[->] (6, 0, 1) -- (7.5, 0, 1) node[below left] {$\substack{f=5 \\ s = 1 \\ p = 0 \\ \textrm{16 filters}}$};
+    \draw[black] (8.5,0,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (8.5,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (8.5,0,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle;
+    \node at (8.5, -1.1, 0.5) {$\scriptstyle 10 \times 10 \times 16$};
+    \node at (8.5, 1, 0.5) {\texttt{Conv2}};
+    \draw[->] (9, 0, 1) -- (11.25, 0, 1) node[below left] {$\substack{\texttt{max-pool} \\ f = 2 \\ s = 2 \\ p = 0}$};
+    \draw[black] (12,0,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (12,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (12,0,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle;
+    \node at (12, -1.1, 0.5) {$\scriptstyle 5 \times 5 \times 16$};
+    \node at (12, 1, .5) {\texttt{Pool2}};
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}] (7.5,-1.7) -- (12, -1.7) node[midway,below,yshift=-.4cm] {\texttt{Layer 2}};
+    \node at (12.75, -.5) {=};
+    \draw (13, -2) rectangle (13.5, 2);
+    \foreach \i in {1.8, 1.6, ..., -1.8} \node[draw,circle,black,scale=1/2] at (13.25, \i) {};
+    \node at (13.25, -2.2) {$\scriptstyle 400$};
+    \draw (-2, -6) rectangle (-1.5, -2);
+    \foreach \i in {1.8, 1.6, ..., -1.8} \node[draw,circle,black,scale=1/2] at (-1.75, \i - 4) {};
+    \node at (-1.75, -6.2) {$\scriptstyle 400$};
+    \foreach \y in {-5, -4.5, ..., -3}
+      \draw[->] (-1.5, -4) -- (0, \y);
+    \draw (0, -5) rectangle (0.5, -3);
+    \foreach \i in {-4.8, -4.6, ..., -3.2} \node[draw,circle,black,scale=1/2] at (0.25, \i) {};
+    \node at (0.25, -5.25) {$\scriptstyle 120$};
+    \draw (2, -4.75) rectangle (2.5, -3.25);
+    \foreach \i in {-4.7, -4.6, ..., -3.3} \node[draw,circle,black,scale=1/4] at (2.25, \i) {};
+    \foreach \y in {-4.7, -4.5, ..., -3.3} \draw[->] (0.5, -4) -- (2, \y);
+    \node at (2.25, -5) {$\scriptstyle 84$};
+    \node at (0.25,  -2.75) {\tiny FC3};
+    \node at (2.25,  -3) {\tiny FC4};
+    \draw[->] (2.75, -4) -- (4, -4);
+    \node[draw,circle] (output) at (5, -4) {$\substack{\textrm{\tiny softmax} \\ \scriptstyle 10 \textrm{\tiny \, outputs}}$};
+    
+  \end{tikzpicture}
+  \caption{\footnotesize 
+    We remark that because the max-pooling operation only has hyperparameters and no learnable parameters, that it's often
+    not considered a layer on its own; we'll only declare a (new) layer where there are weights to be learned. That we chose
+  to label these steps as \texttt{Conv1} and \texttt{Pool1} is meant to reflect the fact that they are both 
+  part of the first layer. After our second layer, we flatten our $5 \times 5 \times 16 = 400$ elements into a 
+  one-dimensional vector. At this point, the visual diagram starts to differ from the implementation details: the reshaped output
+  from \texttt{Pool2} is \emph{fully connected} to the next layer 3 (hence \texttt{FC3}) of 120 hidden neurons. Our weight matrix
+  of learnable parameters has shape $W^{[3]} \in (120, 400)$ and $b^{[3]} \in (120,1)$. This third layer is fully connected to 
+  the fourth layer, \texttt{LC4} which now only has 84 neurons. Finally, we apply one more (learned) weights matrix 
+  (and bias) to \texttt{FC4} in order to obtain a 10-element output, which we then feed into a softmax function to 
+  yield a probability distribution across our digits.} \end{figure}
+
+It's worth re-hashing that in general, as we progress to deeper layers of the network the size of the input shrinks, i.e.
+both of $n_H, n_W \downarrow$, whereas on the other hand there is a tendency for number of channels $n_c \uparrow$ as we get
+to deeper layers. The pattern of $\texttt{Conv} \leadsto \texttt{Pool} \leadsto \texttt{Conv} \leadsto \texttt{Pool} \leadsto \texttt{FC} \leadsto \texttt{FC} \leadsto \texttt{FC} \leadsto \texttt{softmax}$ is very common in computer vision.
+
+\subsubsection{Number of Parameters in a Convolution Layer}
+We remark that there are some differences in the number of filters used in the table below when compared with the example above,
+but the structure of the network remains the same. For a convolutional layer, the number of parameters to learn is given by
+\[
+\texttt{NumParams} = \left(f^{[\ell]} \times f^{[\ell]} \times n_C^{[\ell-1]} + 1 \right) \times n_C^{[\ell]}.
+\]
+\begin{table}[h]
+  \centering   \begin{tabular}{l | c | c | c}
+    & Activation Shape & Activation Size & \# Parameters \\
+    \hline
+  Input: & $(32, 32, 3)$ & $3,072$ & 0 \\
+  \texttt{Conv1} ($f=5,s=1$) & $(28, 28, 8)$ & $4,704$ & $456$ \\
+  \texttt{Pool1} ($f=2,s=2$) & $(14,14,6)$   & $1,176$ & 0 \\
+  \texttt{Conv2} ($f=5,s=1$) & $(10,10,16)$  & $1,600$ & $2,416$ \\
+  \texttt{Pool2} ($f=2,s=2$) & $(5,5,16)$    & $400$   & 0 \\
+  \texttt{FC3}               & $(120,1)$     & $120$   & $48,120$ \\
+  \texttt{FC4}               & $(84,1)$      & $84$    & $10,164$ \\
+  \texttt{Softmax}           & $(10,1)$      & $10$    & $850$   \end{tabular} \end{table}
+
+A few points are worth mentioning.
+\begin{itemize}   \item Components of the network involving Pooling have no parameters to learn.
+  \item The number of parameters used in convolutional layers is relatively small.
+  \item The number of parameters used in fully-connected layers is quite large.
+  \item The activation size decreases as we get deeper into the network.\footnote{If we reduce the size of the representation of data too quickly when moving across layers, performance will suffer.} \end{itemize}
+
 \end{document}
 
