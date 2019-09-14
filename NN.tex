@@ -1,10 +1,12 @@
 \documentclass[12pt]{article}  
+
 \usepackage[boxruled,lined]{algorithm2e} 
 \usepackage{booktabs}
 \usepackage{amsmath} 
 \usepackage{amsthm} 
 \usepackage{amsfonts} 
 \usepackage{enumitem}
+\usepackage[T1]{fontenc}
 \usepackage{xparse} 
 \usepackage{bbm} 
 \usepackage{color,soul} 
@@ -2960,5 +2962,24 @@ on one part of an image, it should work well on a different part.\footnote{It's 
  Notice that the output value in the upper left corner is only influenced by 9 out of 36 values in the input image. Similarly for
 each other value in the output layer.
 Taken together, this means we can train our algorithms faster, on smaller datasets, and without worry of over-fitting.
+
+\subsection{Case Studies} Let's examine a few case studies of effective convolutional neural networks. We've learned about
+the basic building blocks such as convolutional layers, pooling layers, and fully connected layers. As it turns out,
+a lot of advancements in the computer vision research community have been about piecing these building blocks together effectively.
+It turns out that a neural network architecture that works well on one task may also work well on others, and so
+paying attention to well crafted networks can help in solving your own problems. We'll examine \texttt{LeNet-5}, \texttt{AlexNet},
+\texttt{VGG}, \texttt{ResNet}, and \texttt{Inception} networks.
+
+\subsubsection{\texttt{LeNet-5}} The problem is to recognize handwritten digits in gray-scale images. The input is of dimension
+$32 \times 32 \times 1$.
+
+\begin{figure}[h]
+  \centering   \begin{tikzpicture}     \draw (0,0) rectangle (1,1);
+    \node at (0.5, 0.5) {7};
+    \node at (0.5, -.25) {\scriptsize $32 \times 32 \times 1$};   \end{tikzpicture}
+  \caption{An example input for the task of digit classification on grey-scale images.} \end{figure}
+
+The first step involves applying six $5 \times 5$ filters.
+
 \end{document}
 
