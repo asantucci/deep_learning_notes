@@ -2824,7 +2824,8 @@ with no padding. From our formula we know the output will be $n-f+1 \leadsto 28 
 the first layer will be $28 \times 28 \times 6$. We'll call this first layer \texttt{Conv1}: it's the result of applying six filters, adding a bias, then applying a non-linearity.
 
 \begin{figure}[h]
-  \centering   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2} 
+  \centering   \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
     \pgfmathsetmacro{\cubey}{1} 
     \pgfmathsetmacro{\cubez}{1}
     \node at (-2, -1.25) {$\scriptstyle 32 \times 32 \times 3$}; 
@@ -2972,14 +2973,60 @@ paying attention to well crafted networks can help in solving your own problems.
 
 \subsubsection{\texttt{LeNet-5}} The problem is to recognize handwritten digits in gray-scale images. The input is of dimension
 $32 \times 32 \times 1$.
+The first step involves applying six $5 \times 5$ filters, followed by average pooling. We then apply sixteen $5 \times 5$ filters
+before again applying average pooling. Then, we create a sequence of fully connected layers whose number of hidden units decreases
+progressively until making a prediction using 84 \emph{learned} features.
 
 \begin{figure}[h]
-  \centering   \begin{tikzpicture}     \draw (0,0) rectangle (1,1);
-    \node at (0.5, 0.5) {7};
-    \node at (0.5, -.25) {\scriptsize $32 \times 32 \times 1$};   \end{tikzpicture}
-  \caption{An example input for the task of digit classification on grey-scale images.} \end{figure}
+  \centering   \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2}
+    \pgfmathsetmacro{\cubey}{1}     \pgfmathsetmacro{\cubez}{1}
+    \draw (-5,-1) rectangle (-4,0);
+    \node at (-4.5, -.5) {7};
+    \node at (-4.5, -1.25) {\scriptsize $32 \times 32 \times 1$};  
+    \draw[black] (0,-.25,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (0,-.25,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (0,-.25,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez) -- ++(\cubex,0,0) -- cycle; 
+    \draw[->] (-3.5, 0, 1) -- (-2, 0, 1) node[below left] {$\substack{f = 5 \\ s = 1 \\ p = 0 \\ \textrm{6 filters}}$};
+    \node at (-1, -1.5) {\scriptsize $28 \times 28 \times 6$};
+    \draw[->] (1, 0, 1) -- (2.25, 0, 1) node[below left] {$\substack{\texttt{avg-pool} \\ f = 2 \\ s = 2}$};
+    \draw[black] (3,-.25,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (3,-.25,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black] (3,-.25,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle; 
+    \node at (2.5, -1.5) {\scriptsize $14 \times 14 \times 6$};
+    \draw[->] (4, 0, 1) -- (5, 0, 1) node[below left] {$\substack{f = 5 \\ s = 1 \\ \textrm{16 filters}}$};
+    \draw[black] (5.5,-.25,0) -- ++(-\cubex/3,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/3,0,0) -- cycle; 
+    \draw[black] (5.5,-.25,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*2) -- cycle; 
+    \draw[black] (5.5,-.25,0) -- ++(-\cubex/3,0,0) -- ++(0,0,-\cubez*2) -- ++(\cubex/3,0,0) -- cycle; 
+    \node at (5.5, -1.5) {\scriptsize $10 \times 10 \times 16$};
+    \draw[->] (6, 0, 1) -- (8, 0, 1) node[below left] {$\substack{\texttt{avg-pool} \\ f = 2 \\ s = 2}$};
+    \draw[black] (8.25,-.25,0) -- ++(-\cubex/4,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/4,0,0) -- cycle; 
+    \draw[black] (8.25,-.25,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*2) -- cycle; 
+    \draw[black] (8.25,-.25,0) -- ++(-\cubex/4,0,0) -- ++(0,0,-\cubez*2) -- ++(\cubex/4,0,0) -- cycle; 
+    \node at (8.25, -1.5) {\scriptsize $5 \times 5 \times 16$};
+    \draw[->] (9, 0, 1) -- (10.4, 0, 1) node[below left] {$\texttt{\tiny flatten}$};
+    \draw (10, -2) rectangle (10.5, 2);
+    \foreach \i in {1.8, 1.6, ..., -1.8} \node[draw,circle,black,scale=1/2] at (10.25, \i) {};
+    \node at (10.25, -2.2) {$\scriptstyle 400$};
+    \foreach \y in {-1.25, -1.05, ..., 0.75} \draw[->] (10.5, -.25) -- (11, \y);
+    \draw (11, -1.5) rectangle (11.5, 1.5);
+    \foreach \y in {-1.4, -1.1, ..., 1.3} \node[draw,circle,black,scale=1/2] at (11.25, \y) {};
+    \node at (11.25, -1.75) {$\scriptstyle 120$};
+    \foreach \y in {-1.05, -.85, ..., .55} \draw[->] (11.5, -.25) -- (12, \y);
+    \draw (12, -1) rectangle (12.5, 1);
+    \foreach \i in {-.8, -.6, ..., 0.8} \node[draw,circle,black,scale=1/2] at (12.25, \i) {};
+    \node at (12.25, -1.25) {$\scriptstyle 84$};
+    \draw[->] (12.5, -.25) -- (13, -.25) node[right] {$\hat y$};
+  \end{tikzpicture}
+  \caption{\footnotesize
+    We draw out the classic LeNet-5 architecture. The input for the task of digit classification is a grey-scale image.
+    Note that at the time this algorithm was developed, it was more in fashion
+    to use average pooling instead of max pooling. Further, note that the last layers are \emph{fully} connected. Lastly,
+    a classifier is used to map the 84 features in the final layer into a prediction; in modern times, we'd use a softmax, but 
+    back then a different classifier was used.} \end{figure}
 
-The first step involves applying six $5 \times 5$ filters.
+The LeNet-5 architecture uses about 60k parameters, whereas modern deep learning algorithms can be almost 1,000x larger, 
+making use of 10-100M parameters. Notice that $n_H, n_W \downarrow$ as we progress through the network, whereas $n_C \uparrow$.
 
 \end{document}
 
