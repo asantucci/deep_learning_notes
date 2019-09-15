@@ -8,6 +8,7 @@
 \usepackage{enumitem}
 \usepackage[T1]{fontenc}
 \usepackage{xparse} 
+\usepackage{bm}
 \usepackage{bbm} 
 \usepackage{color,soul} 
 \usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
@@ -16,12 +17,16 @@
 \usepackage{tikz}
 \usepackage[normalem]{ulem}
 \usepackage{pgfplots}  
+\usepackage{pifont}
 \usetikzlibrary{positioning}
 \usetikzlibrary{calc}
 \usetikzlibrary{fit}
 \usetikzlibrary{shapes}
 \usetikzlibrary{patterns}
 \usetikzlibrary{decorations.pathreplacing}
+
+\newcommand{\Plus}{\mathord{\begin{tikzpicture}[baseline=0ex, line width=1, scale=0.13]
+\draw (1,0) -- (1,2); \draw (0,1) -- (2,1); \end{tikzpicture}}}
 
 \newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
@@ -1960,7 +1965,8 @@ we could take as input an image of what's in front of the car (perhaps obtained 
 
 \section{Convolutional Neural Networks} Computer vision is an area with a rapidly growing research body. E.g.,
 computer vision can
-\begin{itemize} \item Help self-driving cars figure out where the other cars and pedestrians are in order to avoid them.
+\begin{itemize} 
+\item Help self-driving cars figure out where the other cars and pedestrians are in order to avoid them.
 \item Allow an individual to unlock a phone or door with just their face.
 \item Show you the most attractive, beautiful, or relevant pictures. \end{itemize}
 
@@ -2070,9 +2076,15 @@ Mathematically,
     0 & 30 & 30 & 0 \\
   \end{bmatrix} \end{equation*}
 If we were to visualize this image, it might look as follows:
-\begin{figure}[h]   \centering
-  \begin{tikzpicture}[scale=0.5]     \draw[fill = white, black] (1,0) rectangle (2, 2);     \draw[fill = white] (0,0) rectangle (1, 2); 
-  \end{tikzpicture} \end{figure} The larger values yield brighter pixel intensive values. In this image, there is very clearly a vertical edge right down the middle.
+
+\begin{figure}[h]   
+  \centering
+  \begin{tikzpicture}[scale=0.5]     
+    \draw[fill = white, black] (1,0) rectangle (2, 2);     
+    \draw[fill = white] (0,0) rectangle (1, 2); 
+  \end{tikzpicture} 
+\end{figure} 
+The larger values yield brighter pixel intensive values. In this image, there is very clearly a vertical edge right down the middle.
 We can visualize our filter or kernel matrix as well.
 \begin{figure}[h]
   \centering
@@ -3039,8 +3051,8 @@ filters would be used to look at different channels. Lastly, the LeNet-5 uses a 
 not so common today. Sections two and three of the paper are most relevant to learn from.
 
 \subsection{\href{https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf}{\texttt{AlexNet}}}
-
-\begin{figure}   \centering
+This architecture was designed for the \href{http://www.image-net.org/}{ImageNet} dataset.
+\begin{figure}[h]   \centering
   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
     \pgfmathsetmacro{\cubey}{1}     
     \pgfmathsetmacro{\cubez}{1}
@@ -3139,13 +3151,14 @@ not so common today. Sections two and three of the paper are most relevant to le
   bit slower and so the authors developed a complex algorithm to share tasks between GPU's. This network performed so well 
   that it convinced practictioners of computer vision that deep neural networks carried merit.} \end{figure}
 
-\subsection{VGG-16} The interesting thing about \texttt{VGG-16} is how simple the network architecture is:
+\subsection{\href{https://arxiv.org/abs/1409.1556}{\texttt{VGG-16}}} The interesting thing about \texttt{VGG-16} is how simple the network architecture is:
 the focus is on having convolutional layers that are just $3 \times 3$ filters with unit stride length and \texttt{same}
 padding, and all max-pooling layers use a $2 \times 2$ filter with a stride length of two. The number of hyperparameters
 is drastically reduced relative to previous networks we've seen. Since the architecture is actually quite deep, we won't draw out
 the volumes. Instead we'll use text, and so the notation $\substack{\texttt{Conv } 64 \\ \times 2}$ represents taking an input
 and applying \emph{two} \texttt{same} convolutions with 64 filters each, i.e.
-\begin{figure}[h]
+
+\begin{figure}
   \centering   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
     \pgfmathsetmacro{\cubey}{1}     
     \pgfmathsetmacro{\cubez}{1}
@@ -3166,10 +3179,13 @@ and applying \emph{two} \texttt{same} convolutions with 64 filters each, i.e.
     \draw[black] (11,1.25,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
     \draw[black] (11,1.25,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*3) -- cycle; 
     \draw[black] (11,1.25,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex,0,0) -- cycle; 
-    \node at (9, -.25) {$\scriptstyle 224 \times 224 \times 64$};       \end{tikzpicture} \end{figure}
+    \node at (9, -.25) {$\scriptstyle 224 \times 224 \times 64$};       \end{tikzpicture}
+\end{figure}
 
-And so we proceed with text/short-hand notation.
-\begin{figure}[h]   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
+And so we proceed with text/short-hand notation. Note that the name \texttt{VGG-16} comes from the fact that there are 
+sixteen layers with learnable weights; this ends up being about 138M parameters.
+
+\begin{figure}   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
     \pgfmathsetmacro{\cubey}{1}     
     \pgfmathsetmacro{\cubez}{1}
     %% Input.
@@ -3191,6 +3207,154 @@ And so we proceed with text/short-hand notation.
     \draw[->] (3, -2.5) -- (4, -2.5) node[right] {$\substack{\texttt{FC} \\ 4,096}$};
     \draw[->] (5, -2.5) -- (6, -2.5) node[right] {$\substack{\texttt{FC} \\ 4,096}$};
     \draw[->] (7, -2.5) -- (8, -2.5) node[right] {$\substack{\texttt{Softmax} \\ 1,000}$};
-  \end{tikzpicture} \end{figure}
+  \end{tikzpicture}
+  \caption{\footnotesize The \texttt{VGG-16} architecture, represented using our short-hand notation described above.
+  Notice that each time we apply a convolution, we double the number of filters (or channels) used, 
+  starting from 64 and ending with 256. We again see the pattern that as we progress through the network,
+  $n_H, n_W \downarrow$ and $n_C \uparrow$.} 
+\end{figure}
+
+\subsection{\href{http://openaccess.thecvf.com/content_cvpr_2016/papers/He_Deep_Residual_Learning_CVPR_2016_paper.pdf}{Residual Networks} (ResNets)} Deep neural networks are difficult to train, in part due to
+vanishing and exploding gradients; this section introduces the idea of a skip connection which allows us
+to take an activation from one layer and feed it directly into another much deeper layer in the network.
+
+\paragraph{Residual Block} A typical feed forward neural network has the following structure.
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}     \node (al) at (0, 0) {$a^{[\ell]}$};
+    \draw[->] (al) -- (0.95,0);
+    \draw (1, -.5) rectangle (1.5, .5);
+    \foreach \y in {0.25, 0, -0.25} \node[draw,circle,black,scale=1/2] at (1.25, \y) {};
+    \draw[->] (1.55, 0) -- (2.45,0) node[above left,scale=3/4] {$a^{[\ell+1]}$};
+    \draw (2.5, -.5) rectangle (3, .5);
+    \foreach \y in {0.25, 0, -0.25} \node[draw,circle,black,scale=1/2] at (2.75, \y) {};
+    \draw[->] (3,0) -- (3.95,0) node[right] {$a^{[\ell+2]}$};   \end{tikzpicture} \end{figure}
+
+In computing this graph, we adhere to the following sequence of linear followed by non-linear transforms.
+\begin{align}   z^{[\ell+1]} &= W^{[\ell+1]} a^{[\ell]} + b^{[\ell+1]} \nonumber \\
+  a^{[\ell+1]} &= g(z^{[\ell+1]}) \nonumber \\ 
+  z^{[\ell+2]} &= W^{[\ell+2]} a^{[\ell+1]} + b^{[\ell+2]} \nonumber \\
+  \label{eq: skipconold}
+  a^{[\ell+2]} &= g(z^{[\ell+2]}). \end{align}
+Schematically, we have a DAG that looks like the figure depicted below.
+
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}     \node (al) at (0,0) {$a^{[\ell]}$};
+    \draw[->] (al) -- (1,0) node[right] (lin) {Linear};
+    \draw[->] (lin) -- (2.95,0);
+    \node (relu) at (3.5,0) {ReLU};
+    \draw[->] (relu) -- (5,0) node[above left,scale=3/4] {$a^{[\ell+1]}$};
+    \node (lin2) at (5.75,0) {Linear};
+    \draw[->] (lin2) -- (7,0) node[right] (relu2) {ReLU};
+    \draw[->] (relu2) -- (8.5,0) node[right] {$a^{[\ell+2]}$};
+    \draw[->,orange,dashed] (0,-.5) -- (8.5, -.5) node[below left] {main path};   \end{tikzpicture}
+  \label{fig: mainpathresnet}
+  \caption{\footnotesize 
+    Notice that in order for information to flow
+ from $a^{[\ell]}$ to $a^{[\ell+2]}$, it must go through a sequence of transformations.} \end{figure}
+
+The idea behind a residual net is to forward information from $a^{[\ell]}$ directly into a deeper layer before then applying 
+another activation. We replace equation \ref{eq: skipconold} with 
+\[
+a^{[\ell+2]} = g(z^{[\ell+2]} + a^{[\ell]}).
+\]
+
+\begin{figure}[h]   \centering
+  \begin{tikzpicture}     \node (al) at (0,0) {$a^{[\ell]}$};
+    \draw[->] (al) -- (1,0) node[right] (lin) {Linear};
+    \draw[->] (lin) -- (2.95,0);
+    \node (relu) at (3.5,0) {ReLU};
+    \draw[->] (relu) -- (5,0) node[above left,scale=3/4] {$a^{[\ell+1]}$};
+    \node (lin2) at (5.75,0) {Linear};
+    \draw[->,dashed] (lin2) -- (7,0) node[right] (relu2) {ReLU};
+    \draw[->] (relu2) -- (8.5,0) node[right] {$a^{[\ell+2]}$};
+    \draw[->,orange,dashed] (0,-.5) -- (8.5, -.5) node[below left] {main path};
+    \draw[->, purple] (0.5, 0) -- (0.5, 1) -- (6.75, 1) -- (6.75, 0.4);
+    \node[purple] at (4, 1.25) {``short-cut/skip connetion''};
+    \node[draw,circle,purple,scale=1/3,thick] at (6.75,0.2) {$\Plus$}; 
+  \end{tikzpicture}
+  \caption{A skip connection which bypasses the ``main path''.} 
+\end{figure}
+
+And so our updated network diagram now looks like
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}     
+    \node (al) at (0, 0) {$a^{[\ell]}$};
+    \draw[->] (al) -- (0.95,0);
+    \draw (1, -.5) rectangle (1.5, .5);
+    \foreach \y in {0.25, 0, -0.25} \node[draw,circle,black,scale=1/2] at (1.25, \y) {};
+    \draw[->] (1.55, 0) -- (2.45,0) node[above left,scale=3/4] {$a^{[\ell+1]}$};
+    \draw (2.5, -.5) rectangle (3, .5);
+    \foreach \y in {0.25, 0, -0.25} \node[draw,circle,black,scale=1/2] at (2.75, \y) {};
+    \draw[->] (3,0) -- (3.95,0) node[right] {$a^{[\ell+2]}$};   
+    \draw[->,purple] (0.5, 0) -- (0.5, 1) -- (2.75, 1) -- (2.75, 0.6);
+  \end{tikzpicture} 
+  \caption{\footnotesize A skip connection takes activation from layer $\ell$ and feeds it directly into a later layer.}
+\end{figure}
+
+\begin{figure}   \centering
+  \begin{tikzpicture}     \node (x) at (1/2,0) {$x$};
+    \foreach \x in {1, 2, ..., 10} {
+      \draw[->] (\x, 0) -- (\x+1/2, 0);
+      \draw (\x+1/2, -.5) rectangle (\x+1, .5);
+      \foreach \y in {-.25, 0, .25} \node[draw,circle,scale=1/2] at (\x+3/4,\y) {};
+    }
+    \foreach \x in {1.1, 3.1, ..., 9.1} {
+      \draw[->,orange] (\x, 0) -- (\x,0.8) -- (\x+1.5, 0.8) -- (\x+1.5, 0.6);
+      \draw[purple] (\x, -.6) -- (\x, -.7) -- (\x+1.6, -.7) -- (\x+1.6, -.6);
+    }
+    \draw[->] (11, 0) -- (11.5, 0) node[right] {$a^{[\ell]}$};
+  \end{tikzpicture}
+  \caption{\footnotesize We draw a ``plain'' network in black, and add in skip connections in {\color{orange}{orange}} to transform the network into a \emph{residual network}. The residual network is comprised of five residual \emph{blocks} which we've highlighted in {\color{purple}{purple}}.} \end{figure}
+
+It's also interesting to analyze training error as a function of the number of layers in the network, contrasting 
+``plain'' networks with residual networks.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+  \begin{axis}[     
+    domain=0:2,     
+    restrict y to domain = 0:2,
+    axis lines=middle,     
+    axis equal image,     
+    xtick=\empty, 
+    ytick=\empty,     
+    enlargelimits=true,     
+    clip mode=individual, 
+    clip=false 
+    ]
+    \addplot [orange] {exp(-x)} node[right] {Theory}; 
+    \addplot [purple, domain = 0:2] {1/2*pow(x-1, 2)+1/2} node[right] {Practice}; 
+  \end{axis} 
+  \node[rotate=90] at (-0.2, 2.5) {Training Err};
+  \node            at (3.5,-.4)   {\# Layers};
+\end{tikzpicture}
+\end{figure}
+
+In contrast, with a ResNet we avoid problems of exploding and vanishing gradients since we are able to feed activations directly
+deeper into the network. Whence, we tend to see that training error continues to decrease as we add more residual 
+blocks in our network.
+
+\subsubsection{Why do residual networks work?} We've seen previously that obtaining low training error
+is almost a pre-requisite for obtaining low dev/test error. Being able to train a deep ResNet that achieves
+low training error is a first step in the right direction. Suppose we have some big neural network that outputs
+an intermediary activation value $a^{[\ell]}$.
+\begin{figure}   \centering
+  \begin{tikzpicture}     \node at (0,0) {x};
+    \draw[->] (0.2, 0) -- (1, 0) node[right,draw,rectangle] (bignn) {Big NN};
+    \draw[->] (bignn) -- (3,0) node[right] {$a^{[\ell]}$};    \end{tikzpicture} \end{figure}
+
+Now, suppose that we are going to add a couple extra layers to our giant neural network, with the addition of a skip connection.
+\begin{figure}   \centering
+  \begin{tikzpicture}     \node at (0,0) {x};
+    \draw[->] (0.2, 0) -- (1, 0) node[right,draw,rectangle] (bignn) {Big NN};
+    \draw[->] (bignn) -- (3.5,0) node[above left] {$a^{[\ell]}$};  
+    \draw (4,-.5) rectangle (4.5, .5);
+    \foreach \y in {-.25, 0, .25} \node[draw,circle,scale=1/2] at (4.25, \y) {};
+    \draw[->] (4.5, 0) -- (5,0);   \end{tikzpicture} \end{figure}
+
 \end{document}
+
 
