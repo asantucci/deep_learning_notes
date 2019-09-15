@@ -2971,8 +2971,8 @@ It turns out that a neural network architecture that works well on one task may 
 paying attention to well crafted networks can help in solving your own problems. We'll examine \texttt{LeNet-5}, \texttt{AlexNet},
 \texttt{VGG}, \texttt{ResNet}, and \texttt{Inception} networks.
 
-\subsubsection{\texttt{LeNet-5}} The problem is to recognize handwritten digits in gray-scale images. The input is of dimension
-$32 \times 32 \times 1$.
+\subsubsection{\href{http://yann.lecun.com/exdb/publis/pdf/lecun-01a.pdf}{\texttt{LeNet-5}}} The problem is to recognize handwritten digits in gray-scale images. The input is of dimension
+$32 \times 32 \times 1$. The paper was published in '98.
 The first step involves applying six $5 \times 5$ filters, followed by average pooling. We then apply sixteen $5 \times 5$ filters
 before again applying average pooling. Then, we create a sequence of fully connected layers whose number of hidden units decreases
 progressively until making a prediction using 84 \emph{learned} features.
@@ -3026,7 +3026,111 @@ progressively until making a prediction using 84 \emph{learned} features.
     back then a different classifier was used.} \end{figure}
 
 The LeNet-5 architecture uses about 60k parameters, whereas modern deep learning algorithms can be almost 1,000x larger, 
-making use of 10-100M parameters. Notice that $n_H, n_W \downarrow$ as we progress through the network, whereas $n_C \uparrow$.
+making use of 10-100M parameters. Although this network was designed decades ago, it shares some commonalities with modern networks.
+
+\begin{itemize}   \item Notice that $n_H, n_W \downarrow$ as we progress through the network, whereas $n_C \uparrow$.
+  \item Further, the pattern of \texttt{Convolution} $\leadsto$ \texttt{Pooling} $\leadsto$ \texttt{Convolution} $\leadsto$ \texttt{Pooling} $\leadsto$ \texttt{Fully-Connected Layers} is robust to many problems. \end{itemize}
+
+\paragraph{Advanced} In the paper and at the time, it was more common to use sigmoid and $\tanh$ activation functions as opposed to
+\texttt{ReLU}'s. There is another difference in availability of compute and how this affected the algorithm design: in modern days
+if we have a $n_H \times n_W \times n_C$ network then we apply a $f \times f \times n_C$ filter, where we apply \emph{every} 
+filter to \emph{every} channel; however, back then compute was sparse and so a more complicated algorithm was used where different 
+filters would be used to look at different channels. Lastly, the LeNet-5 uses a non-linearity after the pooling layer which is
+not so common today. Sections two and three of the paper are most relevant to learn from.
+
+\subsection{\href{https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf}{\texttt{AlexNet}}}
+
+\begin{figure}   \centering
+  \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
+    \pgfmathsetmacro{\cubey}{1}     
+    \pgfmathsetmacro{\cubez}{1}
+    %% Input.
+    \draw[ultra thick, draw = black, fill = blue ] (0.5, 0.5) grid (5.5, 5.5) rectangle (0.5, 0.5);     
+    \draw[ultra thick, draw = black, fill = green] (0.25, 0.25) grid (5.25, 5.25) rectangle (0.25, 0.25);     
+    \draw[ultra thick, draw = black, fill = red  ] (0, 0) grid (5, 5) rectangle (0, 0);
+    \node at (2.5, -.25) {$\scriptstyle 227 \times 227 \times 3$};
+    %% First convolution applying 96 filters.
+    \draw[->] (5.5, 2.5) -- (7, 2.5) node[below left] {$\substack{f = 11 \\ s = 4 \\ p = 0 \\ 96 \textrm{ filters}}$};
+    \draw[black] (9.25,2.5,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (9.25,2.5,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black] (9.25,2.5,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex,0,0) -- cycle; 
+    \node at (8.5, 1) {$\scriptstyle 55 \times 55 \times 96$};
+    %% Next, max-pool.
+    \draw[->] (10, 2.5) -- (12.5, 2.5) node[above left] {\footnotesize \texttt{max-pool}} node[below left] 
+      {$\substack{f=3 \\ s = 2 \\ p = 0}$};
+    \draw[black] (13.75,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (13.75,2.5,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black] (13.75,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex/2,0,0) -- cycle; 
+    \node at (13.5, 1) {$\scriptstyle 27 \times 27 \times 96$};
+    %% Here we apply a same convolution but using 256 different filters.
+    \draw[->] (14.5, 2.5) -- (16, 2.5) node[below left] {$\substack{f = 5 \\ s = 1 \\ \texttt{same} \\ \textrm{256 filters}}$};
+    \draw[black] (17.5,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (17.5,2.5,0) -- ++(0,0,-\cubez*5) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*5) -- cycle; 
+    \draw[black] (17.5,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez*5) -- ++(\cubex/2,0,0) -- cycle; 
+    \node at (17.5, 1) {$\scriptstyle 27 \times 27 \times 256$};
+    %% Max-pool with stride and no padding.
+    \draw[->] (0, -2.5) -- (1, -2.5) node[above left] {\footnotesize \texttt{max-pool}} node[below left] {$\substack{f=3 \\ s = 2 \\ p = 0}$};
+    \draw[black] (1.75,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,-\cubey/4,0) -- ++(\cubex/4,0,0) -- cycle; 
+    \draw[black] (1.75,-3.5,0) -- ++(0,0,-\cubez*5) -- ++(0,-\cubey/4,0) -- ++(0,0,\cubez*5) -- cycle; 
+    \draw[black] (1.75,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,0,-\cubez*5) -- ++(\cubex/4,0,0) -- cycle; 
+    \node at (2.5, -4) {$\scriptstyle 13 \times 13 \times 256$};
+    %% Convolution with 384 filters.
+    \draw[->] (3.25, -2.5) -- (4.5, -2.5) node[below left] {$\substack{f=3 \\ s = 1 \\ \texttt{same} \\ 384 \textrm{ filters}}$};
+    \draw[black] (5.5,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,-\cubey/4,0) -- ++(\cubex/4,0,0) -- cycle; 
+    \draw[black] (5.5,-3.5,0) -- ++(0,0,-\cubez*7) -- ++(0,-\cubey/4,0) -- ++(0,0,\cubez*7) -- cycle; 
+    \draw[black] (5.5,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,0,-\cubez*7) -- ++(\cubex/4,0,0) -- cycle; 
+    \node at (6, -4) {$\scriptstyle 13 \times 13 \times 384$};
+    %% Same convolution.
+    \draw[->] (7, -2.5) -- (8, -2.5) node[below left] {$\substack{f=3 \\ \texttt{same}}$};
+    \draw[black] (8.5,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,-\cubey/4,0) -- ++(\cubex/4,0,0) -- cycle; 
+    \draw[black] (8.5,-3.5,0) -- ++(0,0,-\cubez*7) -- ++(0,-\cubey/4,0) -- ++(0,0,\cubez*7) -- cycle; 
+    \draw[black] (8.5,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,0,-\cubez*7) -- ++(\cubex/4,0,0) -- cycle; 
+    \node at (9, -4) {$\scriptstyle 13 \times 13 \times 384$};
+    \draw[->] (10, -2.5) -- (11, -2.5) node[below left] {$\substack{f=3 \\ \textrm{same}}$};
+    %% Yet another same convolution but with fewer filters.
+    \draw[black] (11.5,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,-\cubey/4,0) -- ++(\cubex/4,0,0) -- cycle; 
+    \draw[black] (11.5,-3.5,0) -- ++(0,0,-\cubez*5) -- ++(0,-\cubey/4,0) -- ++(0,0,\cubez*5) -- cycle; 
+    \draw[black] (11.5,-3.5,0) -- ++(-\cubex/4,0,0) -- ++(0,0,-\cubez*5) -- ++(\cubex/4,0,0) -- cycle; 
+    \node at (12, -4) {$\scriptstyle 13 \times 13 \times 256$};
+    \draw[->] (13, -2.5) -- (14.5, -2.5) node[above left] {$\scriptstyle \texttt{max-pool}$} node[below left] {$\substack{f=3\\s=2\\p=0}$};
+    %% The max-pool with stride = 2 narrows our volume.
+    \draw[black] (15,-3.5,0) -- ++(-\cubex/6,0,0) -- ++(0,-\cubey/4,0) -- ++(\cubex/6,0,0) -- cycle; 
+    \draw[black] (15,-3.5,0) -- ++(0,0,-\cubez*5) -- ++(0,-\cubey/4,0) -- ++(0,0,\cubez*5) -- cycle; 
+    \draw[black] (15,-3.5,0) -- ++(-\cubex/6,0,0) -- ++(0,0,-\cubez*5) -- ++(\cubex/6,0,0) -- cycle; 
+    \node at (15.25, -4) {$\scriptstyle 6 \times 6 \times 256$};
+    \node at (0, -8) {=};
+    %% Flattened neurons.
+    \draw[black] (1, -10) rectangle (1.5, -6);
+    \node[draw,circle,black] at (1.25, -6.5) {};
+    \node[draw,circle,black] at (1.25, -7) {};
+    \node[draw,circle,black] at (1.25, -7.5) {};
+    \node at (1.25, -8) {$\vdots$};
+    \node at (1.25, -8.5) {$\vdots$};
+    \node[draw,circle,black] at (1.25, -9.5) {};
+    \node at (1.25, -10.25) {$\scriptstyle 9,216$};
+    \draw[->] (2, -8) -- (3, -8) node[above left] {$\substack{\tiny{\texttt{fully}} \\ \tiny{\texttt{connected}}}$};
+    %% Fully connected layer into 1/2 the neurons.
+    \draw[black] (3, -10) rectangle (3.5, -6);
+    \node[draw,circle,black] at (3.25, -6.5) {};
+    \node[draw,circle,black] at (3.25, -7) {};
+    \node[draw,circle,black] at (3.25, -7.5) {};
+    \node at (3.25, -8) {$\vdots$};
+    \node at (3.25, -8.5) {$\vdots$};
+    \node[draw,circle,black] at (3.25, -9.5) {};
+    \node at (3.25, -10.25) {$\scriptstyle 4,096$};
+    \draw[->] (4, -8) -- (5, -8) node[above left] {$\substack{\tiny{\texttt{fully}} \\ \tiny{\texttt{connected}}}$};
+    %% Fully connected layer into same # of neurons.
+    \draw[black] (5, -10) rectangle (5.5, -6);
+    \node[draw,circle,black] at (5.25, -6.5) {};
+    \node[draw,circle,black] at (5.25, -7) {};
+    \node[draw,circle,black] at (5.25, -7.5) {};
+    \node at (5.25, -8) {$\vdots$};
+    \node at (5.25, -8.5) {$\vdots$};
+    \node[draw,circle,black] at (5.25, -9.5) {};
+    \node at (5.25, -10.25) {$\scriptstyle 4,096$};
+    \draw[->] (6, -8) -- (7, -8) node[right] {$\scriptstyle \texttt{softmax}$};
+    \node at (7.5, -8.25) {\tiny 1,000};
+\end{tikzpicture} \end{figure}
 
 \end{document}
 
