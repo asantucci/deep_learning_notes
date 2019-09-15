@@ -3045,9 +3045,9 @@ not so common today. Sections two and three of the paper are most relevant to le
     \pgfmathsetmacro{\cubey}{1}     
     \pgfmathsetmacro{\cubez}{1}
     %% Input.
-    \draw[ultra thick, draw = black, fill = blue ] (0.5, 0.5) grid (5.5, 5.5) rectangle (0.5, 0.5);     
-    \draw[ultra thick, draw = black, fill = green] (0.25, 0.25) grid (5.25, 5.25) rectangle (0.25, 0.25);     
-    \draw[ultra thick, draw = black, fill = red  ] (0, 0) grid (5, 5) rectangle (0, 0);
+    \draw[ultra thick, draw = black, fill = blue,  scale = 3/4 ] (0.5, 0.5) grid (5.5, 5.5) rectangle (0.5, 0.5);     
+    \draw[ultra thick, draw = black, fill = green, scale = 3/4] (0.25, 0.25) grid (5.25, 5.25) rectangle (0.25, 0.25);     
+    \draw[ultra thick, draw = black, fill = red  , scale = 3/4] (0, 0) grid (5, 5) rectangle (0, 0);
     \node at (2.5, -.25) {$\scriptstyle 227 \times 227 \times 3$};
     %% First convolution applying 96 filters.
     \draw[->] (5.5, 2.5) -- (7, 2.5) node[below left] {$\substack{f = 11 \\ s = 4 \\ p = 0 \\ 96 \textrm{ filters}}$};
@@ -3130,7 +3130,67 @@ not so common today. Sections two and three of the paper are most relevant to le
     \node at (5.25, -10.25) {$\scriptstyle 4,096$};
     \draw[->] (6, -8) -- (7, -8) node[right] {$\scriptstyle \texttt{softmax}$};
     \node at (7.5, -8.25) {\tiny 1,000};
-\end{tikzpicture} \end{figure}
+\end{tikzpicture}
+\caption{\footnotesize 
+  The problem is to predict which one of a thousand categories an image belongs to, or put differently what type of object the 
+  image contains. This network shares a similar structure to \texttt{LeNet-5}, but it has about 60M parameters. 
+  It was trained on
+  a lot more data, and also used \texttt{ReLU} activation functions. We remark that when the paper was written, GPU's were a 
+  bit slower and so the authors developed a complex algorithm to share tasks between GPU's. This network performed so well 
+  that it convinced practictioners of computer vision that deep neural networks carried merit.} \end{figure}
 
+\subsection{VGG-16} The interesting thing about \texttt{VGG-16} is how simple the network architecture is:
+the focus is on having convolutional layers that are just $3 \times 3$ filters with unit stride length and \texttt{same}
+padding, and all max-pooling layers use a $2 \times 2$ filter with a stride length of two. The number of hyperparameters
+is drastically reduced relative to previous networks we've seen. Since the architecture is actually quite deep, we won't draw out
+the volumes. Instead we'll use text, and so the notation $\substack{\texttt{Conv } 64 \\ \times 2}$ represents taking an input
+and applying \emph{two} \texttt{same} convolutions with 64 filters each, i.e.
+\begin{figure}[h]
+  \centering   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
+    \pgfmathsetmacro{\cubey}{1}     
+    \pgfmathsetmacro{\cubez}{1}
+    %% Input.
+    \draw[ultra thick, draw = black, fill = blue , scale = 1/2] (0.5, 0.5) grid (5.5, 5.5) rectangle (0.5, 0.5);     
+    \draw[ultra thick, draw = black, fill = green, scale = 1/2] (0.25, 0.25) grid (5.25, 5.25) rectangle (0.25, 0.25);     
+    \draw[ultra thick, draw = black, fill = red  , scale = 1/2] (0, 0) grid (5, 5) rectangle (0, 0);
+    \node at (1.25, -.25) {$\scriptstyle 224 \times 224 \times 3$};
+    %% First convolution applying 96 filters.
+    \draw[->] (3, 1.25) -- (4.25, 1.25) node[below left] {$\substack{f = 3 \\ s = 1 \\ p = \texttt{same} \\ 64 \textrm{ filters}}$};
+    \draw[black] (6.5,1.25,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (6.5,1.25,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black] (6.5,1.25,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex,0,0) -- cycle; 
+    \node at (5.5, -0.25) {$\scriptstyle 224 \times 224 \times 64$};
+    %% Second convolution.
+    \draw[->] (7, 1.25) -- (8.5, 1.25) node[below left] 
+      {$\substack{f=3 \\ s = 1 \\ p = \texttt{same} \\ 64 \textrm{ filters}}$};
+    \draw[black] (11,1.25,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black] (11,1.25,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black] (11,1.25,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex,0,0) -- cycle; 
+    \node at (9, -.25) {$\scriptstyle 224 \times 224 \times 64$};       \end{tikzpicture} \end{figure}
+
+And so we proceed with text/short-hand notation.
+\begin{figure}[h]   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
+    \pgfmathsetmacro{\cubey}{1}     
+    \pgfmathsetmacro{\cubez}{1}
+    %% Input.
+    \draw[ultra thick, draw = black, fill = blue , scale = 1/2] (0.5, 0.5) grid (5.5, 5.5) rectangle (0.5, 0.5);     
+    \draw[ultra thick, draw = black, fill = green, scale = 1/2] (0.25, 0.25) grid (5.25, 5.25) rectangle (0.25, 0.25);     
+    \draw[ultra thick, draw = black, fill = red  , scale = 1/2] (0, 0) grid (5, 5) rectangle (0, 0);
+    \node at (2.5, -.25) {$\scriptstyle 227 \times 227 \times 3$};
+    %% First convolution applying 64 filters.
+    \draw[->] (4, 1.25) -- (5.5, 1.25) node[below left] {\small [\texttt{Conv 64}] $\times 2$} node[right] {$\scriptstyle 224 \times 224 \times 64$};
+    \draw[->] (7.5, 1.25) -- (8.5, 1.25) node[below left] {\small \texttt{Pool}} node[right] {$\scriptstyle 112 \times 112 \times 64$};
+    \draw[->] (10.5, 1.25) -- (13, 1.25) node[below left] {\small [\texttt{Conv 128}] $\times 2$} node[right] {$\scriptstyle 112 \times 112 \times 128$};
+    \draw[->] (15, 1.25) -- (16, 1.25) node[below left] {\small \texttt{Pool}} node[right] {$\scriptstyle 56 \times 56 \times 128 \ldots$};
+    \draw[->] (0, -1.25) -- (1, -1.25) node[below left] {\small [\texttt{Conv 256}] $\times 3$} node[right] {$\scriptstyle 56 \times 56 \times 256$};
+    \draw[->] (3, -1.25) -- (4, -1.25) node[below left] {\small \texttt{Pool}} node[right] {$\scriptstyle 28 \times 28 \times 256$};
+    \draw[->] (6, -1.25) -- (8, -1.25) node[below left] {\small [\texttt{Conv 512}] $\times 3$} node[right] {$\scriptstyle 28 \times 28 \times 512$};
+    \draw[->] (10, -1.25) -- (11, -1.25) node[below left] {\small \texttt{Pool}} node[right] {$\scriptstyle 14 \times 14 \times 512$};
+    \draw[->] (13, -1.25) -- (15, -1.25) node[below left] {\small [\texttt{Conv 512}] $\times 3$} node[right] {$\scriptstyle 14 \times 14 \times 512 \ldots$};
+    \draw[->] (0, -2.5) -- (1, -2.5) node[below left] {\small \texttt{Pool}} node[right] {$\scriptstyle 7 \times 7 \times 512$};
+    \draw[->] (3, -2.5) -- (4, -2.5) node[right] {$\substack{\texttt{FC} \\ 4,096}$};
+    \draw[->] (5, -2.5) -- (6, -2.5) node[right] {$\substack{\texttt{FC} \\ 4,096}$};
+    \draw[->] (7, -2.5) -- (8, -2.5) node[right] {$\substack{\texttt{Softmax} \\ 1,000}$};
+  \end{tikzpicture} \end{figure}
 \end{document}
 
