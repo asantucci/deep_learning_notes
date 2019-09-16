@@ -3478,6 +3478,7 @@ channel, then yes it's true that a $1\times 1$ convolution amounts to re-scaling
   \end{tikzpicture}
   \caption{With a single channel input, applying a $1 \times 1$ filter does in fact amount to a re-scaling.} \end{figure}
 
+\paragraph{$1 \times 1$ convolutions and \href{https://arxiv.org/abs/1312.4400?context=cs}{networks in networks}}
 However, things start to change when we consider multiple channels, i.e. volumes. If we have a $6 \times 6 \times k$
 input image, and we apply a $1 \times 1 \times k$ filter, then each element in the output is calculated by 
 taking the element-wise product between corresponding elements in the volume with the filter and adding them together to yield
@@ -3505,8 +3506,20 @@ taking the element-wise product between corresponding elements in the volume wit
     \node at (5, 2.5) {$\overset{\texttt{ReLU}}{=}$};     \draw[step=0.5cm] (5.99, 0.99) grid (9, 4);
     \filldraw[pattern=north west lines,pattern color=orange] (8.5,3.5) rectangle(9,4);
     \node at (7.5, 0.5) {$\scriptstyle 6 \times 6 \times \# \textrm{ filters}$};
-  \end{tikzpicture} \end{figure}
+  \end{tikzpicture}
+  \caption{With a $1 \times 1 \times k$ filter applied to a volume, it's as if we have a hidden neuron
+    that takes as input $k$ real numbers from our input and multiplies them element-wise with corresponding
+    elements in the filter before summing the elements and applying a non-linearity such as ReLU.
+    If you have more than a single filter, it's as if you have multiple hidden units
+    which take as input all the numbers in a slice and then building them up into an output that's 
+    $n_H \times n_W \times \# \textrm{ filters}$. This can achieve a non-trivial computation on the input volume.} \end{figure}
 
+\paragraph{Example of when a $1\times 1$ convolution is useful}
+ Suppose you have a $28 \times 28 \times 192$ volume. If you want to shrink the height and width, we could simply use
+a pooling layer. But, perhaps one of the channels has gotten too big and we'd like to shrink it, e.g. perhaps we want to shrink
+our input volume to be $28 \times 28 \times 32$. To do this, we can apply 32 $1 \times 1 \times 192$ filters (the number of channels in the filter has to match the number of channels in the input volume. So whereas pooling layers can be used to shrink $n_H, n_W$,
+we can use $1 \times 1$ convolutions to shrink $n_C$. By shrinking the number of channels, we can save on some computation. We also remark that we can use $1 \times 1$ convolutions to apply non-linearities while still keeping the number of channels the same:
+we can learn more complex functions of our network by adding another layer that e.g. inputs a $28 \times 28 \times 192$ volume and outputs a $28 \times 28 \times 192$ volume. In summary, $1 \times 1$ convolutions allow us to add non-linearity to our neural network and change the number of channels in our volumes.
 \end{document}
 
 
