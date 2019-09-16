@@ -3334,7 +3334,7 @@ blocks in our network.
     clip=false 
     ]
     \addplot [orange] {exp(-x)} node[right] {Theory}; 
-    \addplot [purple, domain = 0:2] {1/2*pow(x-1, 2)+1/2} node[right] {Practice}; 
+    \addplot [purple, domain = 0:2] {1/2*pow(x-1, 2)+1/2} node[right] {Practice {\tiny(plain network)}}; 
   \end{axis} 
   \node[rotate=90] at (-0.2, 2.5) {Training Err};
   \node            at (3.5,-.4)   {\# Layers};
@@ -3398,7 +3398,114 @@ There's one more point worth mentioning: when we add $z^{[\ell+2]} + a^{[\ell]}$
 assuming that the dimension of these two quantities are the same (recall that these are vectors, not scalars). 
 For this reason, it's common to use \texttt{same} convolutions
 which preserve the dimension of our inputs, and in this way we can guarantee that $z^{[\ell+2]}$ and $a^{[\ell]}$ have the 
-same dimension.
+same dimension. In the event that the two vectors have different dimension, there are a couple workarounds. 
+We could compute $z^{[\ell+2]} + W_s a^{[\ell]}$ where $W_s$ is of the appropriate dimension to map $a^{[\ell]}$ to
+the same dimension as $z^{[\ell+2]}$, e.g. if $z^{[\ell+2]}$ has 256 dimensions but $a^{[\ell]}$ has only 128, we'd require
+$W_s \in \mathbb R^{256 \times 128}$ where the weights could be learned. Alternatively, we could construct $W_s$ by hand such that
+it inputs $a^{[\ell]}$ and outputs a zero-padded vector of appropriate dimension.
+
+\paragraph{Pooling and skip connections}
+In He et al.'s 2015 paper, it's worth noting that they follow the general structure of applying several convolutions, then a pooling layer, and then repeating this process several times until we get to fully connected layers which then output a softmax. 
+The convolutions tend to be \texttt{same}
+convolutions such that the addition of $z^{[\ell+2]} + a^{[\ell]}$ is well defined, but notice that when we apply pooling we 
+\emph{must} make an adjustment via a weights matrix $W_s$ as described in the previous paragraph.
+
+\subsubsection{Networks in Networks and $1 \times 1$ convolutions} It turns out that when designing network architectures,
+the idea of a $1 \times 1$ convolution can really help performance. You might wonder: isn't a $1 \times 1$ convolution just like
+applying a re-scaling factor to our image? It turns out this is not the case in general. If we have an image with only a single
+channel, then yes it's true that a $1\times 1$ convolution amounts to re-scaling.
+\begin{figure}[h]
+  \centering   \begin{tikzpicture}[scale=1/2]
+    \draw[step=1cm] (0, 0) grid (6, 6);
+    % Starting from bottom row, working left to right.
+    \node at (0.5, 0.5) {0};
+    \node at (1.5, 0.5) {1};
+    \node at (2.5, 0.5) {3};
+    \node at (3.5, 0.5) {9};
+    \node at (4.5, 0.5) {2};
+    \node at (5.5, 0.5) {1};
+    % second row from bottom.
+    \node at (0.5, 1.5) {3};
+    \node at (1.5, 1.5) {2};
+    \node at (2.5, 1.5) {4};
+    \node at (3.5, 1.5) {1};
+    \node at (4.5, 1.5) {9};
+    \node at (5.5, 1.5) {8};
+    % Third from bottom.
+    \node at (0.5, 2.5) {4};
+    \node at (1.5, 2.5) {2};
+    \node at (2.5, 2.5) {1};
+    \node at (3.5, 2.5) {8};
+    \node at (4.5, 2.5) {3};
+    \node at (5.5, 2.5) {4};
+    % Fourth from bottom.
+    \node at (0.5, 3.5) {7};
+    \node at (1.5, 3.5) {8};
+    \node at (2.5, 3.5) {3};
+    \node at (3.5, 3.5) {6};
+    \node at (4.5, 3.5) {6};
+    \node at (5.5, 3.5) {3};
+    % Fifth from bottom
+    \node at (0.5, 4.5) {3};
+    \node at (1.5, 4.5) {4};
+    \node at (2.5, 4.5) {8};
+    \node at (3.5, 4.5) {3};
+    \node at (4.5, 4.5) {8};
+    \node at (5.5, 4.5) {9};
+    % Second from top.
+    \node at (0.5, 5.5) {1};
+    \node at (1.5, 5.5) {2};
+    \node at (2.5, 5.5) {3};
+    \node at (3.5, 5.5) {4};
+    \node at (4.5, 5.5) {5};
+    \node at (5.5, 5.5) {6};
+    \node at (3, -.5) {$6 \times 6 \times 1$};
+    \node at (7.5, 3.5) {*};
+    % Filter
+    \draw[step=1cm] (9, 3) grid (10, 4);
+    \node at (9.5, 3.5) {2};
+    \node at (11, 3.5) {=};
+    %% Output
+    \draw[step=1cm] (12, 0) grid (18, 6);
+    \node at (12.5, 5.5) {2};
+    \node at (13.5, 5.5) {4};
+    \node at (14.5, 5.5) {6};
+    \node at (15.5, 5.5) {8};
+    \node at (16.5, 5.5) {10};
+    \node at (17.5, 5.5) {12};
+    %% Remainder
+    \node at (12.5, 4.5) {$\scriptstyle \ldots$};
+  \end{tikzpicture}
+  \caption{With a single channel input, applying a $1 \times 1$ filter does in fact amount to a re-scaling.} \end{figure}
+
+However, things start to change when we consider multiple channels, i.e. volumes. If we have a $6 \times 6 \times k$
+input image, and we apply a $1 \times 1 \times k$ filter, then each element in the output is calculated by 
+taking the element-wise product between corresponding elements in the volume with the filter and adding them together to yield
+ a single real number. We can apply multiple filters to achieve an output volume with corresponding number of channels.
+
+\begin{figure}[h]   \centering 
+  \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
+    \pgfmathsetmacro{\cubey}{1}     
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[black] (0,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black] (0,2.5,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black] (0,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex/2,0,0) -- cycle; 
+    \node at (-.5 , 1) {$\scriptstyle 6 \times 6 \times 32$};
+    %% Drawing the sub-volume within our input.
+    \draw[orange,dashed] (0,2.5,0) -- ++(-\cubex/12,0,0) -- ++(0,-\cubey/6,0) -- ++(\cubex/12,0,0) -- cycle; 
+    \draw[orange,dashed] (0,2.5,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey/6,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[orange,dashed] (0,2.5,0) -- ++(-\cubex/12,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex/12,0,0) -- cycle; 
+    %% Drawing filter.
+    \node at (2, 2.5) {*};
+    \draw[orange] (3,2,0) -- ++(-\cubex/12,0,0) -- ++(0,-\cubey/6,0) -- ++(\cubex/12,0,0) -- cycle; 
+    \draw[orange] (3,2,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey/6,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[orange] (3,2,0) -- ++(-\cubex/12,0,0) -- ++(0,0,-\cubez*3) -- ++(\cubex/12,0,0) -- cycle; 
+    \node at (3.25, 1) {$\scriptstyle 1 \times 1 \times 32$};
+    %% Drawing output.
+    \node at (5, 2.5) {$\overset{\texttt{ReLU}}{=}$};     \draw[step=0.5cm] (5.99, 0.99) grid (9, 4);
+    \filldraw[pattern=north west lines,pattern color=orange] (8.5,3.5) rectangle(9,4);
+    \node at (7.5, 0.5) {$\scriptstyle 6 \times 6 \times \# \textrm{ filters}$};
+  \end{tikzpicture} \end{figure}
 
 \end{document}
 
