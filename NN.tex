@@ -3230,14 +3230,12 @@ to take an activation from one layer and feed it directly into another much deep
     \draw[->] (3,0) -- (3.95,0) node[right] {$a^{[\ell+2]}$};   \end{tikzpicture} \end{figure}
 
 In computing this graph, we adhere to the following sequence of linear followed by non-linear transforms.
-\begin{align}   z^{[\ell+1]} &= W^{[\ell+1]} a^{[\ell]} + b^{[\ell+1]} \nonumber \\
-  a^{[\ell+1]} &= g(z^{[\ell+1]}) \nonumber \\ 
-  z^{[\ell+2]} &= W^{[\ell+2]} a^{[\ell+1]} + b^{[\ell+2]} \nonumber \\
+\begin{align}   z^{[\ell+1]} &= W^{[\ell+1]} a^{[\ell]} + b^{[\ell+1]}, \hspace{25pt} a^{[\ell+1]} = g(z^{[\ell+1]}), \hspace{25pt} z^{[\ell+2]} = W^{[\ell+2]} a^{[\ell+1]} + b^{[\ell+2]} \nonumber \\
   \label{eq: skipconold}
   a^{[\ell+2]} &= g(z^{[\ell+2]}). \end{align}
 Schematically, we have a DAG that looks like the figure depicted below.
 
-\begin{figure}[h]   \centering
+\begin{figure}[h!]   \centering
   \begin{tikzpicture}     \node (al) at (0,0) {$a^{[\ell]}$};
     \draw[->] (al) -- (1,0) node[right] (lin) {Linear};
     \draw[->] (lin) -- (2.95,0);
@@ -3258,7 +3256,9 @@ another activation. We replace equation \ref{eq: skipconold} with
 a^{[\ell+2]} = g(z^{[\ell+2]} + a^{[\ell]}).
 \]
 
-\begin{figure}[h]   \centering
+We can see how this fits into our sequence of transformations in the following diagram \ref{fig: skipconnectionbypassesmainpath}.
+\begin{figure}[h!]   
+  \centering
   \begin{tikzpicture}     \node (al) at (0,0) {$a^{[\ell]}$};
     \draw[->] (al) -- (1,0) node[right] (lin) {Linear};
     \draw[->] (lin) -- (2.95,0);
@@ -3272,12 +3272,13 @@ a^{[\ell+2]} = g(z^{[\ell+2]} + a^{[\ell]}).
     \node[purple] at (4, 1.25) {``short-cut/skip connetion''};
     \node[draw,circle,purple,scale=1/3,thick] at (6.75,0.2) {$\Plus$}; 
   \end{tikzpicture}
-  \caption{A skip connection which bypasses the ``main path''.} 
+  \caption{\footnotesize A skip connection which bypasses the ``main path''.} 
+  \label{fig: skipconnectionbypassesmainpath}
 \end{figure}
 
-And so our updated network diagram now looks like
+And so our updated network diagram now looks like figure \ref{fig: skipconnection}.
 
-\begin{figure}[h]
+\begin{figure}[h!]
   \centering
   \begin{tikzpicture}     
     \node (al) at (0, 0) {$a^{[\ell]}$};
@@ -3289,11 +3290,14 @@ And so our updated network diagram now looks like
     \foreach \y in {0.25, 0, -0.25} \node[draw,circle,black,scale=1/2] at (2.75, \y) {};
     \draw[->] (3,0) -- (3.95,0) node[right] {$a^{[\ell+2]}$};   
     \draw[->,purple] (0.5, 0) -- (0.5, 1) -- (2.75, 1) -- (2.75, 0.6);
-  \end{tikzpicture} 
+  \end{tikzpicture}
   \caption{\footnotesize A skip connection takes activation from layer $\ell$ and feeds it directly into a later layer.}
+  \label{fig: skipconnection}
 \end{figure}
 
-\begin{figure}   \centering
+We can construct a residual network by stacking together residual blocks.
+
+\begin{figure}[h!]   \centering
   \begin{tikzpicture}     \node (x) at (1/2,0) {$x$};
     \foreach \x in {1, 2, ..., 10} {
       \draw[->] (\x, 0) -- (\x+1/2, 0);
@@ -3308,10 +3312,14 @@ And so our updated network diagram now looks like
   \end{tikzpicture}
   \caption{\footnotesize We draw a ``plain'' network in black, and add in skip connections in {\color{orange}{orange}} to transform the network into a \emph{residual network}. The residual network is comprised of five residual \emph{blocks} which we've highlighted in {\color{purple}{purple}}.} \end{figure}
 
+\paragraph{ResNets and training error relative to plain networks}
 It's also interesting to analyze training error as a function of the number of layers in the network, contrasting 
 ``plain'' networks with residual networks.
+With a ResNet we avoid problems of exploding and vanishing gradients since we are able to feed activations directly
+deeper into the network. Whence, we tend to see that training error continues to decrease as we add more residual 
+blocks in our network.
 
-\begin{figure}[h]
+\begin{figure}[h!]
 \centering
 \begin{tikzpicture}
   \begin{axis}[     
@@ -3333,27 +3341,64 @@ It's also interesting to analyze training error as a function of the number of l
 \end{tikzpicture}
 \end{figure}
 
-In contrast, with a ResNet we avoid problems of exploding and vanishing gradients since we are able to feed activations directly
-deeper into the network. Whence, we tend to see that training error continues to decrease as we add more residual 
-blocks in our network.
-
-\subsubsection{Why do residual networks work?} We've seen previously that obtaining low training error
+\subsubsection{Why do residual networks work? Learned identity functions} 
+We've seen previously that obtaining low training error
 is almost a pre-requisite for obtaining low dev/test error. Being able to train a deep ResNet that achieves
 low training error is a first step in the right direction. Suppose we have some big neural network that outputs
 an intermediary activation value $a^{[\ell]}$.
-\begin{figure}   \centering
-  \begin{tikzpicture}     \node at (0,0) {x};
-    \draw[->] (0.2, 0) -- (1, 0) node[right,draw,rectangle] (bignn) {Big NN};
-    \draw[->] (bignn) -- (3,0) node[right] {$a^{[\ell]}$};    \end{tikzpicture} \end{figure}
-
+% \begin{figure}[h!] %   \centering
+%   \begin{tikzpicture} %     \node at (0,0) {x};
+%     \draw[->] (0.2, 0) -- (1, 0) node[right,draw,rectangle] (bignn) {Big NN};
+%     \draw[->] (bignn) -- (3,0) node[right] {$a^{[\ell]}$};  %   \end{tikzpicture} % \end{figure}
 Now, suppose that we are going to add a couple extra layers to our giant neural network, with the addition of a skip connection.
-\begin{figure}   \centering
+\begin{figure}[h]   \centering
   \begin{tikzpicture}     \node at (0,0) {x};
-    \draw[->] (0.2, 0) -- (1, 0) node[right,draw,rectangle] (bignn) {Big NN};
-    \draw[->] (bignn) -- (3.5,0) node[above left] {$a^{[\ell]}$};  
+    \draw[->] (0.2, 0) -- (0.95, 0) node[right,draw,rectangle] (bignn) {Big NN};
+    \draw[->] (bignn) -- (3.95,0) node[above left] {$a^{[\ell]}$};  
+    %% First layer after large neural network black-box.
     \draw (4,-.5) rectangle (4.5, .5);
     \foreach \y in {-.25, 0, .25} \node[draw,circle,scale=1/2] at (4.25, \y) {};
-    \draw[->] (4.5, 0) -- (5,0);   \end{tikzpicture} \end{figure}
+    \draw[->] (4.5, 0) -- (4.95,0);
+    %% Second layer after large neural network black-box.
+    \draw (5, -.5) rectangle (5.5, .5);
+    \foreach \y in {-.25, 0, .25} \node[draw,circle,scale=1/2] at (5.25, \y) {};
+    %% Skip connection.
+    \draw[->,orange] (3.6, 0.6) -- (3.6, 0.75) -- (5.25, 0.75) -- (5.25, 0.5);
+    %% Output activation for layer l+2.
+    \draw[->] (5.5, 0) -- (6, 0) node[right] {$a^{[\ell+2]}$};   \end{tikzpicture}
+  \caption{\footnotesize 
+    We visualize a deep neural network with an intermediary output $a^{[\ell]}$ to which we apply a skip-connection.
+    If we use ReLU non-linearities coupled with regularization, the larger network should perform at least as well as the smaller
+    network since in the worst case the larger network can learn to apply an identity function on $a^{[\ell]}$. If we get lucky,
+  the hidden neurons in layers $\ell+1$, $\ell+2$ will help our network to achieve an even lower loss than the smaller network.}
+\end{figure}
+
+We'll assume that we're using a ReLU non-linearity in our network for the activation functions, i.e. our output activations
+are non-negative ($a \geq 0$). Let's consider how we compute $a^{[\ell+2]}$, using the skip connection:
+
+\begin{align}   a^{[\ell+2]} &= g(z^{[\ell+2]} + a^{[\ell]}) \nonumber \\ 
+  \label{eq: recoveringidentity}
+             &= g(W^{[\ell+2]} a^{[\ell+1]} + b^{[\ell+2]} + a^{[\ell]}). \end{align}
+If we're applying $\ell_2$ regularization (weight decay), then this tends to shrink the values of $W^{[\ell+2]}$ closer to zero;
+we could also apply regularization to $b^{[\ell+2]}$ (although we don't usually, but suppose for the sake of this argument we do).
+Then, as $W^{[\ell+2]}, b^{[\ell+2]} \leadsto 0$, notice that \ref{eq: recoveringidentity} evaluates to
+\[
+g(a^{[\ell]}) = a^{[\ell]}
+\]
+where the equality follows from the fact that $g$ is a ReLU and $a^{[\ell]} \geq 0$, whence taking the positive part of $a^{[\ell]}$ amounts to applying the identity function to the same quantity. So what we've seen is that the \emph{identity function} is easy
+for a residual block to learn. This means that adding the two additional layers to our neural network doesn't hurt our ability
+to make good predictions, since in the worst case we can perform just as well as our simpler Big Neural Network.
+Of course, our goal is to improve the quality of predictions as we build deeper networks; so long as some of the hidden neurons
+in layers $\ell+1$ and $\ell+2$ are meaningful, we have a chance to make better predictions. In deep networks \emph{without}
+skip connections, it's very difficult for the network to choose parameters that learn even the identity function, which is why
+adding a lot of layers (without skip connections) can often times degrade model performance rather than help.
+
+\paragraph{Ensuring compatible dimensions when adding skip connections}
+There's one more point worth mentioning: when we add $z^{[\ell+2]} + a^{[\ell]}$ before computing their activation, we are implicitly
+assuming that the dimension of these two quantities are the same (recall that these are vectors, not scalars). 
+For this reason, it's common to use \texttt{same} convolutions
+which preserve the dimension of our inputs, and in this way we can guarantee that $z^{[\ell+2]}$ and $a^{[\ell]}$ have the 
+same dimension.
 
 \end{document}
 
