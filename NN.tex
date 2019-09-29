@@ -3539,9 +3539,10 @@ we can learn more complex functions of our network by adding another layer that 
 
 \subsection{\href{https://arxiv.org/abs/1409.4842}{Inception Network}}
 The inception module takes as input the activation from some previous layer.
-\begin{figure}
+
+\begin{figure}[h]
   \centering
-\begin{tikzpicture}[h]
+\begin{tikzpicture}
 \node[draw,rectangle,fill=orange!60] (prvact) at (0,0) {$\substack{\textrm{Previous}\\ \textrm{Activation}}$} node[below=0.5cm] {$\scriptstyle 28 \times 28 \times 192$};
 \node[draw,rectangle,fill=purple!60] (1b1upper) at (3, 0.9) {$\substack{1 \times         1 \\ \textrm{Conv}}$};
 \draw[->] (prvact) -- (1b1upper);
@@ -3595,6 +3596,19 @@ The inception module takes as input the activation from some previous layer.
 \caption{\footnotesize Inspired from our previous example, our $1 \times 1$ convolution has 16 channels. To save computation on a $3 \times 3$ convolution, we can perform a similar technique. In our pooling layer, we'll use a \texttt{same} padding so that the output height and width is compatible for concatenation with our other outputs; notice that the output here has 192 channels, which seems like a lot so we'll use a $1 \times 1$ convolution to shrink the number of channels to 32.}
 \end{figure}
 The above visualizes a single inception module. The inception architecture essentially stacks many inception modules together. It turns out there is one more detail to the inception architecture which is the addition of side prediction branches: they take as inputs hidden layers and use these to make predictions using a softmax classifier. It turns out that this is a mechanism of regularization since it ensures that the intermediary features learned are reasonable at enabling prediction accuracy; it helps prevent the network from overfitting.
+
+\subsection{Practical Advice for ConvNets}
+\paragraph{Transfer Learning} Rather than train weights from random initialization, you can often make much faster progress if you download weights that somebody else has already trained on the network architecture you are using. You can use the weights as a mechanism of pre-training and transfer to the task you are interested in. Sometimes training might take several weeks and many GPU's; downloading these open source weights is a great initialization strategy for your own neural network.
+
+Suppose you're building a cat detector to recognize your \emph{own} cats: Tigger and Misty. The three labels of your data will be \texttt{Tigger}, \texttt{Misty}, or \texttt{Neither}. Since you probably don't have a lot of pictures of your cats, your training data set will be small. To kick start our project, we can download an open source implementation of a network alongside its weights. Suppose we download a classifier which ultimately uses a softmax to predict one of a thousand categories of objects in images. You can get rid of the last softmax layer and create your own softmax unit that triggers one of your own three clauses: \texttt{Tigger}, \texttt{Misty}, or \texttt{Neither}. You should consider all of the layers of the downloaded network as \emph{frozen}, and you should only train the weights associated with the final softmax layer which we modified.\footnote{To the extent that our training set of images for our own problem is large, we can freeze fewer (or even all) layers in the downloaded network and train their weights as well.} If we wanted, we could first convert each input image in our training set through our neural network to obtain a set of output activations which we then train on; this could save compute time if the marginal cost of evaluating an image in the network is large.
+
+\paragraph{Data Augmentation} Most computer vision tasks could benefit from having more data, and therefore data augmentation is one of the techniques that is often useful in this domain. Computer vision is a complicated task: taking in raw input pixels and understanding whats in an image feels like it should require learning some complicated function or mapping to achieve the desired result. In practice, for almost all computer vision tasks having more data helps; this is unlike other tasks where sometimes we can get enough data.
+This means that data augmentation can often times help.
+
+The simplest augmentation is mirroring on the vertical axis, i.e. we ``flip horizontally''; for most computer vision tasks, flipping the image in this way
+preserves its label (e.g. it's still a cat). Another technique could be to use \emph{random cropping}; this is not perfect since sometimes we end up cropping most of the object of interest out but in practice this doesn't happen too often. We also mention \emph{rotation} and \emph{shearing} of images, as well as perhaps \emph{local warping}.
+
+A second type of data augmentation that is frequently used is \emph{color shifting}. We can add (and subtract) to the R, G, B channels and distort our original image ina way that hopefully still preserves its original label category but does add to our training set. In practice, we draw the error terms applied to each of the R, G and B channels from some small distribution centered around zero e.g. a Gaussian. The intuition for why this works is that it could be that lighting conditions changed which can easily change the color of the image but the label of the image should remain the same.\footnote{One of the methods of RGB distortion uses PCA. The \href{https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf}{AlexNET} paper describes this idea as PCA color augmentation: if your image is mainly purple (i.e. has mostly red and blue tints), then we should add and subtract a lot from red and blue but not change too much of the blue channel.}
 
 \end{document}
 
