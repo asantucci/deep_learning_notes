@@ -1,7 +1,7 @@
 \documentclass[12pt]{article}  
 
 \usepackage[boxruled,lined]{algorithm2e} 
-\usepackage{booktabs}
+%% \usepackage{booktabs}
 \usepackage{amsmath} 
 \usepackage{amsthm} 
 \usepackage{amsfonts} 
@@ -11,7 +11,10 @@
 \usepackage{bm}
 \usepackage{bbm} 
 \usepackage{color,soul} 
-\usepackage{framed} \usepackage[margin=0.5in]{geometry} \usepackage{hyperref} \usepackage{mathtools}
+\usepackage{framed}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{hyperref}
+\usepackage{mathtools}
 \usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
@@ -28,7 +31,19 @@
 \newcommand{\Plus}{\mathord{\begin{tikzpicture}[baseline=0ex, line width=1, scale=0.13]
 \draw (1,0) -- (1,2); \draw (0,1) -- (2,1); \end{tikzpicture}}}
 
-\newtheorem{theorem}{Theorem}[section] \newtheorem{lemma}[theorem]{Lemma} \newtheorem{proposition}[theorem]{Proposition} \newtheorem{corollary}[theorem]{Corollary}  \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} \DeclareMathOperator*{\argmin}{arg\,min} \DeclareMathOperator*{\argmax}{arg\,max} \newcommand{\D}{\mathrm{d}} \SetKwInput{KwInput}{Input} \SetKwInput{KwOutput}{Output}  \begin{document}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\D}{\mathrm{d}}
+\SetKwInput{KwInput}{Input}
+\SetKwInput{KwOutput}{Output}
+
+\begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
 
 \tableofcontents
@@ -3485,7 +3500,8 @@ taking the element-wise product between corresponding elements in the volume wit
  a single real number. We can apply multiple filters to achieve an output volume with corresponding number of channels.
 
 \begin{figure}[h]   \centering 
-  \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2}
     \pgfmathsetmacro{\cubey}{1}     
     \pgfmathsetmacro{\cubez}{1}
     \draw[black] (0,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
@@ -3520,6 +3536,66 @@ a pooling layer. But, perhaps one of the channels has gotten too big and we'd li
 our input volume to be $28 \times 28 \times 32$. To do this, we can apply 32 $1 \times 1 \times 192$ filters (the number of channels in the filter has to match the number of channels in the input volume. So whereas pooling layers can be used to shrink $n_H, n_W$,
 we can use $1 \times 1$ convolutions to shrink $n_C$. By shrinking the number of channels, we can save on some computation. We also remark that we can use $1 \times 1$ convolutions to apply non-linearities while still keeping the number of channels the same:
 we can learn more complex functions of our network by adding another layer that e.g. inputs a $28 \times 28 \times 192$ volume and outputs a $28 \times 28 \times 192$ volume. In summary, $1 \times 1$ convolutions allow us to add non-linearity to our neural network and change the number of channels in our volumes.
+
+\subsection{\href{https://arxiv.org/abs/1409.4842}{Inception Network}}
+The inception module takes as input the activation from some previous layer.
+\begin{figure}
+  \centering
+\begin{tikzpicture}[h]
+\node[draw,rectangle,fill=orange!60] (prvact) at (0,0) {$\substack{\textrm{Previous}\\ \textrm{Activation}}$} node[below=0.5cm] {$\scriptstyle 28 \times 28 \times 192$};
+\node[draw,rectangle,fill=purple!60] (1b1upper) at (3, 0.9) {$\substack{1 \times         1 \\ \textrm{Conv}}$};
+\draw[->] (prvact) -- (1b1upper);
+\node[below=0.00025cm of 1b1upper] {$\scriptscriptstyle 96$ \footnotesize{channels}};
+\node[draw,rectangle,fill=purple!60] (1b1lower) at (3, -0.2) {$\substack{1 \times 1 \\ \textrm{Conv}}$};
+\draw[->] (prvact) -- (1b1lower);
+\node[below=0.000025cm of 1b1lower] {$\scriptscriptstyle 16$ \footnotesize{channels}};
+\node[draw,rectangle,fill=red!60] (maxpool) at (3, -1.5) {$\substack{ \textrm{MaxPool} \\ 3 \times 3, s = 1 \\ \textrm{Same}}$};
+\draw[->] (prvact) -- (maxpool);
+\node[below=0.025cm of maxpool] {$\scriptscriptstyle 28 \times 28 \times 192$};
+\node[draw,rectangle,fill=orange!60] (1b1standalone) at (5, 2) {$\substack{1 \times 1 \\ \textrm{Conv}}$};
+\node[below=0.025cm of 1b1standalone] {$\scriptscriptstyle 28 \times 28 \times   64$};
+\path[->] (prvact) edge [bend left] (1b1standalone);
+\node[draw,rectangle,fill=orange!60] (3b3conv) at (5, 0.9) {$\substack{3 \times     3 \\ \textrm{Conv}}$};
+\draw[->] (1b1upper) -- (3b3conv);
+\node[below=0.025cm of 3b3conv] {$\scriptscriptstyle 28 \times 28 \times 128$};
+\node[draw,rectangle,fill=orange!60] (5b5conv) at (5, -0.2) {$\substack{5 \times 5 \\ \textrm{Conv}}$};
+\draw[->] (1b1lower) -- (5b5conv);
+\node[below=0.0025cm of 5b5conv] {$\scriptscriptstyle 28 \times 28 \times 32$};
+\node[draw,rectangle,fill=orange!60] (1b1postmaxpool) at (5, -1.5) {$\substack{1 \times 1 \\ \textrm{Conv}}$};
+\node[below=0.025cm of 1b1postmaxpool] {$\scriptscriptstyle \substack{28 \times     28 \times 32 \\ 32 \textrm{ \footnotesize{filters}, } 1 \times 1 \times 192}$};
+\draw[->] (maxpool) -- (1b1postmaxpool);
+\node[draw,rectangle,fill=green!60] (cat) at (7.5, 0)      {$\substack{\textrm{Channel}     \\ \textrm{Concat}}$};
+\node[below=0.0025cm of cat] {$\scriptscriptstyle 28 \times 28 \times 256$};
+\draw[->] (1b1standalone) -- (cat);
+\draw[->] (3b3conv) -- (cat);
+\draw[->] (5b5conv) -- (cat);
+\draw[->] (1b1postmaxpool) -- (cat);
+    \pgfmathsetmacro{\cubex}{2}
+    \pgfmathsetmacro{\cubey}{1}     
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[black,fill=yellow!60] (8,2.5,0) -- ++(-\cubex/2,0,0) -- ++(0,-\cubey,0) -- ++(\cubex/2,0,0) -- cycle; 
+    \draw[black,fill=yellow!60] (8,2.5,0) -- ++(0,0,-\cubez/3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez/3) -- cycle; 
+    \draw[black,fill=yellow!60] (8,2.5,0) -- ++(-\cubex/2,0,0) --     ++(0,0,-\cubez/3) -- ++(\cubex/2,0,0) -- cycle;
+    \node at (6.5, 2) {$\scriptscriptstyle 28$};
+    \node at (7.5, 1.4) {$\scriptscriptstyle 28$};
+    \node at (8.25,1.5) {$\scriptscriptstyle 32$};
+    % Purple cube
+    \draw[black,fill=purple!60] (8.2,2.7,0.25) -- ++(0,0,-\cubez/3) -- ++(0,-\cubey,0) -- ++(0,0,\cubez/3) -- cycle; 
+    \draw[black,fill=purple!60] (8.2,2.7,0.25) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez/3) -- ++(\cubex/2,0,0) -- cycle; 
+    \node at (8.5,1.65) {$\scriptscriptstyle 32$};
+    % Blue cube
+    \draw[black,fill=blue!60] (8.4,2.9,0.5) -- ++(0,0,-\cubez) -- ++(0,-\cubey,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black,fill=blue!60] (8.4,2.9,0.5) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez) -- ++(\cubex/2,0,0) -- cycle; 
+    \node at (8.75,1.8) {$\scriptscriptstyle 128$};
+    % Green cube
+    \draw[black,fill=green!60] (8.9,3.4,1) -- ++(0,0,-\cubez/1.5) -- ++(0,-\cubey,0) -- ++(0,0,\cubez/1.5) -- cycle; 
+    \draw[black,fill=green!60] (8.9,3.4,1) -- ++(-\cubex/2,0,0) -- ++(0,0,-\cubez/1.5) -- ++(\cubex/2,0,0) -- cycle; 
+    \node at (9,2.05) {$\scriptscriptstyle 64$};
+\end{tikzpicture}
+\caption{\footnotesize Inspired from our previous example, our $1 \times 1$ convolution has 16 channels. To save computation on a $3 \times 3$ convolution, we can perform a similar technique. In our pooling layer, we'll use a \texttt{same} padding so that the output height and width is compatible for concatenation with our other outputs; notice that the output here has 192 channels, which seems like a lot so we'll use a $1 \times 1$ convolution to shrink the number of channels to 32.}
+\end{figure}
+The above visualizes a single inception module. The inception architecture essentially stacks many inception modules together. It turns out there is one more detail to the inception architecture which is the addition of side prediction branches: they take as inputs hidden layers and use these to make predictions using a softmax classifier. It turns out that this is a mechanism of regularization since it ensures that the intermediary features learned are reasonable at enabling prediction accuracy; it helps prevent the network from overfitting.
+
 \end{document}
 
 
