@@ -3627,6 +3627,35 @@ by a factor of the number of crops (and hence predictions required) applied.
 \item Use architectures of networks published in the literature, preferably with pre-retrained model weights which are then fine-tuned to your dataset.
 \end{itemize}
 
+\subsection{Detection Algorithms} Object detection is an area of computer vision that has seen a lot of recent growth. Recall the task of image classification:
+an algorithm is tasked with determining whether the image contains for example a vehicle. Classification \emph{with localization} is the task of not only labeling an image but also drawing a bounding box around the position of the object of interest; the term localization refers to figuring out \emph{where} in the image the detected object resides. In general, the \emph{detection problem} involves recognizing multiple objects in a single image and localizing each; e.g. in autonomous driving we must recognize other cars, pedestrians, and other objects like road signs as well.
+
+\subsubsection{Classification with Localization} In the image classification problem, we might expect to input an image to a convolutional neural network with multiple layers, and ultimately for a softmax classifier to output the predicted class. Let's suppose we're building a self-driving car, and that our
+class categories are \texttt{pedestrian}, \texttt{car}, \texttt{motorcycle},
+and \texttt{background} to indicate none of the above. If we want to add localization, we simply require our neural network output a few more units which represent a bounding box. In particular, we can request our network also output
+$b_x, b_y, b_h,$ and $b_w$ to indicate the $x,y$ centroid of the box as well as the height and width respectively. We can normalize each image to say that the upper left corner is the origin $(0,0)$ and the lower right corner is the point
+$(1,1)$. To turn this into a supervised learning problem, lets define our labels as follows
+\[
+y = \begin{bmatrix} p_c & b_x & b_y & b_h & b_w & c_1 & c_2 & c_3 \end{bmatrix}^T
+\]
+Here, $p_c$ takes on unit value if there is any object in the image from one of our classes of interest (e.g. is it anything other than background). If there is an object, we place the bounding box description in the next four coordinates, followed by $c_i$'s which are mutually exclusive, binary valued, and indicate which of the classes the image contains. To define our loss-function, we need to encode that we don't care what our neural network outputs if there is no object detected:
+\begin{equation*}
+  \mathcal L (y, \hat y) =
+  \begin{cases}
+    \sum_{i=1}^8 (y_i - \hat y_i)^2 & \textrm{ if } y_{\textrm{pc}} = 1 \\
+    (y_1 - \hat y_1)^2 & \textrm{ if } y_{\textrm{pc}} = 0
+  \end{cases}
+\end{equation*}
+Note that in practice, we'd like to use log-likelihood for $c_i$'s, squared error for the bounding box, and logistic regression loss for $p_c$.
+
+\paragraph{Landmark detection} The previous video showed how we can get a neural network to output additional numbers that specify the bounding box of an object we wish to localize. This concept is powerful: we can learn to recognize landmarks more generally; e.g. perhaps there are 64 points on a face that we'd like to detect such as corners and shape of the mouth (to determine if the person is smiling), etc. We can define
+\begin{align*}
+  \ell_{1x}, \ell_{1y} \\
+  \ell_{2x}, \ell_{2y} \\
+  \vdots \\
+  \ell_{64x}, \ell_{64y}
+\end{align*}
+for each image in our training set. Our labels for the dataset would each contain 129 points: the first would describe is there a face or not, and the remaining 128 would describe the pairs $\ell_{1x}, \ell_{1y}, \ldots, \ell_{64x}, \ell_{64y}$. It goes without saying that to construct such a training dataset would be laborious, manual, and time intensive.
 \end{document}
 
 
