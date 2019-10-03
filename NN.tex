@@ -3656,6 +3656,137 @@ Note that in practice, we'd like to use log-likelihood for $c_i$'s, squared erro
   \ell_{64x}, \ell_{64y}
 \end{align*}
 for each image in our training set. Our labels for the dataset would each contain 129 points: the first would describe is there a face or not, and the remaining 128 would describe the pairs $\ell_{1x}, \ell_{1y}, \ldots, \ell_{64x}, \ell_{64y}$. It goes without saying that to construct such a training dataset would be laborious, manual, and time intensive.
+
+\paragraph{Object Detection}
+Let's now build up an object detection algorithm: we'll learn to use a conv-net to perform object detection using the sliding window detection algorithm. Suppose we want to build a car detection algorithm. To start, create a labeled
+training dataset with \emph{closely cropped} examples of cars: in positive examples, the object of interest will be centered and take up almost the full frame. You can then train a conv-net that inputs an image and outputs whether the object of interest is contained in the image or not. Armed with this conv-net, we can now perform sliding window detection.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[scale=0.5]
+      \draw[step=5cm,gray, very thin] (0, 0) grid (5, 5);
+      \draw[step=1cm,orange,  very thin] (0, 4) grid (1, 5);
+      \draw[purple,  very thin] (0, 3.75) rectangle (1.25, 5);
+      \draw[green,   very thin] (0, 3.50) rectangle (1.50, 5);
+      \draw[->, dashed, orange] (0.5, 4.5) -- (1.75, 4.5);
+      \draw[gray, very thin] (7, 0) rectangle (12, 5);
+      \draw[orange,  very thin] (7.2, 4) rectangle (8.2, 5);
+      \draw[->, dashed, orange] (7.7, 4.5) -- (8.95, 4.5);
+      \draw[purple,  very thin] (7.2, 3.75) rectangle (8.45, 5);
+      \draw[green,   very thin] (7.2, 3.50) rectangle (8.70, 5);
+  \end{tikzpicture}
+  \caption{\footnotesize Start by picking a certain window size and stride-length; for \emph{each} windowed region of the input image, apply your object detector to make a prediction: is there an object of interest in that (small) part of the image. This is computationally intensive in that it requires you to apply your prediction algorithm many times over the same image. Further it is recommended to grow the window size iteratively and reapply the same steps each time, i.e. sliding the window across the image and making a sequence of predictions. With several window sizes, which we've pictured in \color{orange}{orange}\color{black}, \color{purple}{purple}\color{black}, and \color{green}{green}\color{black}, we'd hope to have detected our object of interest at some point in the sliding window algorithm.}
+\end{figure}
+The huge disadvantage to the sliding windows detection algorithm is the computational cost: by cropping so many different square regions from a single input image and running each of them independently through a conv-net. Of course, we can use a course stride (big step size) to reduce the cost, but this coarser granularity comes with a cost to performance. Before the rise of neural networks, people used a simple linear classifier with hand-engineered features; in that era, sliding windows detection was more reasonable. But with conv-nets,a naive implementation of sliding windows is infeasibly slow. And without a small stride-length, our ability to localize the objects is hampered. Fortunately, there's a convolutional solution.
+
+\paragraph{Convolutional Implementation of Sliding Windows}
+What does it mean to have a convolutional implementation of the sliding windows algorithm? Let's first consider how we can translate fully connected layers in a neural network into convolutional layers.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(0,0,-\cubez/2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez/2) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez/2)     -- ++(\cubex,0,0) -- cycle;
+  \node at (-0.95, -2.25) {$\scriptstyle 14 \times 14 \times 3$};
+  \draw[->] (0.5, -0.75) -- (1.5, -0.75) node[below left] {$\substack{\scriptstyle 5 \times 5 \\ \textrm{16 filters}}$};
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,-\cubey*2*10/14,0) -- ++(\cubex*10/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*10/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*10/14,0,0) -- cycle;
+  \node at (2.5, -2.25) {$\scriptstyle 10 \times 10 \times 16$};
+  \draw[->] (3.75, -0.75) -- (5, -0.75) node[above left]
+       {\footnotesize{Max-Pool}} node[below left] {$\scriptstyle 2 \times 2$};
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,-\cubey*2*5/14,0) -- ++(\cubex*5/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*5/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*5/14,0,0) -- cycle;
+\node at (6, -2) {$\scriptstyle 5 \times 5 \times 16$};
+  \draw[->] (6.75, -0.75) -- (7.25, -0.75) node[above left] {\footnotesize FC};
+  \draw[black] (7.5, -2) rectangle (8, 0.5);
+  \node at (7.75, -2.25) {$\scriptstyle 400$};
+  \node[draw,circle] at (7.75, 0.25) {};
+  \node[draw,circle] at (7.75,-0.25) {};
+  \node at (7.75,-0.75) {$\vdots$};
+  \node[draw,circle] at (7.75,-1.75) {};
+  \draw[->] (8.25, -0.75) -- (9, -0.75) node[above left] {\footnotesize FC};
+  \draw[black] (9.5, -2) rectangle (10, 0.5);
+  \node[draw,circle] at (9.75, 0.25) {};
+  \node[draw,circle] at (9.75,-0.25) {};
+  \node at (9.75,-0.75) {$\vdots$};
+  \node[draw,circle] at (9.75,-1.75) {};
+  \node at (9.75, -2.25) {$\scriptstyle 400$};
+  \draw[->] (10.25, -0.75) -- (10.75, -0.75);
+  \node[draw,circle] at (11, -0.75) {};
+  \node at (11, -1.25) {$\substack{y \\ \textrm{softmax}}$};
+  \end{tikzpicture}
+  \caption{\footnotesize
+    Suppose our object detection algorithm accepts as input a
+    $14 \times 14 \times 3$ image. We might then apply 16 $5 \times 5 \times 3$   
+    filters to produce a new volume of dimension $10 \times 10 \times 16$. We     then apply max-pooling with a filter of filter and stride of $2 \times 2$ to half the height and width of the volume. We then have a fully connected layer to 400 hidden units, followed by another fully connected layer to another 400 hidden units, followed by a softmax classifier.}
+\end{figure}
+
+In order to make the next change to our architecture, pretend that our last
+softmax layer actually contains $k$ nodes (one for each of the classes we care about), and that the values in this vector $y$ will correspond to the class probabilities.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(0,0,-\cubez/2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez/2) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez/2)     -- ++(\cubex,0,0) -- cycle;
+  \node at (-0.95, -2.25) {$\scriptstyle 14 \times 14 \times 3$};
+  \draw[->] (0.5, -0.75) -- (1.5, -0.75) node[below left] {$\substack{\scriptstyle 5 \times 5 \\ \textrm{16 filters}}$};
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,-\cubey*2*10/14,0) -- ++(\cubex*10/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*10/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*10/14,0,0) -- cycle;
+  \node at (2.5, -2.25) {$\scriptstyle 10 \times 10 \times 16$};
+  \draw[->] (3.75, -0.75) -- (5, -0.75) node[above left]
+       {\footnotesize{Max-Pool}} node[below left] {$\scriptstyle 2 \times 2$};
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,-\cubey*2*5/14,0) -- ++(\cubex*5/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*5/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*5/14,0,0) -- cycle;
+\node at (6, -2) {$\scriptstyle 5 \times 5 \times 16$};
+  \draw[->] (6.75, -0.75) -- (7.25, -0.75) node[above] {$\substack{400 \textrm{ filters}  \\ \textrm{ each of size} \\ \scriptstyle 5 \times 5 \times 16}$};
+    \draw[black, fill=blue!60] (8,-1.5,0) -- ++(-\cubex*2/14,0,0) -- ++(0,-\cubey*2*2/14,0) -- ++(\cubex*2/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (8,-1.5,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey*2*2/14,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black, fill=blue!60] (8,-1.5,0) -- ++(-\cubex*2/14,0,0) -- ++(0,0,-\cubez*3)     -- ++(\cubex*2/14,0,0) -- cycle;
+    \node at (8.25, -2) {$\scriptstyle 1 \times 1 \times 400$};
+  \draw[->] (9.75, -0.75) -- (10.25, -0.75) node[above] {$\substack{400 \textrm{ filters}  \\ \textrm{ each of size} \\ \scriptstyle 1 \times 1 \times 400}$};
+    \draw[black, fill=blue!60] (11,-1.5,0) -- ++(-\cubex*2/14,0,0) -- ++(0,-\cubey*2*2/14,0) -- ++(\cubex*2/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (11,-1.5,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey*2*2/14,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black, fill=blue!60] (11,-1.5,0) -- ++(-\cubex*2/14,0,0) -- ++(0,0,-\cubez*3)     -- ++(\cubex*2/14,0,0) -- cycle;
+    \node at (11.25, -2) {$\scriptstyle 1 \times 1 \times 400$};
+    \draw[->] (12.75, -0.75) -- (13.25, -0.75) node[above] {$\scriptstyle 1 \times 1$};
+    \draw[black, fill=blue!60] (14,-0.75,0) -- ++(-\cubex*2/14,0,0) -- ++(0,-\cubey*2*2/14,0) -- ++(\cubex*2/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (14,-0.75,0) -- ++(0,0,-\cubez/2) -- ++(0,-\cubey*2*2/14,0) -- ++(0,0,\cubez/2) -- cycle; 
+    \draw[black, fill=blue!60] (14,-0.75,0) -- ++(-\cubex*2/14,0,0) -- ++(0,0,-\cubez/2)     -- ++(\cubex*2/14,0,0) -- cycle;
+    \node at (14, -2) {$\scriptstyle 1 \times 1 \times k$};
+  \end{tikzpicture}
+  \caption{\footnotesize Another way to view creating a fully connected layer is for us to apply, to our $5 \times 5 \times 16$ volume, 400 filters each of dimension $5 \times 5 \times 16$, and this will yield a $1 \times 1 \times 400$ volume as output. Note that this \emph{is} the same as having a fully connected layer: since each of the four hundred units in the output volume was created by applying a filter of dimension $5 \times 5 \times 16$, and so these 400 values were created using some arbitrary linear function of the activations from the previous layer. If we then apply another 400 $1 \times 1 \times 400$ filters, we'll yield another $1\times 1 \times 400$ volume; this gets us our next fully connected layer. Lastly, we have another $1 \times 1$ filter followed by a softmax activation so as to give a $k$ dimensional vector with class probabilities.}
+\end{figure}
+
+Now that we understand how we can implement fully connected layers as convolutions, let's see how to implement sliding windows object detection using convolutions as well. The idea is based on the \href{https://arxiv.org/abs/1312.6229}{Overfeat} paper by Sermanet et. al.
+
+\begin{figure}
+  \centering
+  \begin{tikzpicture}
+    \draw[step=0.25cm] (0,0) grid (3,3);
+    \draw[step=0.25cm] (4.24,0.25) grid (6,2.25);
+    \draw[step=0.25cm] (7.24,0.74) grid (8.5,2);
+    \node[draw,rectangle] at (9.5, 1.5) {};
+    \node[draw,rectangle] at (10.5, 1.5) {};
+    \node[draw,rectangle] at (11.5, 1.5) {};
+  \end{tikzpicture}
+  \caption{\footnotesize For this image only, we draw only the front-facing portion of each volume. That is, we omit the third dimension for simplicity. Suppose we are given a new $16 \times 16 \times 3$ image that we wish to make a prediction on. Then, to perform sliding windows with a stride size of $2$, we could run four different $14 \times 14 \times 3$ sections of our input image through our conv-net architecture to produce four predictions. But, it turns out that a lot of the computations done feeding different parts of the image through the same conv-net is duplicative. The convolutional implementation allows the forward passes to share computation. To do so, we run our same architecture on our different sized input image, in a way that yields the same volume in the end.}
+\end{figure}
+
+\paragraph{Bounding Box Predictions}
+
 \end{document}
 
 
