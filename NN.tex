@@ -3881,6 +3881,51 @@ max $p_c$ below some threshold (say 1/2): unless we think there's a reasonable c
 \end{algorithm}
 
 At the conclusion of this algorithm, we'll have considered each bounding box and either output it as a prediction or discarded it due to having too large IOU with one of the bounding boxes already committed to.
+
+\subsubsection{Anchor Boxes} One of the problems with object detection algorithms as learned so far is that each of the grid cells can only detect a single object. What if a grid cell contains multiple objects? To solve this problem, we use anchor boxes. Let's consider an example where there is a person standing in front of a car, and we've chosen to use a coarse grid such that the midpoint of the car and the midpoint of the person that we're trying to detect both land in the same central grid cell. As we've defined our output vector $y = \begin{bmatrix} p_c & b_x & b_y & b_h & b_w & c_1 & c_2 & \ldots & c_k \end{bmatrix}$ there is no way to encode the existence of multiple objects (let alone multiple bounding boxes. We might choose two differently shaped anchor boxes:
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \draw (0,0) rectangle (1, 2) node[above left] {Anchor box 1};
+    \draw (2,1) rectangle (4, 2) node[above left] {Anchor box 2};
+  \end{tikzpicture}
+  \caption{\footnotesize Two simple types of anchor boxes; perhaps the first is more suitable to bounding a standing person, versus the latter for a car depicted from its side profile.}
+\end{figure}
+Then, for each object detect in each cell, we'll assign it to the anchor box that matches its shape most closely (we can have several bounding boxes, say 5 to choose from). To be explicit, we still assign each object to the cell containing its midpoint, but we choose the anchor box which has the highest IOU for the object. Then, our label vector $y$ will have components
+$p_c, b_x, b_y, b_h, b_w, c_1, c_2, \ldots, c_k$ for \emph{each} of the anchor boxes.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node at (0,0) {y = };
+    \draw (0.5, -3) rectangle (1, 3);
+    \node at (0.75, 2.8) {$p_c$};
+    \node at (0.75, 2.3) {$b_x$};
+    \node at (0.75, 1.8) {$b_y$};
+    \node at (0.75, 1.3) {$b_h$};
+    \node at (0.75, 0.8) {$b_w$};
+    \node at (0.75, 0.3) {$\vdots$};
+    \node at (0.75, -.2) {$c_k$};
+    \draw[decorate,decoration={brace,amplitude=10pt,mirror,raise=4pt},yshift=0pt]
+(1.2,-0.2) -- (1.2,2.8) node [black,midway,xshift=1.25cm] {\footnotesize Anchor 1};
+    \draw[decorate,decoration={brace,amplitude=10pt,mirror,raise=4pt},yshift=0pt]
+(1.2,-3) -- (1.2,-0.25) node [black,midway,xshift=2cm] {\footnotesize Anchors $2, \ldots, k$};
+  \end{tikzpicture}
+  \caption{\footnotesize If we use $k$ anchor boxes, then for each grid cell in each labeled image in our training data, we will require knowledge of $p_c$, the bounding box descriptors, and the class probabilities. In addition to assigning each object to the cell which contains its midpoint, we assign an anchor box to it by comparing the ground-truth bounding box with each of the proposed anchor boxes and computing IOU: the anchor box with highest similarity (IOU) is chosen to describe that object. For anchor boxes that are not used within a cell, we can simply set their $p_c = 0$ to indicate there is no object being bounded by that anchor in that cell.}
+\end{figure}
+Cases that this algorithm does not handle well: what if we have more objects than exist anchor boxes within a single cell? Or, what if two objects in the same cell have the same anchor box shape? This algorithm doesn't deal with these cases well.
+
+How do we choose anchor box sizes? We can use a $k$-means algorithm to partition the objects into different classes, and then select an anchor box that best fits the types of images that fall into each class. It's also possible to choose anchor boxes by hand as follows: simply choose boxes that reasonably can contain the objects your interested in detecting.
+
+\subsubsection{YOLO Object Detection Algorithm}
+Let's see how to put the components discusses above together to form a YOLO object detection algorithm.
+
+\paragraph{Constructing a training set}
+Let's first see how to construct a training data set. Suppose we are interested in classifying three types of objects: pedestrians, cars, and motorcycles. Suppose we are using two different anchor sizes, and that for illustration sake we have chosen to partition our input images into $3 \times 3$. Then each image is a volume that is $3 \times 3 \times 2 \times (5 + k)$, where the two comes from the number of anchor boxes used and the $(5 + k)$ comes from the fact that we require a $p_c, b_x, b_y b_h, b_w, c_1, c_2, \ldots, c_k$ to describe if an object is in a grid cell as well as to localize it. To construct the training set, we have to go through \emph{each} cell of \emph{each} image, and construct the appropriate target $y$ vector describing whether there's an object and where it is in the grid cell.
+
+\paragraph{Training a conv-net} Our input images might be
+$100 \times 100 \times 3$: our conv-net would take this and output the appropriate volume
+$3 \times 3 \times 2 \times (5 + k)$ as described above. Given an image, your neural network will compute this volume describing for each cell whether there is an object (and if so localize it as well). For much of the parts of the image, the component $p_c$ of each anchor box will be zero, indicating that the remaining numbers describing the bounding box and class probabilities for that bounding box don't actually mean anything. Finally, we run our predictions through non-max suppression for \emph{each} of the classes we're interested in predicting, independently.
+
 \end{document}
 
 
