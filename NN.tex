@@ -3941,7 +3941,203 @@ The recognition problem is much harder than the verification problem: suppose we
 As an example, suppse you have a database that consists of an employee-id photo for each employee in your company. Now, suppose somebody shows up at an automatic turnstyle and wants to be let in: the system has to recognize (i)
 whether the person is contained in the database and (ii) which individual it is. One approach could be to attempt to use a conv-net; this approach won't work well since we need to retrain our classifier each time a new member joins our team. Instead, we learn a similarity function: $d(\texttt{image1}, \texttt{image2})$ where if the images are similar a small number is returned and if the images are very different a large number is returned. Then, at inference time we can simply compute $d$ given two images and compare against some fixed threshold. Notice that this allows us to solve the one-shot learning problem: if we add a new person to the team, there's no need to retrain a new function we can simply compare an arbitrary image to our new set.
 
-\paragraph{Siamese Network} A good way to learn a similarity function is to use a Siamese network. We've seen before conv-net architectures that take an input image, map it through a series of transformations to some specified volume, then apply several fully connected layers before making a prediction using a softmax classifier. 
+\paragraph{Siamese Network} A good way to learn a similarity function is to use a Siamese network. We've seen before conv-net architectures that take an input image, map it through a sequence of transformations to some specified volume, then apply several fully connected layers before making a prediction using a softmax classifier.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(0,0,-\cubez/2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez/2) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez/2)     -- ++(\cubex,0,0) -- cycle;
+  \draw[->] (0.5, -0.75) -- (1.5, -0.75) {};
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,-\cubey*2*10/14,0) -- ++(\cubex*10/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*10/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*10/14,0,0) -- cycle;
+  \draw[->] (3.75, -0.75) -- (5, -0.75) {};
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,-\cubey*2*5/14,0) -- ++(\cubex*5/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*5/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*5/14,0,0) -- cycle;
+  \draw[->] (6.75, -0.75) -- (7.25, -0.75) node[above left] {\footnotesize FC};
+  \draw[black] (7.5, -2) rectangle (8, 0.5);
+  \node[draw,circle] at (7.75, 0.25) {};
+  \node[draw,circle] at (7.75,-0.25) {};
+  \node at (7.75,-0.75) {$\vdots$};
+  \node[draw,circle] at (7.75,-1.75) {};
+  \draw[->] (8.25, -0.75) -- (9, -0.75) node[above left] {\footnotesize FC};
+  \draw[black] (9.5, -2) rectangle (10, 0.5);
+  \node[draw,circle] at (9.75, 0.25) {};
+  \node[draw,circle] at (9.75,-0.25) {};
+  \node at (9.75,-0.75) {$\vdots$};
+  \node[draw,circle] at (9.75,-1.75) {};
+  \draw[->] (10.25, -0.75) -- (10.75, -0.75);
+  \node[draw,circle] at (11, -0.75) {};
+  \node at (11, -1.25) {$\substack{y \\ \textrm{softmax}}$};
+  \end{tikzpicture}
+  \caption{\footnotesize A prototypical conv-net architecture, applying filters and pooling to end up with a volume that is then fed into fully connected layers. In this part of the lecture notes, we're going to focus on the set of features derived from the last hidden layer.}
+\end{figure}
+We can think of the mapping from an input image to the set of neurons in the last hidden layer of the conv-net above as an \emph{encoding} of the image:
+given an image we represent it using however many hidden neurons are in this last layer through a learned function $f$. Then, given two input images we feed them each through the neural network to obtain two separate encodings (real-valued vectors): we can then define a distance function $d$ to be the normed difference between the two encodings.
+$$
+d(x_1, x_2) = \| f(x_1) - f(x_2)\|_2^2
+$$
+This idea is inspired by \href{https://research.fb.com/publications/deepface-closing-the-gap-to-human-level-performance-in-face-verification/}{DeepFace}.
+More formally, the parameters of the network define an encoding $f$ of an input image. We'd like to train a network and learn parameters such that if two pictures $x_i$ and $x_j$ are of the same person, then the difference between their encodings should be small; correspondingly if $x_i$ and $x_j$ are pictures of different people, we'd like the difference between their encodings to be very large. Let's next learn a loss function that allows us to cary out this objective.
+
+\subsubsection{\href{https://arxiv.org/abs/1503.03832}{Triplet Loss}} One way to ensure that we learn a good encoding for your pictures is to define and apply gradient descent on the triplet loss function. To apply triplet loss, you need to compare \emph{pairs} of images. In the terminology of triplet loss, you're always going to look at an \emph{anchor} image and whenever you compare it to a \emph{positive} example (e.g. the same person) you want the distance to be small. Whereas, when the anchor is compared to a \emph{negative} example you'ld like the distance to be much further apart. The term triplet loss comes from the fact that we'll always consider triplets of images: an anchor image $A$, a positive image $P$, and a negative image $N$. We want
+\[
+\underbrace{\|f(A) - f(P)\|^2}_{d(A,P)} \leq \underbrace{\|f(A) - f(N)\|^2}_{d(A,N)} \implies \|f(A) - f(P)\|^2 - \|f(A) - f(N)\|^2 \leq 0
+\]
+Realize that a network could learn to output zeros for any image and then this equation would be satisfied: in this case $f(\cdot) = 0$ and everything becomes zero and the inequality is satisfied with equality. Equivalently, if the network learned the \emph{same} encoding for \emph{every} image then this inequality would also be satisfied. To prevent the neural network from doing either of these two things, we'll modify our objective function to require that
+\[
+\|f(A) - f(P)\|^2 - \|f(A) - f(N)\|^2 \leq -\alpha
+\]
+where now $\alpha$ is some hyperparameter that prevents the network from outputting trivial encodings. A more standard way to write the above expression is 
+\[
+\|f(A) - f(P)\|^2 - \|f(A) - f(N)\|^2 + \alpha \leq 0
+\]
+where now we can call $\alpha$ the \emph{margin}. Now, given our three images anchor $A$, positive $P$, and negative $N$, we define our loss function
+\[
+\mathcal L (A, P, N) = \max{\{\|f(A) - f(P)\|^2 - \|f(A) - f(N)\|^2 + \alpha, 0\}}
+\]
+By applying gradient descent to try and minimize this, this has the effect of sending the first argument to be less than or equal to zero as desired. The overall cost function can be summed over a training set consisting of different triplets.
+\[
+J = \sum_{i=1}^m \mathcal L(A^{(i)}, P^{(i)}, N^{(i)})
+\]
+To make this clear, suppose you have a training set of 10k pictures with 1k different persons. You'd have to use these 10k images to manually create triplets with a positive and negative image associated to each anchor. Notice that in order to create a triplet, we do need $A$ and $P$ to be the same person, so you require a training dataset where each person appears multiple times.
+
+\paragraph{Choosing triplets $A$, $P$, $N$} If we constrain $A$ and $P$ to be images containing the same person but choose $N$ randomly, then it will be quite easy for our network to learn to satisfy $d(A,P) + \alpha \leq d(A,N)$ since if $A$ and $N$ are two randomly chosen persons there is a good chance their distance will exceed the margin; so, the neural network won't learn much from such an example. What we'd like to do is to train on triplets that are ``hard'', where $d(A,P) \approx d(A,N)$: in this case the network has to learn to push the former downward or the latter upward. The paper \href{https://arxiv.org/abs/1503.03832}{FaceNet} has details on how to choose triplets wisely to speed up training.
+
+\paragraph{Face verification and binary classification} Triplet loss is one good way to learn the parameters of a conv-net for face recognition. There's another way to learn these parameters: by posing face recognition as a binary classification problem. We can train a neural network, have it output an embedding, and then input these for both images into a logistic regression unit to make a prediction; the target label will be unit valued if the images are of the same person and zero otherwise.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(0,0,-\cubez/2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez/2) -- cycle; 
+    \draw[black, fill=blue!60] (0,0,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez/2)     -- ++(\cubex,0,0) -- cycle;
+  \draw[->] (0.5, -0.75) -- (1.5, -0.75) {};
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,-\cubey*2*10/14,0) -- ++(\cubex*10/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*10/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (3,-0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*10/14,0,0) -- cycle;
+  \draw[->] (3.75, -0.75) -- (5, -0.75) {};
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,-\cubey*2*5/14,0) -- ++(\cubex*5/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*5/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (6,-1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*5/14,0,0) -- cycle;
+  \draw[->] (6.75, -0.75) -- (7.25, -0.75) node[above left] {\footnotesize FC};
+  \draw[black] (7.5, -2) rectangle (8, 0.5);
+  \node[draw,circle] at (7.75, 0.25) {};
+  \node[draw,circle] at (7.75,-0.25) {};
+  \node at (7.75,-0.75) {$\vdots$};
+  \node[draw,circle] at (7.75,-1.75) {};
+  \draw[->] (8.25, -0.75) -- (9, -0.75) node[above left] {\footnotesize FC};
+  \draw[black] (9.5, -2) rectangle (10, 0.5);
+  \node[draw,circle] at (9.75, 0.25) {};
+  \node[draw,circle] at (9.75,-0.25) {};
+  \node at (9.75,-0.75) {$\vdots$};
+  \node[draw,circle] at (9.75,-1.75) {};
+  %% Second layer
+  \draw[black, fill=blue!60] (0,-3,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+  \draw[black, fill=blue!60] (0,-3,0) -- ++(0,0,-\cubez/2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez/2) -- cycle; 
+    \draw[black, fill=blue!60] (0,-3,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez/2)     -- ++(\cubex,0,0) -- cycle;
+  \draw[->] (0.5, -3.75) -- (1.5, -3.75) {};
+    \draw[black, fill=blue!60] (3,-3.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,-\cubey*2*10/14,0) -- ++(\cubex*10/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (3,-3.5,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*10/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (3,-3.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*10/14,0,0) -- cycle;
+  \draw[->] (3.75, -3.75) -- (5, -3.75) {};
+    \draw[black, fill=blue!60] (6,-4,0) -- ++(-\cubex*5/14,0,0) -- ++(0,-\cubey*2*5/14,0) -- ++(\cubex*5/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (6,-4,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*5/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (6,-4,0) -- ++(-\cubex*5/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*5/14,0,0) -- cycle;
+  \draw[->] (6.75, -3.75) -- (7.25, -3.75) node[above left] {\footnotesize FC};
+  \draw[black] (7.5, -5) rectangle (8, -2.5);
+  \node[draw,circle] at (7.75, -2.75) {};
+  \node[draw,circle] at (7.75,-3.25) {};
+  \node at (7.75,-3.75) {$\vdots$};
+  \node[draw,circle] at (7.75,-4.75) {};
+  \draw[->] (8.25, -3.75) -- (9, -3.75) node[above left] {\footnotesize FC};
+  \draw[black] (9.5, -5) rectangle (10, -2.5);
+  \node[draw,circle] at (9.75, -2.75) {};
+  \node[draw,circle] at (9.75,-3.25) {};
+  \node at (9.75,-3.75) {$\vdots$};
+  \node[draw,circle] at (9.75,-4.75) {};
+  \draw[->] (10.25, -0.75) -- (11, -2);
+  \draw[->] (10.25, -3.75) -- (11, -2);
+  \node[draw,circle] at (11.25, -2) {};
+  \draw[->] (11.5, -2) -- (12, -2);
+  \node at (12.25, -2) {$\hat y$};
+  \end{tikzpicture}
+  \caption{\footnotesize We could take a pair of neural networks, i.e. a Siamese network, and have them both compute embeddings for each image. We then feed these embeddings (or perhaps their difference) as input into a logistic regression unit to make a prediction. The two neural networks are called \emph{siamese} because they share the same parameters. The training dataset will now consist of \emph{pairs} of images, where the label is unit valued if the images contain the same person and zero otherwise.}
+\end{figure}
+What is our logistic regression unit really doing? Well, if we feed it as input the difference between the two encodings returned by our images fed into our network,
+\[
+\hat y = \sigma \left( \sum_{k=1}^{\textrm{length of encoding}} w_k |f(x^{(i)})_k - f(x^{(j)})_k| + b\right)
+\]
+and the job of the logistic regression unit would be to learn weights $w_k$'s and $b$ such that our logistic loss is minimized.
+Instead of taking a simple difference between our two encodings, we could also consider a $\chi^2$ similarity:
+\[
+\frac{\left(f(x^{(i)})_k - f(x^{(j)})_k\right)^2}{f(x^{(i)})_k + f(x^{(j)})_k}
+\]
+
+\paragraph{Precomputing embeddings for each employee in our database}
+As an implementation detail: if we are deploying a system we may wish to precompute the encodings for each employee in our database, that way when a new employee walks through the turnstyle hoping to be recognized we can just run their image through the upper layer of the siamese network and compare it to the pre-computed embeddings for each known employee in the database.
+
+\subsection{Neural Style Transfer} The idea of neural style transfer is to take some raw image \emph{content} $c$ and compose a new generated image $g$ using some style $s$. In order to implement neural style transfer, we'll have to inspect the features at various hidden layers of a conv-net.
+\paragraph{What are deep conv-nets learning?} What are the deeper layers of a conv-net really learning? Suppose we've trained an AlexNet network.
+\begin{figure}[h]
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \node at (-2, 0) {\includegraphics[scale=0.15]{profile}};
+    \node at (-2,-1.35) {$\scriptstyle 224 \times 224 \times 3$};
+    \draw[black, fill=blue!60] (1.75,0.5,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (1.75,0.5,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez*2) -- cycle; 
+    \draw[black, fill=blue!60] (1.75,0.5,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez*2)     -- ++(\cubex,0,0) -- cycle;
+  \node at (1, -1.75) {$\scriptstyle 110 \times 110 \times 96$};
+    \draw[black, fill=blue!60] (4.5,0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,-\cubey*2*10/14,0) -- ++(\cubex*10/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (4.5,0.5,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*10/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (4.5,0.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*10/14,0,0) -- cycle;
+  \node at (4, -1.25) {$\scriptstyle 55 \times 55 \times 96$};
+    \draw[black, fill=blue!60] (6,0.25,0) -- ++(-\cubex*5/14,0,0) -- ++(0,-\cubey*2*5/14,0) -- ++(\cubex*5/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (6,0.25,0) -- ++(0,0,-\cubez*1.5) -- ++(0,-\cubey*2*5/14,0) -- ++(0,0,\cubez*1.5) -- cycle; 
+    \draw[black, fill=blue!60] (6,0.25,0) -- ++(-\cubex*5/14,0,0) -- ++(0,0,-\cubez*1.5)     -- ++(\cubex*5/14,0,0) -- cycle;
+\node at (6, -1) {$\scriptstyle 26 \times 26 \times 256$};
+    \draw[black, fill=blue!60] (7.5,0,0) -- ++(-\cubex*2/10,0,0) -- ++(0,-\cubey*2*2/10,0) -- ++(\cubex*2/10,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (7.5,0,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey*2*2/10,0) -- ++(0,0,\cubez*2) -- cycle; 
+    \draw[black, fill=blue!60] (7.5,0,0) -- ++(-\cubex*2/10,0,0) -- ++(0,0,-\cubez*2)     -- ++(\cubex*2/10,0,0) -- cycle;
+    \node at (7.75, -1) {$\scriptstyle 13 \times 13 \times 256$};
+    \draw[black, fill=blue!60] (9,0,0) -- ++(-\cubex*2/10,0,0) -- ++(0,-\cubey*2*2/10,0) -- ++(\cubex*2/10,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (9,0,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey*2*2/10,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black, fill=blue!60] (9,0,0) -- ++(-\cubex*2/10,0,0) -- ++(0,0,-\cubez*3)     -- ++(\cubex*2/10,0,0) -- cycle;
+    \node at (9.5, -1) {$\scriptstyle 13 \times 13 \times 384$};
+    \draw[black, fill=blue!60] (11,0,0) -- ++(-\cubex*2/10,0,0) -- ++(0,-\cubey*2*2/10,0) -- ++(\cubex*2/10,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (11,0,0) -- ++(0,0,-\cubez*3) -- ++(0,-\cubey*2*2/10,0) -- ++(0,0,\cubez*3) -- cycle; 
+    \draw[black, fill=blue!60] (11,0,0) -- ++(-\cubex*2/10,0,0) -- ++(0,0,-\cubez*3)     -- ++(\cubex*2/10,0,0) -- cycle;
+    \node at (11.25, -1) {$\scriptstyle 13 \times 13 \times 384$};
+    \draw[black, fill=blue!60] (13,0,0) -- ++(-\cubex*2/14,0,0) -- ++(0,-\cubey*2*2/14,0) -- ++(\cubex*2/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (13,0,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*2/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (13,0,0) -- ++(-\cubex*2/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*2/14,0,0) -- cycle;
+\node at (13.25, -1) {$\scriptstyle 6 \times 6 \times 256$};
+\draw (14, -1) rectangle (14.5, 1);
+\node[draw,circle,scale=0.75] at (14.25, 0.8) {};
+\node[draw,circle,scale=0.75] at (14.25, 0.35) {};
+\node at (14.25, 0) {$\vdots$};
+\node[draw,circle,scale=0.75] at (14.25, -0.7) {};
+\node at (14.25, -1.25) {$\scriptstyle 4096$};
+\draw (15, -1) rectangle (15.5, 1);
+\node[draw,circle,scale=0.75] at (15.25, 0.8) {};
+\node[draw,circle,scale=0.75] at (15.25, 0.35) {};
+\node at (15.25, 0) {$\vdots$};
+\node[draw,circle,scale=0.75] at (15.25, -0.7) {};
+\node at (15.25, -1.25) {$\scriptstyle 4096$};
+\node at (16, 0) {$\hat y$};
+  \end{tikzpicture}
+\end{figure}
 
 \end{document}
 
