@@ -3926,6 +3926,23 @@ Let's first see how to construct a training data set. Suppose we are interested 
 $100 \times 100 \times 3$: our conv-net would take this and output the appropriate volume
 $3 \times 3 \times 2 \times (5 + k)$ as described above. Given an image, your neural network will compute this volume describing for each cell whether there is an object (and if so localize it as well). For much of the parts of the image, the component $p_c$ of each anchor box will be zero, indicating that the remaining numbers describing the bounding box and class probabilities for that bounding box don't actually mean anything. Finally, we run our predictions through non-max suppression for \emph{each} of the classes we're interested in predicting, independently.
 
+\paragraph{\href{https://arxiv.org/abs/1311.2524}{Region Proposals}} This is an influential body of work. Recall sliding windows which involves conceptually running a classifier across different croppings of the image. We can of course run the algorithm convolutionally, but it unfortunately spends a lot of compute on regions of the image that just don't contain any objects of interest. 
+Rather than running your conv-net on all sliding windows, they propose only computing your conv-net on smaller subset(s) of the image. The way that region proposal is carried out is to run a \emph{segmentation} algorithm on the input image and then use this to decide where to run your classifier. For each region of interest returned by the segmentation algorithm, we run our conv-net for which we get a prediction for an object and also a bounding box. There's also
+a convolutional implementation which allows for making predictions across all areas of interest returned from the segmentation algorithm, known as \href{https://arxiv.org/abs/1504.08083}{Fast R-CNN}. Then, there's \href{https://arxiv.org/abs/1506.01497}{Faster R-CNN} which uses a conv-net as the basis for the segmentation algorithm and this in turn runs even faster.
+
+\subsection{Face Recognition} A special application of conv-nets is facial recognition and neural style transfer. Let's start with defining some terms used in the face recognition literature.
+\begin{itemize}
+  \item The face verification problem is as follows: you'ure given an input image as well as the name or ID of a person, and the job of the system is to verify whether the input image is that of the \emph{claimed} person.
+\item In the recognition problem, we have a database of $K$ persons, and we are given an input image: we then wish to output the ID of the individual if one of the $K$ persons (or output ``not recognized'').
+\end{itemize}
+The recognition problem is much harder than the verification problem: suppose we have a verification system that only commits 1\% error, then when applied to a recognition system responsible for 100 people we're likely to make a mistake.
+
+\paragraph{One shot learning} One of the problems of facial recognition is that it's a one-shot learning problem: that is, you need to be able to recognize a person given just a single image or one example of their face. Historically, deep learning algorithms don't perform well if you only have a single example.
+As an example, suppse you have a database that consists of an employee-id photo for each employee in your company. Now, suppose somebody shows up at an automatic turnstyle and wants to be let in: the system has to recognize (i)
+whether the person is contained in the database and (ii) which individual it is. One approach could be to attempt to use a conv-net; this approach won't work well since we need to retrain our classifier each time a new member joins our team. Instead, we learn a similarity function: $d(\texttt{image1}, \texttt{image2})$ where if the images are similar a small number is returned and if the images are very different a large number is returned. Then, at inference time we can simply compute $d$ given two images and compare against some fixed threshold. Notice that this allows us to solve the one-shot learning problem: if we add a new person to the team, there's no need to retrain a new function we can simply compare an arbitrary image to our new set.
+
+\paragraph{Siamese Network} A good way to learn a similarity function is to use a Siamese network. We've seen before conv-net architectures that take an input image, map it through a series of transformations to some specified volume, then apply several fully connected layers before making a prediction using a softmax classifier. 
+
 \end{document}
 
 
