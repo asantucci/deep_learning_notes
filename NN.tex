@@ -3772,7 +3772,7 @@ softmax layer actually contains $k$ nodes (one for each of the classes we care a
 
 Now that we understand how we can implement fully connected layers as convolutions, let's see how to implement sliding windows object detection using convolutions as well. The idea is based on the \href{https://arxiv.org/abs/1312.6229}{Overfeat} paper by Sermanet et. al.
 
-\begin{figure}
+\begin{figure}[h]
   \centering
   \begin{tikzpicture}
     %%%% First row.
@@ -3830,12 +3830,29 @@ Now that we understand how we can implement fully connected layers as convolutio
     \draw[step=0.1cm] (14.19, -7.01) grid (15.01, -6.2);
     \node at (14.5, -7.25) {$\scriptstyle 8 \times 8 \times k$};
   \end{tikzpicture}
-  \caption{\footnotesize For this image only, we draw only the front-facing portion of each volume. That is, we omit the third dimension for simplicity. Suppose we are given a new $16 \times 16 \times 3$ image that we wish to make a prediction on. Then, to perform sliding windows with a stride size of $2$, we could run four different $14 \times 14 \times 3$ sections of our input image through our conv-net architecture to produce four predictions. But, it turns out that a lot of the computations done feeding different parts of the image through the same conv-net is duplicative. The convolutional implementation allows the forward passes to share computation. To do so, we run our same architecture on our different sized input image, in a way that yields the same volume as what we would have gotten with sliding windows. It turns out that in our $2 \times 2 \times k$ output volume, the ``upper-left'' neuron gives us what we would have gotten if we had applied our conv-net to the ``upper-left'' crop of the input image, and correspondingly for each remaining neuron. Note that the size of the input image can change, we still apply the same steps of our convolutional neural network in order to end up with a volume that corresponds to the output of sliding windows, as shown in the last row where we get an $8 \times 8$ output volume.
+  \caption{\footnotesize Convolutional implementation of sliding windows. For this image only, we draw only the front-facing portion of each volume. That is, we omit the third dimension for simplicity. Suppose we are given a new $16 \times 16 \times 3$ image that we wish to make a prediction on. Then, to perform sliding windows with a stride size of $2$, we could run four different $14 \times 14 \times 3$ sections of our input image through our conv-net architecture to produce four predictions. But, it turns out that a lot of the computations done feeding different parts of the image through the same conv-net is duplicative. The convolutional implementation allows the forward passes to share computation. To do so, we run our same architecture on our different sized input image, in a way that yields the same volume as what we would have gotten with sliding windows. It turns out that in our $2 \times 2 \times k$ output volume, the ``upper-left'' neuron gives us what we would have gotten if we had applied our conv-net to the ``upper-left'' crop of the input image, and correspondingly for each remaining neuron. Note that the size of the input image can change, we still apply the same steps of our convolutional neural network in order to end up with a volume that corresponds to the output of sliding windows with a stride length of 2,
+as shown in the last row where we get an $8 \times 8$ output volume.
 }
 \end{figure}
 
 
 \paragraph{Bounding Box Predictions}
+The problem with sliding windows is that the bounding boxes we get as part of the output aren't that accurate. Let's consider an example image.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node at (0, 0) {\includegraphics{car_driving}};
+    \draw[red,thick] (-2.5, -2) rectangle (-0.75, -0.4);
+  \end{tikzpicture}
+  \caption{\footnotesize We could envision that in a sliding windows algorithm, the window with the maximal prediction for the object of interest may not even fully contain the car but instead only a portion of it due to the kernel size and stride length. Further, the best bounding box for the object may not be a square but instead rectangular in shape, and a sliding windows algorithm doesn't allow us to capture that.}
+\end{figure}
+One way to get more accurate bounding boxes is via the \href{https://arxiv.org/abs/1506.02640}{You Only Look Once} algorithm. Suppose we have an input image of dimension $100 \times 100$. We might overlay a coarser grid, say $19 \times 19$ over our original image such that we partition the original image into smaller cropped images. We will apply our image classification and localization algorithms learned previously to each of the cells in the partitioned grid. In particular, we need to learn how to create labels for such data: for each observation, i.e. each cell in each image, we create an eight dimensional vector $y = \begin{bmatrix} p_c & b_x & b_y & b_h & b_w & c_1 & c_2 & \ldots & c_k \end{bmatrix}$ where the first element describes whether there is an object in the (cropped) image, the next four elements describe the bounding box for the item associated with that grid cell, and the last items are the class probabilities. Suppose an image has two objects. When an object is found in an image (by hand, when creating the labels), we assign it to the cell which contains the midpoint of its bounding box; this ensures that each object is assigned to exactly one of the partitioning cells even if it spans multiple. So, for each grid cell in our partitioning, we end up with an eight-dimensional output vector. So if we used a $k \times k$ overlay,
+we'll want our target output volume to be $k \times k \times 8$. So in our example, the input might be $100 \times 100 \times 3$, and our job will be to choose conv-layers and max-pool layers such that we eventually map to a $k \times k \times 8$ output volume. We then have input images and target labels, and we can use back propagation to train the neural network to learn to map from any input image $X$ to this type of output volume $Y$.
+
+Notice that the algorithm should work okay contingent upon there not being more than a single object in each of the partitioning cells; using a finer grid helps to address this problem. Further, notice that the algorithm is a lot of like the image classification algorithm learned earlier in that we can output precise bounding boxes that are not subject to the stride size of sliding windows.
+
+One point worth hashing out is how to define $b_x, b_y, b_h, b_w$. We can normalize each grid cell such that its upper left point is $(0,0)$ and the lower-right point is $(1,1)$. Then, $b_x, b_y$ specifiy the mid-points and are are guaranteed to lie within the unit interval by definition of assigning each object to the grid cell which contains its mid-point. The height and width $b_h, b_w$ are specified relative to the size of the partitioning cell, and so they theoretically could be larger than one. There are some further enhancements we can make, like for example applying a sigmoid function to $b_x,b_y$ to ensure they lie in the unit interval and applying an exponential function to $b_h, b_w$ to ensure they are non-negative.
 
 \end{document}
 
