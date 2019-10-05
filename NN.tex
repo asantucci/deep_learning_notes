@@ -3854,6 +3854,17 @@ Notice that the algorithm should work okay contingent upon there not being more 
 
 One point worth hashing out is how to define $b_x, b_y, b_h, b_w$. We can normalize each grid cell such that its upper left point is $(0,0)$ and the lower-right point is $(1,1)$. Then, $b_x, b_y$ specifiy the mid-points and are are guaranteed to lie within the unit interval by definition of assigning each object to the grid cell which contains its mid-point. The height and width $b_h, b_w$ are specified relative to the size of the partitioning cell, and so they theoretically could be larger than one. There are some further enhancements we can make, like for example applying a sigmoid function to $b_x,b_y$ to ensure they lie in the unit interval and applying an exponential function to $b_h, b_w$ to ensure they are non-negative.
 
+\subsubsection{Intersection over Union} This is a technique that can help evaluate your object detection algorithm, and we'll later show how it can be added as a feature to a model to make it work even better. In the object detection task, you're expected to \emph{localize} the object after detecting it. Suppose we have an image with a ground-truth label in \color{purple}{purple}\color{black}, and our algorithm has output a bounding box in \color{orange}{orange}\color{black}: is this a good bounding box? The intersection-over-union computes the intersection over the union of the two bounding boxes. To be clear: the union is any area contained in either bounding box, whereas the intersection is the region that is contained in box bounding boxes. By dividing the size of the intersection by the size of the union, we can get a scalar value describing precision of the bounding box; by convention if Intersection Over Union (IOU) exceeds 1/2 then computer-vision researchers say the bounding box was correctly computed. In the event that the boxes overlap perfectly, IOU takes on unit value.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node at (0, 0) {\includegraphics{car_driving}};
+    \draw[purple,thick]    (-3.2, -2.2) rectangle (-0.8, -0.4);
+    \draw[orange,thick] (-2.8, -2)   rectangle (-1.2, -0.2);
+  \end{tikzpicture}
+\end{figure}
+
 \end{document}
 
 
