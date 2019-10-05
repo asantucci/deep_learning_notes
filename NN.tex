@@ -3775,15 +3775,65 @@ Now that we understand how we can implement fully connected layers as convolutio
 \begin{figure}
   \centering
   \begin{tikzpicture}
-    \draw[step=0.25cm] (0,0) grid (3,3);
-    \draw[step=0.25cm] (4.24,0.25) grid (6,2.25);
-    \draw[step=0.25cm] (7.24,0.74) grid (8.5,2);
-    \node[draw,rectangle] at (9.5, 1.5) {};
+    %%%% First row.
+    \draw[step=0.2cm] (0,0) grid (2.8,2.8);
+    \node at (1.25, -0.25) {$\scriptstyle 14 \times 14 \times 3$};
+    \draw[->] (3.25, 1.5) -- (4, 1.5) node[below left] {$\scriptstyle 5 \times 5$};
+    \draw[step=0.1cm] (4.5,1) grid (5.5,2);
+    \node at (5.15, -0.25) {$\scriptstyle 10 \times 10 \times 16$};
+    \draw[->] (6.25, 1.5) -- (7, 1.5) node[above] {\scriptsize Max-Pool} node[below] {$\scriptstyle 2 \times 2$};
+    \draw[step=0.25cm] (7.74,0.74) grid (9,2);
+    \node at (8.25, -0.25) {$\scriptstyle 5 \times 5 \times 16$};
+    \draw[->] (9.25, 1.5) -- (10, 1.5) node[above left] {\scriptsize FC} node[below left] {$\scriptstyle 5 \times 5$};
     \node[draw,rectangle] at (10.5, 1.5) {};
-    \node[draw,rectangle] at (11.5, 1.5) {};
+    \node at (10.5, -0.25) {$\scriptstyle 1 \times 1 \times 400$};
+    \draw[->] (10.75, 1.5) -- (11.5, 1.5) node[above left] {\scriptsize FC} node[below left] {$\scriptstyle 1 \times 1$};
+    \node[draw,rectangle] at (12, 1.5) {};
+    \node at (12.2, -0.25) {$\scriptstyle 1 \times 1 \times 400$};
+    \draw[->] (12.25, 1.5) -- (13, 1.5) node[above left] {\scriptsize FC} node[below left] {$\scriptstyle 1 \times 1$};
+    \node[draw,rectangle] at (13.5, 1.5) {};
+    \node at (13.5, -0.25) {$\scriptstyle 1 \times 1 \times k$};
+    %%%% Second row.
+    \draw[step=0.2cm] (0,-4.2) grid (3.2,-1);
+    \node at (1.25, -4.5) {$\scriptstyle 16 \times 16 \times 3$};
+    \draw[->] (3.25, -2.5) -- (4, -2.5) node[below left] {$\scriptstyle 5 \times 5$};
+    \draw[step=0.175cm] (4.2,-3.7) grid (5.975,-1.925);
+    \node at (5.15, -4.25) {$\scriptstyle 12 \times 12 \times 16$};
+    \draw[->] (6.25, -2.5) -- (7, -2.5) node[above] {\scriptsize Max-Pool} node[below] {$\scriptstyle 2 \times 2$};
+    \draw[step=0.2cm] (7.79,-3.2) grid (9,-2);
+    \node at (8.25, -3.75) {$\scriptstyle 6 \times 6 \times 16$};
+    \draw[->] (9.25, -2.5) -- (10, -2.5) node[above left] {\scriptsize FC}     node[below left] {$\scriptstyle 5 \times 5$};
+    \draw[step=0.25cm] (10.24, -3) grid (10.76, -2.5);
+    \node at (10.5, -3.75) {$\scriptstyle 2 \times 2 \times 400$};
+    \draw[->] (10.9, -2.5) -- (11.5, -2.5) node[above left] {\scriptsize FC} node[below left] {$\scriptstyle 1 \times 1$};
+    \draw[step=0.25cm] (11.74, -3) grid (12.25, -2.5);
+    \node at (12.2, -3.75) {$\scriptstyle 2 \times 2 \times 400$};
+    \draw[->] (12.45, -2.5) -- (13, -2.5) node[above left] {\scriptsize FC}         node[below left] {$\scriptstyle 1 \times 1$};
+    \draw[step=0.25cm] (13.24, -3) grid (13.76, -2.5);
+    \node at (13.5, -3.75) {$\scriptstyle 2 \times 2 \times k$};
+    %%%% Third row.
+    \draw[step=0.1cm] (-0.01,-7.81) grid (2.8,-5);
+    \node at (1.25, -8) {$\scriptstyle 28 \times 28 \times 3$};
+    \draw[->] (3.25, -6.5) -- (4, -6.5) node[below left] {$\scriptstyle 5 \times 5$};
+    \draw[step=0.1cm] (4.19,-7.51) grid (6.61,-5.1);
+    \node at (5.15, -8) {$\scriptstyle 24 \times 24 \times 16$};
+    \draw[->] (6.75, -6.5) -- (7.5, -6.5) node[above] {\scriptsize Max-Pool} node[below] {$\scriptstyle 2 \times 2$};
+    \draw[step=0.1cm] (8.19,-7.21) grid (9.41,-6);
+    \node at (8.75, -7.75) {$\scriptstyle 12 \times 12 \times 16$};
+    \draw[->] (9.5, -6.5) -- (10.25, -6.5) node[above left] {\scriptsize FC}     node[below left] {$\scriptstyle 5 \times 5$};
+    \draw[step=0.1cm] (10.39, -7.01) grid (11.21, -6.19);
+    \node at (10.75, -7.25) {$\scriptstyle 8 \times 8 \times 400$};
+    \draw[->] (11.5, -6.5) -- (12.25, -6.5) node[above left] {\scriptsize FC} node[below left] {$\scriptstyle 1 \times 1$};
+    \draw[step=0.1cm] (12.39, -7.01) grid (13.21, -6.19);
+    \node at (12.8, -7.25) {$\scriptstyle 8 \times 8 \times 400$};
+    \draw[->] (13.25, -6.5) -- (14, -6.5) node[above left] {\scriptsize FC}         node[below left] {$\scriptstyle 1 \times 1$};
+    \draw[step=0.1cm] (14.19, -7.01) grid (15.01, -6.2);
+    \node at (14.5, -7.25) {$\scriptstyle 8 \times 8 \times k$};
   \end{tikzpicture}
-  \caption{\footnotesize For this image only, we draw only the front-facing portion of each volume. That is, we omit the third dimension for simplicity. Suppose we are given a new $16 \times 16 \times 3$ image that we wish to make a prediction on. Then, to perform sliding windows with a stride size of $2$, we could run four different $14 \times 14 \times 3$ sections of our input image through our conv-net architecture to produce four predictions. But, it turns out that a lot of the computations done feeding different parts of the image through the same conv-net is duplicative. The convolutional implementation allows the forward passes to share computation. To do so, we run our same architecture on our different sized input image, in a way that yields the same volume in the end.}
+  \caption{\footnotesize For this image only, we draw only the front-facing portion of each volume. That is, we omit the third dimension for simplicity. Suppose we are given a new $16 \times 16 \times 3$ image that we wish to make a prediction on. Then, to perform sliding windows with a stride size of $2$, we could run four different $14 \times 14 \times 3$ sections of our input image through our conv-net architecture to produce four predictions. But, it turns out that a lot of the computations done feeding different parts of the image through the same conv-net is duplicative. The convolutional implementation allows the forward passes to share computation. To do so, we run our same architecture on our different sized input image, in a way that yields the same volume as what we would have gotten with sliding windows. It turns out that in our $2 \times 2 \times k$ output volume, the ``upper-left'' neuron gives us what we would have gotten if we had applied our conv-net to the ``upper-left'' crop of the input image, and correspondingly for each remaining neuron. Note that the size of the input image can change, we still apply the same steps of our convolutional neural network in order to end up with a volume that corresponds to the output of sliding windows, as shown in the last row where we get an $8 \times 8$ output volume.
+}
 \end{figure}
+
 
 \paragraph{Bounding Box Predictions}
 
