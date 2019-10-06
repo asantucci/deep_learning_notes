@@ -3065,7 +3065,7 @@ filter to \emph{every} channel; however, back then compute was sparse and so a m
 filters would be used to look at different channels. Lastly, the LeNet-5 uses a non-linearity after the pooling layer which is
 not so common today. Sections two and three of the paper are most relevant to learn from.
 
-\subsection{\href{https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf}{\texttt{AlexNet}}}
+\subsubsection{\href{https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf}{\texttt{AlexNet}}}
 This architecture was designed for the \href{http://www.image-net.org/}{ImageNet} dataset.
 \begin{figure}[h]   \centering
   \begin{tikzpicture}     \pgfmathsetmacro{\cubex}{2}
@@ -3166,7 +3166,7 @@ This architecture was designed for the \href{http://www.image-net.org/}{ImageNet
   bit slower and so the authors developed a complex algorithm to share tasks between GPU's. This network performed so well 
   that it convinced practictioners of computer vision that deep neural networks carried merit.} \end{figure}
 
-\subsection{\href{https://arxiv.org/abs/1409.1556}{\texttt{VGG-16}}} The interesting thing about \texttt{VGG-16} is how simple the network architecture is:
+\subsubsection{\href{https://arxiv.org/abs/1409.1556}{\texttt{VGG-16}}} The interesting thing about \texttt{VGG-16} is how simple the network architecture is:
 the focus is on having convolutional layers that are just $3 \times 3$ filters with unit stride length and \texttt{same}
 padding, and all max-pooling layers use a $2 \times 2$ filter with a stride length of two. The number of hyperparameters
 is drastically reduced relative to previous networks we've seen. Since the architecture is actually quite deep, we won't draw out
@@ -3537,7 +3537,7 @@ our input volume to be $28 \times 28 \times 32$. To do this, we can apply 32 $1 
 we can use $1 \times 1$ convolutions to shrink $n_C$. By shrinking the number of channels, we can save on some computation. We also remark that we can use $1 \times 1$ convolutions to apply non-linearities while still keeping the number of channels the same:
 we can learn more complex functions of our network by adding another layer that e.g. inputs a $28 \times 28 \times 192$ volume and outputs a $28 \times 28 \times 192$ volume. In summary, $1 \times 1$ convolutions allow us to add non-linearity to our neural network and change the number of channels in our volumes.
 
-\subsection{\href{https://arxiv.org/abs/1409.4842}{Inception Network}}
+\subsubsection{\href{https://arxiv.org/abs/1409.4842}{Inception Network}}
 The inception module takes as input the activation from some previous layer.
 
 \begin{figure}[h]
@@ -4162,6 +4162,7 @@ The first part of the loss function measures the discrepancy in content between 
 \end{itemize}
 \paragraph{Style cost function} What does the style of an image mean?
 \begin{figure}[h]
+  \centering
   \begin{tikzpicture}
     \pgfmathsetmacro{\cubex}{2} 
     \pgfmathsetmacro{\cubey}{1} 
@@ -4239,6 +4240,7 @@ This allows us to use multiple layers, including earlier ones which capture styl
 
 \subsubsection{1D and 3D Generalizations} Most of our discussion has focused on 2D input data. Many of the techniques we've learned about also extend to 1 and 3D data. We've already seen how 2D convolutions work:
 \begin{figure}[h]
+  \centering
   \begin{tikzpicture}
     \draw[step=0.1] (0,0) grid (1.4, 1.4);
     \node at (0.5, -0.25) {\footnotesize 2D input image};
