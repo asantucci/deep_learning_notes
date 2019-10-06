@@ -4086,7 +4086,7 @@ Instead of taking a simple difference between our two encodings, we could also c
 \paragraph{Precomputing embeddings for each employee in our database}
 As an implementation detail: if we are deploying a system we may wish to precompute the encodings for each employee in our database, that way when a new employee walks through the turnstyle hoping to be recognized we can just run their image through the upper layer of the siamese network and compare it to the pre-computed embeddings for each known employee in the database.
 
-\subsection{Neural Style Transfer} The idea of neural style transfer is to take some raw image \emph{content} $c$ and compose a new generated image $g$ using some style $s$. In order to implement neural style transfer, we'll have to inspect the features at various hidden layers of a conv-net.
+\subsection{\href{https://arxiv.org/abs/1508.06576}{Neural Style Transfer}} The idea of neural style transfer is to take some raw image \emph{content} $c$ and compose a new generated image $g$ using some style $s$. In order to implement neural style transfer, we'll have to inspect the features at various hidden layers of a conv-net.
 \paragraph{What are deep conv-nets learning?} What are the deeper layers of a conv-net really learning? Suppose we've trained an AlexNet network.
 \begin{figure}[h]
   \begin{tikzpicture}
@@ -4136,9 +4136,128 @@ As an implementation detail: if we are deploying a system we may wish to precomp
 \node[draw,circle,scale=0.75] at (15.25, -0.7) {};
 \node at (15.25, -1.25) {$\scriptstyle 4096$};
 \node at (16, 0) {$\hat y$};
-  \end{tikzpicture}
+\end{tikzpicture}
 \end{figure}
+Here's how we can visualize what the deeper layers are learning. Start with a hidden unit in layer 1: scan through your training set and find out which examples (or even what image patches) maximize that hidden units activation function. Notice that for a hidden unit in the first layer of our conv-net, it sees only a relatively small portion of the neural network, and correspondingly it makes sense to plot just a small image patch. So, for a given hidden unit, you might find the nine image patches that maximize that unit's activation. We can then repeat this process for different hidden units, each time figuring out what parts of our training dataset maximize each hidden unit's activation.
+When we carry this process out, we might learn that hidden units in the first layer often learn to recognize simple features: such as edges (oriented in various ways) or a particular shade of color.
 
+What if we repeat this same process at deeper hidden layers; realize first that each hidden unit in later hidden layers sees a larger region of the image. Later layers will detect more complex shapes and patterns. As we progress deeper into the network, a hidden unit might be responsible for detecting objects like cars or people, or landmark features like water.
+
+\paragraph{Cost function for Generated images} How can we provide content image $c$ and a style image $s$ and instruct a neural network to provide a generated image $g$? We define a cost function that measures how good a generated image is. How do we define the quality of a generated image? Let's split our cost function into two parts.
+\[
+J(G) = \alpha J_{\texttt{content}}(C,G) + \beta J_{\texttt{style}}(S,G).
+\]
+The first part of the loss function measures the discrepancy in content between the generated image and the content image, whereas the latter term measures the discrepancy betewen the generated image with the proposed style. To generate a new image, we follow an algorithm.
+\begin{algorithm}
+  \caption{Neural style transfer}
+  Initiliaze $G$ randomly, e.g. $G \in 100 \times 100 \times 3$ \\
+  Use gradient descent to minimize our loss $J(G)$:, $G := G - \frac{\textrm{d}}{\textrm{d} G} J(G)$ where we update our pixels one at a time.
+\end{algorithm}
+\paragraph{Content cost function} Suppose we use a hidden layer $\ell$ to compute content cost. If $\ell$ is a small number, e.g. hidden layer one, it will force your generated image to create pixel values very similar to your content image. Whereas if you use a deeper layer, we are requesting similarities at higher levels of abstraction, e.g. ``if the content image has a dog, ensure the generated image does as well''. In practice, we'll want to choose an intermediary layer that is not too shallow or too deep.
+\begin{itemize}
+\item Suppose you use hidden layer $\ell$ to compute content cost.
+\item Use a pre-trained conv-net (e.g. VGG network).
+\item Let $a^{[\ell](C)}$ and $a^{[\ell](G)}$ be the activation of layer $\ell$   on the content and generated images respectively; if the two activations are similar, both images have similar content.
+\item Define $J_{\texttt{content}}(C,G) = \frac{1}{2} \|a^{[\ell](C)} - a^{[\ell](G)}\|^2$
+\end{itemize}
+\paragraph{Style cost function} What does the style of an image mean?
+\begin{figure}[h]
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[ultra thick, draw = black, fill = blue , scale = 1/2] (-5.5, 0.5) grid (-1.5, 4.5) rectangle (-5.5, 0.5);     
+    \draw[ultra thick, draw = black, fill = green, scale = 1/2] (-5.25, 0.25) grid (-1.25, 4.25) rectangle (-5.25, 0.25);     
+    \draw[ultra thick, draw = black, fill = red, scale = 1/2] (-5, 0) grid (-1,     4) rectangle (-5, 0);
+\draw[->] (-0.25, 1) -- (0.25, 1);
+%% First volume
+    \draw[black, fill=blue!60] (2.5,1.5,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (2.5,1.5,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez*2) -- cycle; 
+    \draw[black, fill=blue!60] (2.5,1.5,0) -- ++(-\cubex,0,0) -- ++(0,0,-\cubez*2)         -- ++(\cubex,0,0) -- cycle;
+%% Second volume
+    \draw[black, fill=blue!60] (5.5,1.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,-\cubey*2*10/14,0) -- ++(\cubex*10/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (5.5,1.5,0) -- ++(0,0,-\cubez) -- ++(0,-\cubey*2*10/14,0) -- ++(0,0,\cubez) -- cycle; 
+    \draw[black, fill=blue!60] (5.5,1.5,0) -- ++(-\cubex*10/14,0,0) -- ++(0,0,-\cubez)     -- ++(\cubex*10/14,0,0) -- cycle;
+\draw[->] (3.5, 1) -- (4, 1);
+    %% Third volume
+    \draw[black, fill=blue!60] (7.5,1,0) -- ++(-\cubex*5/14,0,0) -- ++(0,-\cubey*2*5/14,0) -- ++(\cubex*5/14,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (7.5,1,0) -- ++(0,0,-\cubez*1.5) -- ++(0,-\cubey*2*5/14,0) -- ++(0,0,\cubez*1.5) -- cycle; 
+    \draw[black, fill=blue!60] (7.5,1,0) -- ++(-\cubex*5/14,0,0) --     ++(0,0,-\cubez*1.5)     -- ++(\cubex*5/14,0,0) -- cycle;
+\draw[->] (6, 1) -- (6.5, 1);
+    %% Long skinny volume
+    \draw[black, fill=blue!60] (9,0.5,0) -- ++(-\cubex*2/10,0,0) -- ++(0,-\cubey*2*2/10,0) -- ++(\cubex*2/10,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (9,0.5,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey*2*2/10,0) -- ++(0,0,\cubez*2) -- cycle; 
+    \draw[black, fill=blue!60] (9,0.5,0) -- ++(-\cubex*2/10,0,0) --     ++(0,0,-\cubez*2)     -- ++(\cubex*2/10,0,0) -- cycle;
+    \draw[->] (8.25, 1) -- (8.75, 1);
+    \draw (10.5, 0) rectangle (11, 2);
+\node[draw,circle,scale=0.75] at (10.75, 1.8) {};
+\node[draw,circle,scale=0.75] at (10.75, 1.35) {};
+\node at (10.75, 1) {$\vdots$};
+\node[draw,circle,scale=0.75] at (10.75, 0.3) {};
+\draw[->] (10, 1) -- (10.4, 1);
+\draw[->] (11, 1) -- (11.35, 1);
+\node at (11.65,1) {$\hat y$};
+  \end{tikzpicture}
+  \caption{\footnotesize Suppose we have an input image. We're used to seeing conv-net architectures in the style depicted above. Suppose you've chosen some layer $\ell$ to define a measure of style within an image. We will define style as the correlation between activations across different channels in this layer $\ell$ activation.}
+\end{figure}
+Let's suppose for concreteness that we have chosen a particular layer and it corresponds to some volume.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\cubex}{2} 
+    \pgfmathsetmacro{\cubey}{1} 
+    \pgfmathsetmacro{\cubez}{1}
+    \draw[black, fill=blue!60] (2.5,1.5,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
+    \draw[black, fill=blue!60] (2.5,1.5,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez*2) -- cycle; 
+    \draw[black, fill=blue!60] (2.5,1.5,0) -- ++(-\cubex,0,0) --     ++(0,0,-\cubez*2)         -- ++(\cubex,0,0) -- cycle;
+\node at (0.25, 0.75) {$n_h$};
+\node at (1.75, -0.75) {$n_w$};
+\node at (3.5, -0.25) {$n_c$};
+  \end{tikzpicture}
+  \caption{\footnotesize We have fixed attention to layer $\ell$ in our conv-net depicted above, and we will focus on computing correlation between activations across different channels in this layer.}
+\end{figure}
+If our volume is $n_h \times n_w times n_c$, where for simplicity of illustration let us take $n_c = 5$ but in practice we would have many more channels. To capture style, examine channels pairwise and consider how correlated the activations are, for each of the $n_h \times n_w$ matrices of real numbered activations. Why does this capture style? Correlations tell us which of the high-level texture components (e.g. a vertical texture, or a shade of a particular color) tend to occur or not together in part of an image.
+\begin{algorithm}
+  \caption{Style Matrix}
+  Let $a^{[\ell]}_{i,j,k}$ denote activation at layer $\ell$ in position $i,j,k$     of the volume (height, width, and channels respectively). \\
+  $G^{[\ell]}$ will be a square $n_c^{[\ell]} \times n_c^{[\ell]}$ matrix which measures ``correlations''; in particular for a particular entry of our style matrix we can compute it as follows $G_{k,k'}^{[\ell]} = \sum_i^{n_h^{[\ell]}} \sum_j^{n_w^{[\ell]}} a^{[\ell]}_{ijk} a^{[\ell]}_{ijk'}$
+\end{algorithm}
+What we're technically computing is the un-normalized cross covariance, not a proper correlation. We compute this style-matrix for \emph{both} the generated image \emph{and} the style image. We then
+\begin{align*}
+  G_{k,k'}^{[\ell](S)} = \sum_i^{n_h^{[\ell]}} \sum_j^{n_w^{[\ell]}}   a^{[\ell](S)}_{ijk} a^{[\ell](S)}_{ijk'}, \hspace{25pt}
+  G_{k,k'}^{[\ell](G)} = \sum_i^{n_h^{[\ell]}} \sum_j^{n_w^{[\ell]}} a^{[\ell](G)}_{ijk} a^{[\ell](G)}_{ijk'}
+\end{align*}
+Then, we define the style cost function as
+\[
+J_{\texttt{style}}^{[\ell]}(S,G) = \frac{1}{2 n_h^{[\ell]} n_w^{[\ell]} n_c^{[\ell]}}\|G^{[\ell](S)} - G^{[\ell](G)}\|_F^2 = \frac{1}{2 n_h^{[\ell]} n_w^{[\ell]} n_c^{[\ell]}} \sum_k \sum_{k'} \left(G^{[\ell](S)}_{kk'} - G^{[\ell](G)}_{kk'}\right)^2
+\]
+It turns out that we get more aesthetically pleasing images if we use the style cost function from multiple different layers. We can use additional hyperparameters to control weighting:
+\begin{align*}
+  J_{\texttt{style}}(S,G) = \sum_{\ell} \lambda^{[\ell]} J_{\texttt{style}}^{[\ell]}(S,G)
+\end{align*}
+This allows us to use multiple layers, including earlier ones which capture stylistic similarities at a low level, as well as later layers which capture stylistic similarities at a higher level of abstraction.
+
+\subsubsection{1D and 3D Generalizations} Most of our discussion has focused on 2D input data. Many of the techniques we've learned about also extend to 1 and 3D data. We've already seen how 2D convolutions work:
+\begin{figure}[h]
+  \begin{tikzpicture}
+    \draw[step=0.1] (0,0) grid (1.4, 1.4);
+    \node at (0.5, -0.25) {\footnotesize 2D input image};
+    \node at (0.5, -0.5)  {$\scriptstyle 14 \times 14$};
+    \node at (1.8, 0.7) {*};
+    \draw[step=0.1] (2.2, 0.4) grid (2.7, 0.9);
+    \node at (2.5, 0.25) {\footnotesize 2D filter};
+    \node at (2.5, 0) {$\scriptstyle 5 \times 5$};
+    \node at (3, 0.7) {=};
+    \draw[step=0.1] (3.4, 0) grid (4.4, 1);
+    \node at (3.9, -0.2) {$\scriptstyle 10 \times 10$};
+  \end{tikzpicture}
+  \caption{\footnotesize We've seen before that if we have a $14 \times 14$ input image, and     we apply a $5 \times 5$ filter, we end up with an output that is $10 \times 10$.
+    If we have $3$ channels in our input image, we'd require our filter to be $5 \times 5 \times 3$. If we want an output volume that is $10 \times 10 \times \beta$, we require $\beta$ different filters to be used.} 
+\end{figure}
+\paragraph{1D Case} Suppose we have EKG data, which is a real-valued signal that can be obtained by hooking up some electrode sensors to the chest; there is a spike corresponding to each heartbeat. If you wanted to use EKG signals to make medical diagnoses, we'd have 1D data. Perhaps we have $k$ data points. We can still apply a 1D filter using the vanilla definition of convolution where we slide our filter over different regions of our data, each time taking corresponding elements, multiplying them and adding the result. We see that, for example a 14 unit vector convolved with a 5-unit filter gives us a 10 unit output. We could then apply 16 different filters to end up with a $10 \times 16$ volume that could represent the first layer in our conv-net. For most 1D applications, we end up using recurrent neural networks which we'll learn about in forthcoming lectures.
+
+\paragraph{3D Generalization}
+We now have a three-dimensional input volume. E.g. a CT scan takes slices through our body and is fundamentally three dimensional in nature: we have an $n_h$, $n_w$, and $n_s$ where the last parameter indicates the number of slices in the CT scan. In a 3D convolution, we can take e.g. a $14 \times 14 \times 14$ input convolved with a $5 \times 5\times 5$ filter to get a $10 \times 10 \times 10$ output volume. If we have 16 filters, we'll get a $10 \times 10 \times 10 \times 16$ output. 3D data can also be learned on using a 3D conv-net. Another example that is 3D in nature is movie data. 
 \end{document}
 
 
