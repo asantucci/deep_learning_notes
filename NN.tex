@@ -4262,7 +4262,147 @@ This allows us to use multiple layers, including earlier ones which capture styl
 We now have a three-dimensional input volume. E.g. a CT scan takes slices through our body and is fundamentally three dimensional in nature: we have an $n_h$, $n_w$, and $n_s$ where the last parameter indicates the number of slices in the CT scan. In a 3D convolution, we can take e.g. a $14 \times 14 \times 14$ input convolved with a $5 \times 5\times 5$ filter to get a $10 \times 10 \times 10$ output volume. If we have 16 filters, we'll get a $10 \times 10 \times 10 \times 16$ output. 3D data can also be learned on using a 3D conv-net. Another example that is 3D in nature is movie data.
 
 \section{Sequence Models}
-Sequence models are one of the most exciting areas in deep learning; models like recurrent neural networks (RNN's) have transformed speech recognition, natural language processing, and other areas.
+Sequence models are one of the most exciting areas in deep learning; models like recurrent neural networks (RNN's) have transformed speech recognition, natural language processing, and other areas. What are some examples where sequence models are helpful?
+\begin{itemize}
+\item \emph{Speech Recognition}: you are given an input audio clip $X$ and asked to map it into a text transcript $Y$. Both the input and output are sequence data, since $X$ is an audio clip that plays out over time and $Y$ is a sequence of words.
+\item \emph{Music Generation}: here, only the output $Y$ is a sequence; the input can be an empty set, or an integer specifying the genre of music you want to generate, or perhaps the first few notes of the music you want to generate.
+\item \emph{Sentiment Classification:} the input $X$ is a sequence of words (e.g. a review of a movie) and the output could be a rating (e.g. on a 5-star   scale).
+\item \emph{DNA Sequence Analysis:} The input is your DNA, represented as a sequence of codons $A$, $C$, $G$, and $T$ and the goal is to label which parts of the sequence contain a particular protein for example.
+\item \emph{Machine Translation:} given an input sentence in one language you are asked to translate it to another.
+\item \emph{Video Activity Recognition:} You are given a sequence of video   frames and asked to recognize the activity taking place.
+\item \emph{Name Entity Recognition:} you are given a setence and asked to identify the people in that sentence.
+\end{itemize}
+All of these problems can be cast as supervised learning problems, but they can be very different from each other: in some examples $X$ and $Y$ are both sequences, but sometimes they can have different lengths, or sometimes exactly one is a sequence but not the other.
+
+\subsection{Notation} Let's start by defining some notation that will be useful in building up these sequence models. Let's suppose that we're tasked with \emph{named-entity recognition}: that is, given an input sequence of words we are asked to locate the position of names.
+\begin{equation}
+\label{eq: simplenamedentityrecognitioninput}
+X: \textrm{``Harry Potter and Hermione Granger invented a new spell.''}
+\end{equation}
+A use case is in the context of search engines, for example, to index all of say the last twenty-four hours of news for all people mentioned so that they can be indexed appropriately. Name-entity recognition systems can be used to find not just people's names, but also company names, times, locations, country names, currency names, etc. in various types of text. We might want our model to output a single bit for each input word: is that a part of a persons name? There are more sophisticated representations that will also tell us the start and end of a name within a sentence, but this simpler output representation will suffice for this example. Since our input sentence in \ref{eq: simplenamedentityrecognitioninput} contains 9 words, so will our target label:
+\[
+y = 
+\begin{bmatrix} 1 & 1 & 0 & 1 & 1 & 0 & 0 & 0 & 0 \end{bmatrix}.
+\]
+We'll go ahead and use a one-indexed superscript with angle-brackets to index into our intput $X$:
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node at (0,0) {Harry};
+    \node at (0,-0.5) {$X^{\langle 1\rangle}$};
+    \node at (1.5,0) {Potter};
+    \node at (1.5,-0.5) {$X^{\langle 2\rangle}$};
+    \node at (2.75,0) {and};
+    \node at (2.75,-0.5) {$X^{\langle 3\rangle}$};
+    \node at (3.75,0) {$\ldots$};
+    \node at (5,0) {spell};
+    \node at (5,-0.5) {$X^{\langle 9\rangle}$};
+  \end{tikzpicture}
+\end{figure}
+In general, we'll use $X^{\langle t \rangle}$ to refer to some arbitrary element in the middle of our input sequence. We will similarly use the notation
+$Y = \begin{bmatrix} Y^{\langle 1 \rangle} & Y^{\langle 2 \rangle} & \ldots &   Y^{\langle 9 \rangle} \end{bmatrix}$.
+Let $T_X$ denote the length of the input sequence, and $T_Y$ to denote the length of the output sequence. To refer to the $t$-th component of the $i$-th training example, we can express this as $x^{(i)\langle t \rangle}$. Note that each observation can have a different input and output length, and so let $T_X^{(i)}$ denote input sequence length for $i$-th observation and $T_Y^{(i)}$ denote corresponding output sequence length.
+
+\paragraph{Determining a Population Vocabulary} To represent the words in a sentence, you come up with a vocabulary or dictionary. This involves first coming up with an ordered listing of a population of words.
+\[
+\underbrace{
+\begin{bmatrix}
+  \textrm{a} \\ \textrm{Aaron} \\ \vdots \\ \textrm{and} \\ \vdots \\ \textrm{Harry} \\ \vdots \\ \textrm{Potter} \\ \vdots \\ \textrm{Zulu}
+\end{bmatrix}}_{\textrm{Vocabulary}} \leadsto \begin{bmatrix} 1 \\ 2 \\ \vdots \\ 367 \\ \vdots \\ 4075 \\ \vdots \\ 6830 \\ \vdots \\ 10000 \end{bmatrix}
+\]
+We can associate an ordinal index with each word, e.g. ``a'' is word one, ``Aaron'' is word two, perhaps ``Harry'' appears in position 4,075, and perhaps Zulu is the last word that appears at index 10,000. For a commercial application, it would be more common to see dictionary sizes of at least 30-50k whereas a large internet company might use a dictionary with a million words or even larger. To encode a word not found in our dictionary, we might give it its own position in the dictionary associated with the string representation \texttt{<unk>}.
+\paragraph{Creating a Dictionary and Representing Words in a Sentence}
+One way to create this dictionary may be to go through your training data and retain only the ten-thousand most frequently recurring words, or perhaps use an online resource to determine the top ten-thousand most frequently used words in the English language. We can then use a one-hot encoding to represent each word. 
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node at (-1.5, 0) {``Harry'' = };
+    \node at (0,0) {$\begin{bmatrix} 0 \\ \vdots \\ 0 \\ 1 \\ 0 \\ \vdots \\ 0 \end{bmatrix}$};
+    \draw[<-] (0.65, -0) -- (1.15, -0) node[right] {\footnotesize position       4,075};
+    \node at (5, 0) {``Potter'' = };
+    \node at (6.5,0) {$\begin{bmatrix} 0 \\ \vdots \\ 0 \\ 1 \\ 0 \\ \vdots \\ 0 \end{bmatrix}$};
+    \draw[<-] (7.25, -0) -- (7.75, -0) node[right] {\footnotesize position 6,830};
+  \end{tikzpicture}
+  \caption{\footnotesize In our example dictionary, the word ``Harry'' would be represented by the all zeros vector, length ten-thousand, with exception to a unit valued element at index 4,075. The name ``Potter'' was indexed at position 6,830 in our dictionary, so that's where we encode a unit value in its vector representation.}
+\end{figure}
+
+We now have a representation for each word in our input $X$: for each $X^{\langle t \rangle}$ we represent it as a one-hot encoded vector. We call it a one-hot encoding since there is exactly one unit value turned on and everything else is zeroed out.
+
+\subsection{Recurrent Neural Network Model} We've established a notation for how to define sequence learning problems. Let's now talk about how to construct a neural network which learns the mapping from (sequence) $X$ to (sequence) $Y$. The first thing to go over is why a standard neural network wouldn't work well for our task of, e.g. entity recognition. In the context of our last problem, why not take nine one-hot encoded vectors and feed them into a neural network with a few layers and then output nine bits describing whether each input word is a part of a name?
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node at (0, 1) {$x^{\langle 1 \rangle}$};
+    \node[draw,circle] at (1,1) {};
+    \draw[->] (1.25, 1) -- ( 1.75, 0.8);
+    \node at (0, 0) {$x^{\langle 2 \rangle}$};
+    \node[draw,circle] at (1,0) {};
+    \draw[->] (1.25, 0) -- (1.75, 0);
+    \node at (0,-1) {$\vdots$};
+    \node at (0,-2) {$x^{\langle T_x \rangle}$};
+    \draw[->] (1.25, -2) -- (1.75, -1.8);
+    \node[draw,circle] at (1,-2) {};
+    \draw (2, -2) rectangle (2.5, 1);
+    \node[draw,circle,scale=0.75] at (2.25, 0.8) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0) {};
+    \node at (2.25, -1) {$\vdots$};
+    \node[draw,circle,scale=0.75] at (2.25, -1.8) {};
+    \draw[->] (2.75, -0.5) -- (3.5, -0.5);
+    \draw (4, -2) rectangle (4.5, 1);
+    \node[draw,circle,scale=0.75] at (4.25, 0.8) {};
+    \node[draw,circle,scale=0.75] at (4.25, 0) {};
+    \node at (4.25, -1) {$\vdots$};
+    \node[draw,circle,scale=0.75] at (4.25,-1.8) {};
+    \draw[->] (4.75, 0.8) -- (5.25, 1) node[draw,circle,right] {};
+    \draw[->] (4.75, 0)   -- (5.25, 0) node[draw,circle,right] {};
+    \draw[->] (4.75,-1.8) -- (5.25, -2) node[draw,circle,right] {};
+    \node at (6.5, 1) {$y^{\langle 1 \rangle}$};
+    \node at (6.5, 0) {$y^{\langle 2 \rangle}$};
+    \node at (6.5,-1) {$\vdots$};
+    \node at (6.5,-2) {$y^{\langle T_y \rangle}$};
+  \end{tikzpicture}
+  \caption{\footnotesize What can go wrong if we use a plain neural network to try and create a mapping from $X$ to $Y$?}
+\end{figure}
+The first problem is that inputs and outputs can be of different lengths for different examples: i.e. $T_x$ and $T_y$ can vary across observations. Maybe if there was an upper bound to the length of sentences, we could zero-pad inputs up to that maximum but that doesn't feel like an ideal representation. Secondly, a naive neural network architecture such as this doesn't share features across regions of text: e.g. learning that ``Harry'' can be a name in position $x^{\langle t\rangle}$ can also help us realize that same word is also a name when appearing in a different position $x^{\langle t'\rangle}$. Similar to what we saw with conv-nets, using a better representation will allow us to reduce the number of parameters in the model. Previously recall that with a dictionary of size ten-thousand, each word (i.e. each $X^{\langle t \rangle}$), is represented as a ten-thousand dimensional one-hot enconding; a weight matrix for this first layer would have an enormous number of parameters.
+
+\paragraph{Building up a RNN} Let's say we're reading a sentence from left to right. The first word we read will be $X^{\langle 1 \rangle}$. We can feed this into a neural network and maybe try to predict the output: is this part of a person's name or not.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0);
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[above] {$\hat y^{\langle 1         \rangle}$};
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$};
+    \node at (2.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (2.25, -0.5) -- (2.25, 0);
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    \draw[->] (2.25, 2.25) -- (2.25, 2.75) node[above] {$\hat y^{\langle 2         \rangle}$};
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (5, 1);
+    \node at (5.25, -1) {$X^{\langle T_x \rangle}$};
+    \draw[->] (5.25, -0.5) -- (5.25, 0);
+    \draw (5, 0.25) rectangle (5.5, 2);
+    \node[draw,circle,scale=0.75] at (5.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (5.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.7) {};
+    \draw[->] (5.25, 2.25) -- (5.25, 2.75) node[above] {$\hat y^{\langle T_y         \rangle}$};    
+  \end{tikzpicture}
+  \caption{\footnotesize When a recurrent neural network makes a prediction for the second element in the input sequence $X^{\langle 2 \rangle}$, it also gets to input some information from what was computed from time step one. In particular, the activation from the previous step is carried forward. In this first example, we have that $T_x = T_y$.}
+\end{figure}
 \end{document}
 
 
