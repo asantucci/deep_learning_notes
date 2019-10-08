@@ -4369,6 +4369,7 @@ The first problem is that inputs and outputs can be of different lengths for dif
 \begin{figure}[h]
   \centering
   \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$};
     %% First input in the sequence.
     \node at (0.25, -1) {$X^{\langle 1 \rangle}$};
     \draw[->] (0.25, -0.5) -- (0.25, 0);
@@ -4401,8 +4402,27 @@ The first problem is that inputs and outputs can be of different lengths for dif
     \node[draw,circle,scale=0.75] at (5.25, 1.7) {};
     \draw[->] (5.25, 2.25) -- (5.25, 2.75) node[above] {$\hat y^{\langle T_y         \rangle}$};    
   \end{tikzpicture}
-  \caption{\footnotesize When a recurrent neural network makes a prediction for the second element in the input sequence $X^{\langle 2 \rangle}$, it also gets to input some information from what was computed from time step one. In particular, the activation from the previous step is carried forward. In this first example, we have that $T_x = T_y$.}
+  \caption{\footnotesize When a recurrent neural network makes a prediction for the second element in the input sequence $X^{\langle 2 \rangle}$, it also gets to input some information from what was computed from time step one. In general, the activation from the previous step is carried forward. To kick things off, we'll also have some made up activation at time step zero, e.g. we might choose to initialize $a^{\langle 0 \rangle}$ with a vector of all zeros. In this first example, we have that $T_x = T_y$.}
 \end{figure}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle t \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0);
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[above] {$\hat y^{\langle t                         \rangle}$};
+    \path[->] (0.5, 1.75) edge[bend left=90] (0.5, 0.5);
+    \node[draw,rectangle,fill,black] at (0.85, 1.2) {};
+  \end{tikzpicture}
+  \caption{\footnotesize Some textbooks or research papers will diagram a     recurrent neural network as follows: they will show input
+    $X^{\langle t \rangle}$ mapping to some output $Y^{\langle t \rangle}$ and they will use a loop to indicate recurrence and a black box to indicate a one step time delay. For clarity, we will avoid drawing out our networks with such a compressed representation.}
+\end{figure}
+A recurrent neural network scans through the data from left to right, and the parameters it uses for each time step are shared: we will denote these activation parameters by $W_{ax}$. And further, the activations, i.e. the horizontal connections, are governed by some other set of parameters $W_{aa}$. 
 \end{document}
 
 
