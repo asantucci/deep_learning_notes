@@ -1,6 +1,6 @@
 \documentclass[12pt]{article}  
 
-\usepackage[boxruled,lined]{algorithm2e} 
+\usepackage[boxruled,lined]{algorithm2e}
 %% \usepackage{booktabs}
 \usepackage{amsmath} 
 \usepackage{amsthm} 
@@ -4363,9 +4363,229 @@ We now have a representation for each word in our input $X$: for each $X^{\langl
   \end{tikzpicture}
   \caption{\footnotesize What can go wrong if we use a plain neural network to try and create a mapping from $X$ to $Y$?}
 \end{figure}
-The first problem is that inputs and outputs can be of different lengths for different examples: i.e. $T_x$ and $T_y$ can vary across observations. Maybe if there was an upper bound to the length of sentences, we could zero-pad inputs up to that maximum but that doesn't feel like an ideal representation. Secondly, a naive neural network architecture such as this doesn't share features across regions of text: e.g. learning that ``Harry'' can be a name in position $x^{\langle t\rangle}$ can also help us realize that same word is also a name when appearing in a different position $x^{\langle t'\rangle}$. Similar to what we saw with conv-nets, using a better representation will allow us to reduce the number of parameters in the model. Previously recall that with a dictionary of size ten-thousand, each word (i.e. each $X^{\langle t \rangle}$), is represented as a ten-thousand dimensional one-hot enconding; a weight matrix for this first layer would have an enormous number of parameters.
+\begin{enumerate}
+  \item Inputs and outputs can be of different lengths for different examples: i.e. $T_x$ and $T_y$ can vary across observations. Maybe if there was an upper bound to the length of sentences, we could zero-pad inputs up to that maximum but that doesn't feel like an ideal representation.
+\item Further, a naive neural network architecture such as this doesn't share features across regions of text: e.g. learning that ``Harry'' can be a name in position $x^{\langle t\rangle}$ can also help us realize that same word is also a name when appearing in a different position $x^{\langle t'\rangle}$. Similar to what we saw with conv-nets, using a better representation will allow us to reduce the number of parameters in the model. Previously recall that with a dictionary of size ten-thousand, each word (i.e. each $X^{\langle t \rangle}$), is represented as a ten-thousand dimensional one-hot enconding; a weight matrix for this first layer would have an enormous number of parameters.
+\end{enumerate}
 
 \paragraph{Building up a RNN} Let's say we're reading a sentence from left to right. The first word we read will be $X^{\langle 1 \rangle}$. We can feed this into a neural network and maybe try to predict the output: is this part of a person's name or not.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$} node[below left] {\color{purple} $W_{aa}$};
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y^{\langle 1         \rangle}$};
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}     node[below left] {\color{purple} $W_{aa}$};
+    \node at (2.25, -1) {$X^{\langle 2 \rangle}$};
+    \draw[->] (2.25, -0.5) -- (2.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    \draw[->] (2.25, 2.25) -- (2.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y^{\langle 2         \rangle}$};
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (5, 1);
+    \node at (5.25, -1) {$X^{\langle T_x \rangle}$};
+    \draw[->] (5.25, -0.5) -- (5.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (5, 0.25) rectangle (5.5, 2);
+    \node[draw,circle,scale=0.75] at (5.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (5.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.7) {};
+    \draw[->] (5.25, 2.25) -- (5.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y^{\langle T_y         \rangle}$};    
+  \end{tikzpicture}
+  \caption{\footnotesize When a recurrent neural network makes a prediction for the second element in the input sequence $X^{\langle 2 \rangle}$, it also gets to input some information from what was computed from time step one. In general, the activation from the previous step is carried forward. To kick things off, we'll also have some made up activation at time step zero, e.g. we might choose to initialize $a^{\langle 0 \rangle}$ with a vector of all zeros. In this first example, we have that $T_x = T_y$. For each input element in the sequence, we use shared weight parameters $W_{ax}$, and to govern how we pass forward activations we used shared weight parameters $W_{aa}$. Lastly, there is a set of weights $W_{ya}$ that govern how to map from hidden neurons to an output prediction.}
+\end{figure}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle t \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y^{\langle t                         \rangle}$};
+    \path[->] (0.5, 1.75) edge[bend left=90] (0.5, 0.5);
+    \node[draw,rectangle,fill,black] at (0.85, 1.2) {};
+    \node at (1.4, 1.2) {\color{purple} $W_{aa}$};
+  \end{tikzpicture}
+  \caption{\footnotesize Some textbooks or research papers will diagram a     recurrent neural network as follows: they will show input
+    $X^{\langle t \rangle}$ mapping to some output $Y^{\langle t \rangle}$ and they will use a loop to indicate recurrence and a black box to indicate a one step time delay. For clarity, we will avoid drawing out our networks with such a compressed representation.}
+\end{figure}
+A recurrent neural network scans through the data from left to right, and the parameters it uses for each time step are shared: we will denote these activation parameters by $W_{ax}$. And further, the way activations are propagated through the sequence, i.e. the horizontal connections, are governed by some other set of parameters $W_{aa}$ which are shared across the layers of the network as well. Lastly, there is a set of weight parameters $W_{ya}$ that govern how we map from the hidden neurons to an output prediction, and these are also shared across the network. When we discuss how forward propagation works, the ordering and choice of characters used in the subscripts will make more sense. When we are making a prediction for
+$y^{\langle t \rangle}$, we get information not only from
+$X^{\langle t \rangle}$ but also information from previous
+$X^{\langle t' \rangle}$ for $t' < t$ since this information is allowed to pass forward to subsequent layers in the form of activations. Note that one \emph{downside} to this network is that we only use information from \emph{earlier} in the sequence to help make our predictions, i.e. our architecture is \emph{unidirectional}; in particular when we make a prediction for $y^{\langle t \rangle}$ we don't consider information from $X^{\langle t' \rangle}$ for $t' > t$. Consider an example that highlights why this is a problem, by contrasting the following two sentences:
+\begin{itemize}
+\item ``He said Teddy Roosevelt was a great president.''
+\item ``He said `teddy bears are on sale'.''
+\end{itemize}
+Given just the first three words of each sentence, it's impossible to know for sure whether the word teddy is part of a person's name or if it refers to a stuffed animal. We can address this issue through the use of \emph{bi-directional} RNN's (BRNN's).
+\subsubsection{Forward Propagation}
+Let's consider a cleaned up network representation of what we drew out earlier.
+\begin{figure}[h]
+  \centering
+    \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$};
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0);
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[above] {$\hat y^{\langle 1         \rangle}$};
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}   ;
+    \node at (2.25, -1) {$X^{\langle 2 \rangle}$};
+    \draw[->] (2.25, -0.5) -- (2.25, 0);
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    \draw[->] (2.25, 2.25) -- (2.25, 2.75) node[above] {$\hat y^{\langle 2         \rangle}$};
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (6, 1) node[above left] {$a^{\langle T_x - 1 \rangle}$};
+    \node at (6.25, -1) {$X^{\langle T_x \rangle}$};
+    \draw[->] (6.25, -0.5) -- (6.25, 0);
+    \draw (6, 0.25) rectangle (6.5, 2);
+    \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.7) {};
+    \draw[->] (6.25, 2.25) -- (6.25, 2.75) node[above] {$\hat y^{\langle T_y         \rangle}$};    
+    \end{tikzpicture}
+\end{figure}
+Typically, we start off with $a^{\langle 0 \rangle}$ equal to the zero vector. To compute $a^{\langle 1 \rangle}$, for (potentially different) activation functions $g_1$, $g_2$,
+\begin{align*}
+a^{\langle 1 \rangle} &= g_1\left(W_{aa} a^{\langle 0 \rangle} + W_{ax} x^{\langle 1 \rangle} + b_a\right) \\
+\hat y^{\langle 1 \rangle} &= g_2\left(W_{ya} a^{\langle 1 \rangle} + b_y \right)
+\end{align*}
+Let's revisit our notation $W_{\alpha, \beta}$: the second parameter $\beta$ indicates what the input values for the weights matrix are and the first parameter $\alpha$ indicates what we're computing. So for example, the weights matrix $W_{aa}$ accepts as input an activation and is used to compute an activation; the weights matrix $W_{ax}$ accepts as input an
+$X^{\langle t \rangle}$ and is used to compute an activation; finally, the weights $W_{ya}$ take in as argument a set of activations and are used to compute $\hat y$'s. It turns out that it's common practice to use a $\tanh$ activation function in a RNN, although ReLU's are also sometimes used for $g_1$; correspondingly depending on what our output $y$ is we choose $g_2$ accordingly: e.g. if we have a binary classification problem  we might use a sigmoid activation function, whereas for a $k$-way classification problem we might use a softmax. More generally, for some intermediary (time)-step $t$:
+\begin{align*}
+  a^{\langle t \rangle} &= g_1\left(W_{aa} a^{\langle t - 1 \rangle} + W_{ax}   X^{\langle t \rangle} + b_a\right) \\
+  \hat y^{\langle t \rangle} &= g_2\left(W_{ya} a^{\langle t \rangle} + b_y \right)
+\end{align*}
+These equations define the forward propagation in a neural network: we initialize $a^{\langle 0 \rangle}$ to be the zeros vector, and using this we can proceed in computing various quantities in our DAG from left to right. If we'd like to simplify notation slightly, we can form a new matrix by concatenating $W_{aa}$ with $W_{ax}$ as follows:
+$W_a = \begin{bmatrix} W_{aa} & W_{ax} \end{bmatrix}$ and then this lets us write
+\[
+a^{\langle t \rangle} = g\left(W_a \begin{bmatrix} a^{\langle t - 1 \rangle} \\ x^{\langle t \rangle} \end{bmatrix} + b_a \right).
+\]
+We can apply definition of block-matrix multiplication to recover our original expression, which is itself linear and can therefore be expressed as a matrix multiply. The advantage is that instead of carrying around two parameter matrices, we can only require keeping track of a single parameter matrix $W_a$. We can modify the notation used in the second equation as well by dropping one of the subscripts, so that we end up with
+\begin{align*}
+a^{\langle t \rangle} &= g_1\left(W_a \begin{bmatrix} a^{\langle t - 1 \rangle}   \\ x^{\langle t \rangle} \end{bmatrix} + b_a \right) \\
+\hat y^{\langle t \rangle} &= g_2 \left(W_y a^{\langle t \rangle} + b_y\right).
+\end{align*}
+So, $W_y$ indicate a weights matrix for computing $\hat y$ quantities, whereas $W_a$ indicates a weights matrix for computing activations.
+\subsubsection{Backward Propagation}
+We've seen in forward propagation how we can compute the activations from left to right such that we can output all of our predictions. In backward propagation, we go through the computational graph in reverse order. To be concrete, suppose we're given an input sequence
+$X^{\langle 1 \rangle}, X^{\langle 2 \rangle}, \ldots, X^{\langle T_x \rangle}$. Using $X^{\langle 1 \rangle}$ and $a^{\langle 0 \rangle}$ alongside a weights matrix $W_a$ and bias term $b_a$, we're going to compute the activation $a^{\langle 1 \rangle}$.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node at (-1.5, 1.25) {$a^{\langle 0 \rangle}$};
+    \draw[->] (-1, 1.25) -- (-0.5, 1.25);
+    \node at (0, 0) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0, 0.25) -- (0, 1) node[above,draw,rectangle] (a1)
+         {$a^{\langle 1                 \rangle}$};
+    \draw[->] (0, 1.75) -- (0, 2.25) node[above,draw,rectangle] (y1) {$\hat y^{\langle 1 \rangle}$};
+    \node (weights) at (-1.5, -0.1) {\color{blue!50}   $W_a, b_a$};
+    \node (yweights) at (-1.5, 3)   {\color{purple!50} $W_y, b_y$};
+    \draw[->,blue!50] (weights) -- (a1);
+    \draw[->,purple!50] (yweights) -- (y1);
+    \node at (2, 0) {$X^{\langle 2 \rangle}$};
+    \draw[->] (2, 0.25) -- (2, 1) node[above,draw,rectangle] (a2) {$a^{\langle 2                 \rangle}$};
+    \draw[->] (2, 1.75) -- (2, 2.25) node[above,draw,rectangle] {$\hat y^{\langle 2 \rangle}$};
+    \draw[->] (a1) to (a2);
+    \draw[->,blue!50] plot [smooth] coordinates { (-1, -0.1) (0, -0.5) (1.4,             1)};
+    \draw[->,purple!50] plot [smooth] coordinates { (-1, 3) (1, 3) (1.5, 2.6) };
+    \node at (4, 0) {$X^{\langle 3 \rangle}$};
+    \draw[->] (4, 0.25) -- (4, 1) node[above,draw,rectangle] (a3) {$a^{\langle 3                 \rangle}$};
+    \draw[->] (4, 1.75) -- (4, 2.25) node[above,draw,rectangle] {$\hat y^{\langle 3 \rangle}$};
+    \draw[->] (a2) -- (a3);
+    \draw[->,blue!50] plot [smooth] coordinates { (-1, -0.1) (0, -0.5) (1.9,             -0.5) (3.6, 0.9)};
+    \draw[->,purple!50] plot [smooth] coordinates { (-1, 3) (1, 3) (3, 3) (3.4, 2.6) };
+    \node at (5, 1.25) {$\ldots$};
+    \draw[->] (5.5, 1.25) -- (6.5, 1.25);
+    \node at (7, 0) {$X^{\langle T_x \rangle}$};
+    \draw[->] (7, 0.25) -- (7, 1) node[above, draw, rectangle] (atx)          {$a^{\langle T_x \rangle}$};
+    \draw[->] (7, 1.75) -- (7, 2.25) node[above,draw,rectangle] {$\hat y^{\langle T_y \rangle}$};
+    \draw[->,blue!50] plot [smooth] coordinates { (-1, -0.1) (0, -0.6) ( 2,       -0.6) (6, -0.6) (6.6, 0.9)};
+    \draw[->,purple!50] plot [smooth] coordinates { (-1, 3) (1, 3) (3, 3) (6, 3) (6.4, 2.6) };
+  \end{tikzpicture}
+  \caption{\footnotesize We have depicted the essentials for forward and backward propagation. Note that the weights for the activations $W_a, b_a$ are shared across time, and the same is true for the weights for the predictions $W_y, b_y$.}
+\end{figure}
+Let's first define an element-wise loss function. We're in the context of entity-recognition and so our target output is binary valued: we can use the standard logistic regression loss, also known as cross entropy loss.
+\[
+\mathcal L^{\langle t \rangle} \left( \hat y^{\langle t \rangle}, y^{\langle t \rangle}\right) = -y^{\langle t \rangle} \log \hat y^{\langle t \rangle} - (1-y^{\langle t \rangle}) \log (1 - \hat y^{\langle t \rangle}).
+\]
+We can now define the loss over the entire sequence:
+\[
+\mathcal L(\hat y, y) = \sum_{t=1}^{T_y} \mathcal L^{\langle t \rangle} \left( \hat y^{\langle t \rangle}, y^{\langle t \rangle}\right)
+\]
+From earlier examples we've seen: backpropagation requires passing information in the directions opposite to what we've depicted in the above graph when we pass weights forward as input. We can take derivatives of our loss function with respect to our various parameters and update them using gradient descent or our favorite optimization algorithm. We call this process \emph{backward propagation   through time} because we are processing our input sequence in reverse order.
+So far, we've assumed that the length of the input sequence is equal to the length of the output sequence; let's now consider a much richer model architecture which will expand on the types of problems we can tackle.
+
+\subsubsection{Different types of RNNs}
+Let's now consider cases where $T_x \neq T_y$. The following is inspired from Andrej Karkpathy's \href{http://karpathy.github.io/2015/05/21/rnn-effectiveness/}{The Unreasonable   Effectiveness of RNN's} blog post.
+\begin{figure}[h]
+  \centering
+    \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$};
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0);
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[above] {$\hat y^{\langle 1         \rangle}$};
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}   ;
+    \node at (2.25, -1) {$X^{\langle 2 \rangle}$};
+    \draw[->] (2.25, -0.5) -- (2.25, 0);
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    \draw[->] (2.25, 2.25) -- (2.25, 2.75) node[above] {$\hat y^{\langle 2         \rangle}$};
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (6, 1) node[above left] {$a^{\langle T_x - 1 \rangle}$};
+    \node at (6.25, -1) {$X^{\langle T_x \rangle}$};
+    \draw[->] (6.25, -0.5) -- (6.25, 0);
+    \draw (6, 0.25) rectangle (6.5, 2);
+    \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.7) {};
+    \draw[->] (6.25, 2.25) -- (6.25, 2.75) node[above] {$\hat y^{\langle T_y         \rangle}$};    
+    \end{tikzpicture}
+    \caption{\footnotesize This is an architecture as presented in the previous section. We call this a many-to-many network architecture since the length of the input sequence was greater than one and we are mapping to an output sequence with length greater than one.}
+\end{figure}
+Let's now consider the problem of \emph{sentiment classification}, in which we are given a body of text describing perhaps a rating and we wish to map it to rating on a 5-star scale.
 \begin{figure}[h]
   \centering
   \begin{tikzpicture}
@@ -4378,51 +4598,68 @@ The first problem is that inputs and outputs can be of different lengths for dif
     \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
     \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
     \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
-    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[above] {$\hat y^{\langle 1         \rangle}$};
     %% Second element in the input sequence.
-    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$};
-    \node at (2.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}   ;
+    \node at (2.25, -1) {$X^{\langle 2 \rangle}$};
     \draw[->] (2.25, -0.5) -- (2.25, 0);
     \draw (2, 0.25) rectangle (2.5, 2);
     \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
     \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
     \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
     \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
-    \draw[->] (2.25, 2.25) -- (2.25, 2.75) node[above] {$\hat y^{\langle 2         \rangle}$};
     %% Moving on past second layer.
     \draw[->] (2.75, 1) -- (3.25, 1);
     \node at (4, 1) {$\ldots$};
-    \draw[->] (4.5, 1) -- (5, 1);
-    \node at (5.25, -1) {$X^{\langle T_x \rangle}$};
-    \draw[->] (5.25, -0.5) -- (5.25, 0);
-    \draw (5, 0.25) rectangle (5.5, 2);
-    \node[draw,circle,scale=0.75] at (5.25, 0.5) {};
-    \node[draw,circle,scale=0.75] at (5.25, 0.9) {};
-    \node[draw,circle,scale=0.75] at (5.25, 1.3) {};
-    \node[draw,circle,scale=0.75] at (5.25, 1.7) {};
-    \draw[->] (5.25, 2.25) -- (5.25, 2.75) node[above] {$\hat y^{\langle T_y         \rangle}$};    
+    \draw[->] (4.5, 1) -- (6, 1) node[above left] {$a^{\langle T_x - 1 \rangle}$};
+    \node at (6.25, -1) {$X^{\langle T_x \rangle}$};
+    \draw[->] (6.25, -0.5) -- (6.25, 0);
+    \draw (6, 0.25) rectangle (6.5, 2);
+    \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.7) {};
+    \draw[->] (6.25, 2.25) -- (6.25, 2.75) node[above] {$\hat y$};    
   \end{tikzpicture}
-  \caption{\footnotesize When a recurrent neural network makes a prediction for the second element in the input sequence $X^{\langle 2 \rangle}$, it also gets to input some information from what was computed from time step one. In general, the activation from the previous step is carried forward. To kick things off, we'll also have some made up activation at time step zero, e.g. we might choose to initialize $a^{\langle 0 \rangle}$ with a vector of all zeros. In this first example, we have that $T_x = T_y$.}
+  \caption{\footnotesize Here, we show how we could take as input a sentence such as ``there is nothing to like in this movie'' and output a single prediction $\hat y$ describing the sentiment of the review (could be binary valued, is the review positive or negative, or perhaps on a 5-star scale). Instead of having the RNN output a prediction at each timestep, we simply have it output a prediction after its processed the entire input sequence. We call this a \emph{many-to-one} architecture.}
 \end{figure}
+As a limiting case, a \emph{one-to-one} network architecture maps an input $X$ to an output prediction $y$ and would be similar to what we saw in the first components of the lecture sequence. In addition to many-to-one, we can also have a \emph{one-to-many} network architectures; an example would be music generation. The input $x$ could be a single note to start the melody, and the desired output could be a sequence of notes. For this, our predictions past the first timestep don't depend on anything but the previous activations.
+
 \begin{figure}[h]
   \centering
   \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$};
     %% First input in the sequence.
-    \node at (0.25, -1) {$X^{\langle t \rangle}$};
+    \node at (0.25, -1) {$X$};
     \draw[->] (0.25, -0.5) -- (0.25, 0);
     \draw (0, 0.25) rectangle (0.5, 2);
     \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
     \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
     \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
     \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
-    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[above] {$\hat y^{\langle t                         \rangle}$};
-    \path[->] (0.5, 1.75) edge[bend left=90] (0.5, 0.5);
-    \node[draw,rectangle,fill,black] at (0.85, 1.2) {};
+    \draw[->] (0.25, 2) -- (0.25, 2.5) node[above] {$\hat y^{\langle 1 \rangle}$};
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}   ;
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    \draw[->] (2.25, 2) -- (2.25, 2.5) node[above] {$\hat y^{\langle 2 \rangle}$};
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (6, 1) node[above left] {$a^{\langle T_y - 1 \rangle}$};
+    \draw (6, 0.25) rectangle (6.5, 2);
+    \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.7) {};
+    \draw[->] (6.25, 2.25) -- (6.25, 2.75) node[above] {$\hat y^{\langle T_y \rangle}$};    
   \end{tikzpicture}
-  \caption{\footnotesize Some textbooks or research papers will diagram a     recurrent neural network as follows: they will show input
-    $X^{\langle t \rangle}$ mapping to some output $Y^{\langle t \rangle}$ and they will use a loop to indicate recurrence and a black box to indicate a one step time delay. For clarity, we will avoid drawing out our networks with such a compressed representation.}
+  \caption{\footnotesize An example model architecture for music generation. The input could be an integer describing the genre, or perhaps the first note of the desired output melody. We make a sequence of $T_y$ predictions, where only the first depends on an input $X$.}
 \end{figure}
-A recurrent neural network scans through the data from left to right, and the parameters it uses for each time step are shared: we will denote these activation parameters by $W_{ax}$. And further, the activations, i.e. the horizontal connections, are governed by some other set of parameters $W_{aa}$. 
+
+
 \end{document}
 
 
