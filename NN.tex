@@ -4920,13 +4920,44 @@ $c^{\langle t \rangle}$ and $\tilde c^{\langle t \rangle}$ and correspondingly $
 
 \paragraph{Relevance of previous memory cell}
 In practice, we make one additional modification to our GRU, which is to generate a new candidate $\tilde c^{\langle t \rangle}$ using some notion of the \emph{relevance} of $c^{\langle t - 1 \rangle}$, whence our full set of equations becomes:
-\begin{align*}
-  \tilde c^{\langle t \rangle} &= \tanh \left( W_c \begin{bmatrix} \Gamma_r * c^{\langle t - 1 \rangle} \\ x^{\langle t \rangle}       \end{bmatrix} + b_c   \right) \\
-\Gamma_u &= \sigma\left(W_u \begin{bmatrix} c^{\langle t - 1 \rangle}   \\ x^{\langle t \rangle}   \end{bmatrix} + b_u \right) \\
-\Gamma_r &= \sigma\left(W_r \begin{bmatrix} c^{\langle t - 1 \rangle}     \\ x^{\langle t \rangle}   \end{bmatrix} + b_r \right) \\
+\begin{align}
+  \label{eq: gruupdatebeg}
+  \tilde c^{\langle t \rangle} &= \tanh \left( W_c \begin{bmatrix} \Gamma_r * c^{\langle t - 1 \rangle} \\ x^{\langle t \rangle}       \end{bmatrix} + b_c     \right) \\
+  \nonumber
+\Gamma_u &= \sigma\left(W_u \begin{bmatrix} c^{\langle t - 1 \rangle}     \\ x^{\langle t \rangle}   \end{bmatrix} + b_u \right) \\
+\nonumber
+\Gamma_r &= \sigma\left(W_r \begin{bmatrix} c^{\langle t - 1 \rangle}       \\ x^{\langle t \rangle}   \end{bmatrix} + b_r \right) \\
+\label{eq: gruupdateend}
 c^{\langle t \rangle} &= \Gamma_u * \tilde c^{\langle t \rangle} + (1-\Gamma_u)* c^{\langle t - 1 \rangle}
-\end{align*}
+\end{align}
 \paragraph{Notation in literature} Note that in the literature, sometimes $h$ is used in place of $c$, and $u$ and $r$ are used in place of $\Gamma_u$ and $\Gamma_r$ respectively.
+\subsubsection{\href{http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.676.4320&rep=rep1&type=pdf}{Long short term memory (LSTM)}} In the last section, we discussed how the GRU can allow us to learn very long range dependencies in a sequence. There is another type of unit that allows one to accomplish this objective similarly well: long short term memory units, which are in fact more powerful than a GRU. Recall equations \ref{eq: gruupdatebeg}-\ref{eq: gruupdateend} which governed how a memory cell was updated. We initialize
+$c^{\langle t \rangle} = a^{\langle t \rangle}$, and we have notions of \emph{update} gates and \emph{relevance} gates which help us to decide whether to accept a new candidate memory cell. On the other hand, an LSTM is governed by the following equations:
+\begin{align*}
+  \tilde c^{\langle t \rangle} &= \tanh \left( W_c \begin{bmatrix} a^{\langle t -       1 \rangle} \\ x^{\langle t \rangle} \end{bmatrix} + b_c \right) \\
+  \Gamma_u &= \sigma \left(W_u \begin{bmatrix} a^{\langle t -       1 \rangle}     \\ x^{\langle t \rangle} \end{bmatrix} + b_u\right) \\
+  \Gamma_f &= \sigma \left(W_f \begin{bmatrix} a^{\langle t -       1 \rangle}     \\ x^{\langle t \rangle} \end{bmatrix} + b_f \right) \\
+  \Gamma_o &= \sigma \left(W_o \begin{bmatrix} a^{\langle t -       1 \rangle}     \\ x^{\langle t \rangle} \end{bmatrix} + b_o \right) \\
+  c^{\langle t \rangle} &= \Gamma_u * \tilde c^{\langle t \rangle} + \Gamma_f *   c^{\langle t - 1 \rangle} \\
+  a^{\langle t \rangle} &= \Gamma_o * \tanh c^{\langle t \rangle}
+\end{align*}
+where here we use a separate \emph{update} $\Gamma_u$ gate and a different \emph{forget} $\Gamma_f$ gate in addition to an \emph{output} $\Gamma_o$ gate. Note that we now have three gates instead of two, and so our architecture is slightly more complex than a GRU; we can visualize our architecture.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \draw (0,0) rectangle (10, 3);
+    \node[draw,rectangle] (forget) at (1.5, 0.5) {\footnotesize forget gate};
+    \node[draw,rectangle] (update) at (4, 0.5) {\footnotesize update gate};
+    \node[draw,rectangle] (tanh)   at (6, 0.5) {$\scriptstyle \tanh$};
+    \node[draw,rectangle] (output) at (8, 0.5) {\footnotesize output gate};
+    \node at (0.5, -0.5)  {$x^{\langle t \rangle}$};
+    \node at (-1,   1)    {$a^{\langle t - 1 \rangle}$};
+    \node at (-1,   2.25) {$c^{\langle t - 1 \rangle}$};
+    \draw[->,blue!50] plot [smooth] coordinates { (-0.5, 1) (-0.4,                   0.1) (1.25, 0.1) (1.5, 0.2)};
+    \draw[blue!50] plot [smooth] coordinates { (0.5, -0.25) (0.75, 0) (0.9, 0.075)};
+  \end{tikzpicture}
+\end{figure}
+
 \end{document}
 
 
