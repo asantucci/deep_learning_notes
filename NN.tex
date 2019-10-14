@@ -4838,11 +4838,95 @@ and note that the terms on the right hand side of the equation above are exactly
 
 We remark that it's also possible to construct a \emph{character-level} language model. That is, our vocabulary could consist of the unique characters appearing in our training dataset, something like
 \[
-\texttt{Vocabulary } = \begin{bmatrix} \textrm{a} & \ldots & \textrm{z} & \_ & . & , & ; & 0 & \ldots & 9 & \textrm{A} & \ldots & \textrm{Z} \end{bmatrix}
+\texttt{Vocabulary } = \begin{bmatrix} \textrm{a} & \ldots & \textrm{z} & \textrm{\_} & \textrm{.} & \textrm{,} & \textrm{;} & 0 & \ldots & 9 & \textrm{A} & \ldots & \textrm{Z} \end{bmatrix}
 \]
 And then we could model the probability of sequences of characters instead of words. A \emph{benefit} of a character level language model is that we don't have to deal with unknown tokens, and we can assign every sequence of characters (every word) a non-zero probability of appearing elsewhere in a sequence of characters (or words); e.g. even if the type of cat ``mau'' is not frequently enough to appear in our word-vocabulary, a character-level language model could still assign this sequence of characters a probability of appearing somewhere within a sentence. The main \emph{disadvantage} is that we end up with much longer sequences; a consequence of this is that because any particular model has a finite memory, capturing long-range dependencies between earlier parts of an input sequence and much later parts of the same (very long) input sequence can be difficult.
 
 \subsection{Vanishing gradients with RNNs}
+One of the problems with a basic RNN algorithm is that it runs into vanishing gradient problems. Consider two (long) sentences:
+\begin{itemize}
+\item The \emph{cat}, which ate a lot of delicious food, \emph{was} full.
+\item The \emph{cats}, which ate a lot of delicious food, \emph{were} full.
+\end{itemize}
+\paragraph{Vanishing gradients and long range dependencies}
+This is an example where language can have very long term dependencies: the plurality \emph{cat(s)} earlier in the sentence impacts the verb describing if the cat's (or cats') fullness. The basic RNN's we've seen so far are not so great at capturing long range dependencies; due to the vanishing gradients problem, it can be difficult for the outputs of the errors associated with the later time steps to affect the computations at much earlier time steps. In practice, this means it can be quite difficult to train a RNN to realize that it needs to memorize the plurality of the noun used earlier in the sentence in order to realize the corresponding type of verb to use much later in the sentence. Note as well that in English, number of words separating our noun and verb as in the examples used above could be unboundedly long, and so we might require that our RNN memorize a particular bit of information for a very long time before using that piece of information.
+
+\paragraph{Exploding gradients} Note that exploding gradients can also be an issue for very deep networks. This can be catastrophic since exponentially large gradients cause your parameters to blow up; it turns out it's a bit easier to spot since the parameters blowing up often results in \texttt{NaN}'s in your output, indicating the result of a numerical overflow. If you spot this, one solution is to use \emph{gradient-clipping} which really amounts to examining your gradient vectors and if any element exceeds some threshold, then re-scale the elements so that they are not \emph{too} big. The problem of vanishing gradients is much harder to solve.
+
+\subsubsection{Gated Recurrent Unit (GRU)} The gated recurrent unit is a modification to the RNN hidden layer that makes it much better at capturing long range dependencies or connections and it also helps a lot with the problem of vanishing gradients. Recall how we compute an activation at time-step $t$:
+\[
+a^{\langle t \rangle} = g(W_a \begin{bmatrix} a^{\langle t-1 \rangle} \\ x^{\langle t \rangle} \end{bmatrix} + b_a)
+\]
+where $g$ could be an activation function such as $\tanh$. The in a diagram, we have something like
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node[draw,rectangle,scale=8] at (0,0) {};
+    \node[draw,rectangle] (tanh) at (0,0) {$\tanh$};
+    \node (xt) at (0,-2) {$x^{\langle t \rangle}$};
+    \node (atm1) at (-2,0) {$a^{\langle t - 1 \rangle}$};
+    \draw[->] (atm1) -- (tanh);
+    \draw[->] (xt) -- (tanh);
+    \node (at) at (2, 0) {$a^{\langle t \rangle}$};
+    \draw[->] (tanh) -- (at);
+    \node[draw,rectangle] (sm) at (2, 2) {softmax};
+    \draw[->] (tanh) -- (sm);
+    \draw[->] (sm) -- (2, 2.5) node[above] {$\hat y^{\langle t \rangle}$};
+  \end{tikzpicture}
+\end{figure}
+The motivation for GRU's comes from two papers: \href{https://arxiv.org/pdf/1409.1259.pdf}{On the Properties of Neural Machine Translation} and \href{https://arxiv.org/abs/1412.3555}{Empirical Evaluation of Gated Recurrent Neural Networks on Sequence Modeling}. The GRU will have a new variable called $c$ which represents a memory cell; this memory cell will allow us to capture long range dependencies. For now, we will set $c^{\langle t \rangle} = a^{\langle t \rangle}$, but this will change when we discuss LSTM's. At each time step, we will consider overwriting the memory cell with a candidate \[
+\tilde c^{\langle t \rangle} = \tanh\left(W_c \begin{bmatrix} c^{\langle t-1 \rangle}   \\ x^{\langle t \rangle} \end{bmatrix} + b_c \right)
+\]
+The key idea of the GRU is that we have a gate $\Gamma_u$, where the subscript $u$ denotes \emph{update}, and its output lies in the unit interval:
+\[
+\Gamma_u = \sigma \left( W_u \begin{bmatrix} c^{\langle t-1 \rangle} \\ x^{\langle t \rangle} \end{bmatrix} + b_u\right).
+\]
+For most of the values in the input domain of the $\sigma$ function, the output lies very close to either zero or one. Our gate $\Gamma_u$ will decide at each time step whether to update our memory cell with the candidate. So, perhaps our memory cell is bit-valued and corresponds to whether a noun is plural, and our gate is responsible for propagating this information much further into the sequence until we need to draw upon this information when choosing an appropriate verb (using our running example). Our update rule will formally be:
+\begin{equation}
+  \label{eq: gammaupdategru}
+c^{\langle t \rangle} = \Gamma_u \tilde c^{\langle t \rangle} + \left(1-\Gamma_u\right) c^{\langle t-1\rangle}.
+\end{equation}
+We can visualize all this with a diagram.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node[draw,rectangle,scale=10] at (0,0) {};
+    \node[draw,rectangle] (tanh) at (-0.5,0) {$\tanh$};
+    \node[draw,rectangle] (sigm) at (0.5, 0) {$\sigma$};
+    \node (xt) at (-1,-2) {$x^{\langle t \rangle}$};
+    \node (atm1) at (-3,0) {$c^{\langle t - 1 \rangle} = a^{\langle t - 1         \rangle}$};
+    \draw[->,blue!50] plot [smooth] coordinates { (-1.75, 0) (-1.5, 0) (-1.4,                   -1) (-0.7, -1) (-0.5, -0.35)};
+    \draw[->,blue!50] plot [smooth] coordinates { (-1, -1.75) (-0.7, -1)};
+    \draw[->,blue!50] plot [smooth] coordinates { (-0.7, -1) (0.5,-0.35) };
+    \node[above = 1mm of tanh] {$\tilde c^{\langle t \rangle}$};
+    \node[above = 1mm of sigm] {$\Gamma_u$};
+    \draw[->,blue!50] plot [smooth] coordinates { (-0.25, 0.35) (-0.1,0.9)};
+    \draw[->,blue!50] plot [smooth] coordinates { (0.25, 0.35) ( 0.1,0.9)};
+    \node[draw,rectangle,fill=purple!50] (update) at (0, 1.15) {};
+    \draw[->,blue!50] plot [smooth] coordinates { (-1.75, 0) (-1.5, 1) (-0.2, 1.15)};
+    \node (at) at (3, 1.15) {$c^{\langle t \rangle} = a^{\langle t \rangle}$};
+    \draw[->,blue!50] (update) -- (at);
+    \draw[->,blue!50] plot [smooth] coordinates { (1, 1.15) (1.5, 1.6) };
+    %% \draw[->] (tanh) -- (at);
+    \node[draw,rectangle] (sm) at (2, 2) {softmax};
+    %% \draw[->] (tanh) -- (sm);
+    \draw[->,blue!50] (sm) -- (2, 2.5) node[above,black] {$\hat y^{\langle t \rangle}$};
+  \end{tikzpicture}
+  \caption{\footnotesize Here, the cell shaded in \color{purple!50}{purple} \color{black} represents equation \ref{eq: gammaupdategru}. Notice that whereas before, very large or small activation values resulted in vanishing gradients and harmed our ability to propagate errors to earlier parts of our sequence model; now, very large or small activation values for $\Gamma_u$ correspond to keeping or forgetting the contents of the memory update cell, and so for example even if $\Gamma_u \approx 0$ for many time steps, this corresponds to simply setting $c^{\langle t \rangle} = c^{\langle t - 1 \rangle}$ repeatedly and ``memorizing'' information. So whereas before large or small activation values yielded vanishing gradients, in this set up they do not hurt us.}
+\end{figure}
+\paragraph{Implementation details} Note that in an activation layer,
+$a^{\langle t \rangle}$ can be a vector, and so therefore
+$c^{\langle t \rangle}$ and $\tilde c^{\langle t \rangle}$ and correspondingly $\Gamma_u$ can be vectors as well. In this case, the multiplications in our update rule \ref{eq: gammaupdategru} become element-wise multiplies. We can interpret these element-wise multiplies as turning on-or-off different bits which correspond to memorizing different types of information: e.g. one bit might be dedicated to understanding the plurality of the noun in the sentence, whereas perhaps another realizes that the subject is about food. At each point in time, we choose to update a (subset of) memory bits.
+
+\paragraph{Relevance of previous memory cell}
+In practice, we make one additional modification to our GRU, which is to generate a new candidate $\tilde c^{\langle t \rangle}$ using some notion of the \emph{relevance} of $c^{\langle t - 1 \rangle}$, whence our full set of equations becomes:
+\begin{align*}
+  \tilde c^{\langle t \rangle} &= \tanh \left( W_c \begin{bmatrix} \Gamma_r * c^{\langle t - 1 \rangle} \\ x^{\langle t \rangle}       \end{bmatrix} + b_c   \right) \\
+\Gamma_u &= \sigma\left(W_u \begin{bmatrix} c^{\langle t - 1 \rangle}   \\ x^{\langle t \rangle}   \end{bmatrix} + b_u \right) \\
+\Gamma_r &= \sigma\left(W_r \begin{bmatrix} c^{\langle t - 1 \rangle}     \\ x^{\langle t \rangle}   \end{bmatrix} + b_r \right) \\
+c^{\langle t \rangle} &= \Gamma_u * \tilde c^{\langle t \rangle} + (1-\Gamma_u)* c^{\langle t - 1 \rangle}
+\end{align*}
+\paragraph{Notation in literature} Note that in the literature, sometimes $h$ is used in place of $c$, and $u$ and $r$ are used in place of $\Gamma_u$ and $\Gamma_r$ respectively.
 \end{document}
 
 
