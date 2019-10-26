@@ -3842,7 +3842,7 @@ The problem with sliding windows is that the bounding boxes we get as part of th
 \begin{figure}[h]
   \centering
   \begin{tikzpicture}
-    \node at (0, 0) {\includegraphics{car_driving}};
+    \node at (0, 0) {\includegraphics{fig/car_driving}};
     \draw[red,thick] (-2.5, -2) rectangle (-0.75, -0.4);
   \end{tikzpicture}
   \caption{\footnotesize We could envision that in a sliding windows algorithm, the window with the maximal prediction for the object of interest may not even fully contain the car but instead only a portion of it due to the kernel size and stride length. Further, the best bounding box for the object may not be a square but instead rectangular in shape, and a sliding windows algorithm doesn't allow us to capture that.}
@@ -4093,7 +4093,7 @@ As an implementation detail: if we are deploying a system we may wish to precomp
     \pgfmathsetmacro{\cubex}{2} 
     \pgfmathsetmacro{\cubey}{1} 
     \pgfmathsetmacro{\cubez}{1}
-    \node at (-2, 0) {\includegraphics[scale=0.15]{profile}};
+    \node at (-2, 0) {\includegraphics[scale=0.15]{fig/profile}};
     \node at (-2,-1.35) {$\scriptstyle 224 \times 224 \times 3$};
     \draw[black, fill=blue!60] (1.75,0.5,0) -- ++(-\cubex,0,0) -- ++(0,-\cubey*2,0) -- ++(\cubex,0,0) -- cycle; 
     \draw[black, fill=blue!60] (1.75,0.5,0) -- ++(0,0,-\cubez*2) -- ++(0,-\cubey*2,0) -- ++(0,0,\cubez*2) -- cycle; 
