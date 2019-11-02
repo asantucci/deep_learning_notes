@@ -5051,6 +5051,56 @@ For a lot of text with natural language processing problem, a bidirectional RNN 
 
 \paragraph{Disadvantages of a BRNN} Note that with a BRNN, you need the \emph{entire} sequence of data before you can make predictions \emph{anywhere}. E.g. if you're building a speech recognition system, then the BRNN would let you take into account the entire speech utterance, but with this straightforward implementation you would need to wait for the person to \emph{stop talking} to get the entire utterance before you can actually process it and make a speech recognition prediction. Therefore, for real time speech recognition applications, we would need a slightly more complex module.
 
+\subsubsection{Deep RNNs} The various RNNs we've seen already will work quite well by themselves. But, for learning very complex functions it's sometimes useful to stack multiple layers of RNNs together to build even deeper versions of these models. We will use the notation $a^{[\ell]\langle t \rangle }$ to denote the activation for layer $\ell$ at position $t$ within our sequence.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \foreach \y in {1, 2, 3} {
+      \node (a\y0) at (-0.5, \y) {$a^{[\y]\langle 0 \rangle}$};
+    }
+    \foreach \x in {1,...,4} {
+      \node (x\x) at (2*\x,0) {$x^{\langle \x \rangle}$};
+      \node (y\x) at (2*\x,4) {$\hat y^{\langle \x \rangle}$};
+    }
+    \foreach \x in {1,...,4} {
+      \foreach \y in {1, 2, 3} {
+        \node[draw,rectangle] (a\y\x) at (2*\x,\y) {$a^{[\y]\langle \x \rangle}$};
+}
+}
+\foreach \y in {1, 2, 3} { \draw[->] (a\y0) -- (a\y1); \node at (0.25,\y-0.25) {\color{orange!50} $\scriptstyle W_a^{[\y]}, b_a^{[\y]}$}; }
+\foreach \x in {1, ..., 4} {
+  \draw[->] (x\x) -- (a1\x);
+  \draw[->] (a3\x) -- (y\x);
+}
+% Vertical arrows.
+\draw[->] (a11) -- (a21);
+\draw[->] (a21) -- (a31);
+\draw[->] (a12) -- (a22);
+\draw[->] (a22) -- (a32);
+\draw[->] (a13) -- (a23);
+\draw[->] (a23) -- (a33);
+\draw[->] (a14) -- (a24);
+\draw[->] (a24) -- (a34);
+% Horizontal arrows.
+\draw[->] (a11) -- (a12);
+\draw[->] (a21) -- (a22);
+\draw[->] (a31) -- (a32);
+\draw[->] (a12) -- (a13);
+\draw[->] (a22) -- (a23);
+\draw[->] (a32) -- (a33);
+\draw[->] (a13) -- (a14);
+\draw[->] (a23) -- (a24);
+\draw[->] (a33) -- (a34);
+\end{tikzpicture}
+\caption{\footnotesize We draw out a three layer deep RNN for a one-to-one architecture. Each block could be a simple RNN block, a GRU, or an LSTM. Whereas for a simple neural network we might end up with a hundred or more layers, because an RNN already incorporates a temporal component having just a few layers of depth can make the network considerably more complex; therefore, we don't typically see RNN's with more than just a few layers.}
+\end{figure}
+Take as an example $a^{[2]\langle 3 \rangle}$ in the computational graph above, how do we compute it? It has two inputs, $a^{[2]\langle 2 \rangle}$ and $a^{[1]\langle 3 \rangle}$ as we will apply a non-linearity $g$:
+\[
+  a^{[2]\langle 3 \rangle } = g\left(W_a^{[2]} \begin{bmatrix} a^{[2]\langle 2 \rangle} \\ a^{[1]\langle 3 \rangle}             \end{bmatrix} + b_a^{[3]} \right).
+\]
+Note that the parameters are shared at the \emph{layer} level \emph{across} the sequence.
+
+\paragraph{Common variations} Instead of adding many layers that are shared across the sequence, one common technique is to start with the network architecture as depicted in our deep RNN example, but then instead of immediately predicting $\hat y^{\langle t \rangle }$ after the third layer, we can instead feed the activation through a stand-alone (from the rest of the sequence) deep network before making a prediction.
 \end{document}
 
 
