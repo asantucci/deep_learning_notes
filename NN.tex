@@ -4978,8 +4978,78 @@ where here we use a separate \emph{update} $\Gamma_u$ gate and a different \emph
     \node[draw,rectangle,scale=0.5] (tanh2) at (8, 1.85) {$\tanh$};
     \draw[->] (tanh2) -- (ottimescttahnh);
     \draw[->] (8, 2.25) -- (tanh2);
-  \end{tikzpicture}
+    \draw[->] (ottimescttahnh) -- (11, 1.25) node[above] (at) {$a^{\langle t         \rangle }$};
+    \node[draw,rectangle,scale=0.5] (softmax) at (11.5, 1.25) {\footnotesize       softmax};
+\draw[->] (softmax) -- (12, 1.25) node[right] {$\hat y^{\langle t \rangle }$};
+\end{tikzpicture}
+\caption{\footnotesize The computational diagram for a basic LSTM.}
 \end{figure}
+
+Note that one common variation is to introduce what's referred to as a \emph{peephole connection}, in which for each of $\Gamma_u, \Gamma_f, \Gamma_o$, we introduce weights not just for $a^{\langle t-1 \rangle}$ and $x^{\langle t \rangle}$ but also for $c^{\langle t - 1 \rangle}$; in this way, we are allowed to peer into the past.
+
+\paragraph{GRU vs. LSTM} LSTM's were actually derived before GRU's. There isn't a concensus on which is better, since sometimes they outperform eachother on different problems. It's noteworthy that because it's a bit simpler, the GRU can lead to slightly faster computations which may help scale to larger more complex models. But, the LSTM is more powerful and more flexible.
+
+\subsubsection{Bi-directional RNN} A bi-directional RNN lets us take information from \emph{both} earlier \emph{and} later in the sequence. Consider a familiar network in the context of named entity recognition.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node (a0) at (0, 0) {$a^{\langle 0 \rangle}$};
+    \foreach \x in {1,...,7} {
+      \node[draw,rectangle] (a\x) at (2*\x,0) {$a^{\langle \x \rangle}$};
+      \node (x\x) at (2*\x, -1) {$x^{\langle \x \rangle}$};
+      \node (y\x) at (2*\x,  1) {$y^{\langle \x \rangle}$};
+      \draw[->] (x\x) -- (a\x);
+      \draw[->] (a\x) -- (y\x);
+    }
+    \draw[->] (a0) -- (a1);
+    \draw[->] (a1) -- (a2);
+    \draw[->] (a2) -- (a3);
+    \draw[->] (a3) -- (a4);
+    \draw[->] (a4) -- (a5);
+    \draw[->] (a5) -- (a6);
+    \draw[->] (a6) -- (a7);
+    \node[below = 0.1cm of x1] {He};
+    \node[below = 0.1cm of x2] {said,};
+    \node[below = 0.1cm of x3] {``Teddy};
+    \node[below = 0.1cm of x4] {bears};
+    \node[below = 0.1cm of x5] {are};
+    \node[below = 0.1cm of x6] {on};
+    \node[below = 0.1cm of x7] {sale!''};
+  \end{tikzpicture}
+  \caption{\footnotesize Consider two different input sentences, which have different outputs for a named entity recognition task.
+\begin{itemize}\item He said ``Teddy bears are on sale!''
+\item He said, ``Teddy Roosevelt was a great President!''\end{itemize}
+In order to figure out whether the third word Teddy is part of a person's name, it's not enough to just look at the first part of the sentence; to tell if $y^{\langle 3 \rangle}$ should be a zero or one, we need more information. This problem persists in any unidirectional or forward direction only RNN, no matter whether we use a standard RNN block, GRU's, or LSTM's.}
+\end{figure}
+
+\paragraph{Bi-directional RNN (BRNN)} A bi-directional RNN allows us to take information from the entire sequence when making a prediction at any particular point within the sequence. We realize an acyclic graph:
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \foreach \x in {1,...,4} {
+      \node[draw,rectangle] (af\x) at (3*\x-0.65,0) {$\overrightarrow a^{\langle \x \rangle}$};
+      \node[draw,rectangle] (ab\x) at (3*\x+0.65,0) {$\overleftarrow a^{\langle \x \rangle}$};
+      \node (x\x) at (3*\x, -1) {$x^{\langle \x \rangle}$};
+      \node (y\x) at (3*\x,  1) {$\hat y^{\langle \x \rangle}$};
+      \draw[->] (x\x) -- (af\x);
+      \draw[->] (x\x) -- (ab\x);
+      \draw[->] (af\x) -- (y\x);
+      \draw[->] (ab\x) -- (y\x);
+    }
+    \path[->,orange!50] (af1) edge[bend left] (af2);    
+    \path[->,orange!50] (af2) edge[bend left] (af3);    
+    \path[->,orange!50] (af3) edge[bend left] (af4);
+    \path[->,purple!50] (ab4) edge[bend left] (ab3);
+    \path[->,purple!50] (ab3) edge[bend left] (ab2);
+    \path[->,purple!50] (ab2) edge[bend left] (ab1);
+  \end{tikzpicture}
+  \caption{\footnotesize In each block of a BRNN, we can use not just a standard RNN block but also a GRU or an LSTM. Note that the above diagram depicts forward propagation only, which in a BRNN consists of both a \color{orange!50}{left-to-right} \color{black} pass in computing $\overrightarrow a^{\langle t \rangle}$ as well as a \color{purple!50}{right-to-left} \color{black} pass in computing $\overleftarrow a^{\langle t \rangle}$.}
+\end{figure}
+
+For a lot of text with natural language processing problem, a bidirectional RNN with an LSTM appears to be commonly used. I.e. given some NLP problem an a complete sentence, we might try to label things within the sentence, and a bidirectional RNN with LSTM blocks (both forward and backward) would be a pretty reasonable first choice.
+
+\paragraph{Disadvantages of a BRNN} Note that with a BRNN, you need the \emph{entire} sequence of data before you can make predictions \emph{anywhere}. E.g. if you're building a speech recognition system, then the BRNN would let you take into account the entire speech utterance, but with this straightforward implementation you would need to wait for the person to \emph{stop talking} to get the entire utterance before you can actually process it and make a speech recognition prediction. Therefore, for real time speech recognition applications, we would need a slightly more complex module.
 
 \end{document}
 
