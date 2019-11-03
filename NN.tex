@@ -315,7 +315,9 @@ Recall that
   \cosh(x) = \frac{e^x + e^{-x}}{2}, \hspace{10pt} \textrm{ and } \hspace{5pt}
   \tanh(x) = \frac{\sinh(x)}{\cosh(x)}. \end{align*}
 It's easy to see using linearity of $\frac{\d \,}{\d x}$ and the chain rule that $\frac{\d \,}{\d x}  \sinh(x) = \frac{e^x}{2} + \frac{e^{-x}}{2} = \cosh(x)$ and similarly that $\frac{\d \,}{\d x}\cosh(x) = \sinh(x)$. Then, apply either quotient rule \emph{or} both the product rule and chain rule:
-\begin{align*}   \frac{\d \,}{\d x} \tanh(x) = \frac{\d \,}{\d x} \sinh(x) \cosh(x)^{-1} = \cosh(x) \cosh(x)^{-1} - \sinh(x)\cosh(x)^{-2}\sinh(x) = 1 - \tanh(x)^2. \end{align*}
+\begin{align}
+  \label{eq: ddxtanh}
+  \frac{\d \,}{\d x} \tanh(x) = \frac{\d \,}{\d x} \sinh(x) \cosh(x)^{-1} = \cosh(x) \cosh(x)^{-1} - \sinh(x)\cosh(x)^{-2}\sinh(x) = 1 - \tanh(x)^2. \end{align}
 \paragraph{Rectified Linear Unit} has derivative equal to
 \begin{align}   \frac{\d \,}{\d x} \max\{0,x\}=       \begin{cases}        0 &\quad\text{if } x < 0\\        1 &\quad\text{if } x > 0 \\
        \textrm{undefined} &\quad\text{if } x = 0      \end{cases} \end{align}
@@ -4543,9 +4545,50 @@ We can now define the loss over the entire sequence:
 \mathcal L(\hat y, y) = \sum_{t=1}^{T_y} \mathcal L^{\langle t \rangle} \left( \hat y^{\langle t \rangle}, y^{\langle t \rangle}\right)
 \]
 From earlier examples we've seen: backpropagation requires passing information in the directions opposite to what we've depicted in the above graph when we pass weights forward as input. We can take derivatives of our loss function with respect to our various parameters and update them using gradient descent or our favorite optimization algorithm. We call this process \emph{backward propagation   through time} because we are processing our input sequence in reverse order.
-So far, we've assumed that the length of the input sequence is equal to the length of the output sequence; let's now consider a much richer model architecture which will expand on the types of problems we can tackle.
+
+\paragraph{Basic RNN backward pass} Recall that we have
+\[
+  a^{\langle t \rangle} = \tanh \left( W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t -1 \rangle} + b \right).
+\]
+Recall from our section on activation functions and according to equation \ref{eq: ddxtanh}, we know that $\frac{\partial \tanh (x)}{\partial x} = 1 - \tanh(x)^2$. From basic rules of calculus, we can also derive that
+\begin{align*}
+  \frac{\partial a^{\langle t \rangle}}{\partial W_{ax}} &= \left(1 - \tanh \left(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t -1 \rangle} + b   \right)^2 \right) \cdot {x^{\langle t \rangle}}^T \\
+    \frac{\partial a^{\langle t \rangle}}{\partial W_{aa}} &= \left(1 - \tanh \left(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t -1 \rangle} + b   \right)^2 \right) \cdot {a^{\langle t-1 \rangle}}^T \\
+  \frac{\partial a^{\langle t \rangle}}{\partial b} &= \sum_{\texttt{batch}} \left(1 - \tanh \left(W_{ax}x^{\langle t \rangle} + W_{aa} a^{\langle t - 1     \rangle} + b\right)^2\right) \\
+  \frac{\partial a^{\langle t \rangle}}{\partial x^{\langle t \rangle}} &= W_{ax}^T \cdot \left(1 - \tanh\left(W_{ax} x^{\langle t \rangle} + W_{aa}   a^{\langle t - 1 \rangle} + b \right)^2\right) \\
+    \frac{\partial a^{\langle t \rangle}}{\partial a^{\langle t-1 \rangle}} &= W_{aa}^T \cdot \left(1 - \tanh\left(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t - 1 \rangle} + b \right)^2\right)
+\end{align*}
+
+Notice that in many of these formulae, they share the common term:
+\[
+  1 - \tanh(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t-1 \rangle} + b_a)^2.
+\]
+This simply follows from the fact that $\frac{\D}{\D u} \tanh(u) = 1 - \tanh(u)^2$ where here $u = W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t -1 \rangle} + b_a$. For each derivative we're tasked with computing, the basic solution may be expressed via chain-rule:
+\[
+\frac{\partial J}{\partial \texttt{variable}} = \frac{\partial J}{\partial a_{\texttt{next}}} \frac{\partial a_{\texttt{next}}}{\partial \texttt{variable}}.
+\]
+E.g. in order to calculate
+\[
+  \frac{\partial J}{\partial x^{\langle t \rangle}} = \frac{\partial J }{\partial a_{\texttt{next}}} \frac{\partial a_{\texttt{next}}}{\partial x^{\langle t \rangle}} = \D a_{\texttt{next}} * W_{ax}^T * (1 - \tanh(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t - 1 \rangle} + b)^2\right).
+\]
+
+Each derivative will share the common term:
+\[
+  \D a_{\texttt{next}} * (1 - \tanh(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t - 1 \rangle} + b)^2).
+\]
+For this reason, when programming backward propagation with an RNN it's handy to define something like
+\[
+  \D \tanh = \frac{\partial J}{\partial a_{\texttt{next}}} \frac{\partial a_{\texttt{next}}}{\partial u} = \D a_{\texttt{next}} * (1 - \tanh(u)^2 ) = \D a_{\texttt{next}} * (1 - a_{\texttt{next}}^2).
+\]
+Then, each derivative calculation may be expressed more succinctly, e.g.
+\[
+  \frac{\partial J}{\partial x^{\langle t \rangle}} = W_{ax}^T \cdot \D \tanh
+\]
+
+
 
 \subsection{Different types of RNNs}
+So far, we've assumed that the length of the input sequence is equal to the length of the output sequence; let's now consider a much richer model architecture which will expand on the types of problems we can tackle.
 Let's now consider cases where $T_x \neq T_y$. The following is inspired from Andrej Karkpathy's \href{http://karpathy.github.io/2015/05/21/rnn-effectiveness/}{The Unreasonable   Effectiveness of RNN's} blog post.
 \begin{figure}[h]
   \centering
@@ -4988,6 +5031,12 @@ where here we use a separate \emph{update} $\Gamma_u$ gate and a different \emph
 Note that one common variation is to introduce what's referred to as a \emph{peephole connection}, in which for each of $\Gamma_u, \Gamma_f, \Gamma_o$, we introduce weights not just for $a^{\langle t-1 \rangle}$ and $x^{\langle t \rangle}$ but also for $c^{\langle t - 1 \rangle}$; in this way, we are allowed to peer into the past.
 
 \paragraph{GRU vs. LSTM} LSTM's were actually derived before GRU's. There isn't a concensus on which is better, since sometimes they outperform eachother on different problems. It's noteworthy that because it's a bit simpler, the GRU can lead to slightly faster computations which may help scale to larger more complex models. But, the LSTM is more powerful and more flexible.
+
+\paragraph{Gate Derivatives} For backward propagation, we need to know how to take derivatives with respect to our various gates.
+\begin{align*}
+  \D \Gamma_0^{\langle t \rangle} &= \D a_{\texttt{next}} * \tanh(c_{\texttt{next}}) * \Gamma_0^{\langle t \rangle} * (1 - \Gamma_0^{\langle t \rangle})
+\end{align*}
+\paragraph{Parameter Derivatives}
 
 \subsubsection{Bi-directional RNN} A bi-directional RNN lets us take information from \emph{both} earlier \emph{and} later in the sequence. Consider a familiar network in the context of named entity recognition.
 
