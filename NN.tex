@@ -5182,18 +5182,74 @@ as a thing unto itself, and this doesn't allow a learning algorithm to generaliz
 
 Instead, it would be nice if we could learn features that describe words, and then for each word in our dictionary we could learn corresponding feature values. E.g. for each word we could imagine a \emph{gender} feature which takes on values in $[-1, 1]$ where the lower-boundary represents a male gender and the upper-boundary represents a female gender. Then a learning algorithm may be able to realize that this feature value might be $-0.95$ for a king, $0.97$ for a queen, and near zero for apples and oranges which are genderless. Another feature could be, ``how royal is the subject?''.  The terms man and woman are not really royal, so they may have feature values closer to zero here, whereas king and queen will have activated feature values. We could imagine another feature for \emph{age} and yet another for \emph{food}.
 
-\begin{tabular}[h]
-  \begin{table}{l | c c c c c c }
-    & $\substack{\textrm{Man} \\ (5391)}$ & $\substack{\textrm{Woman} \\ (9853)}$ & $\substack{\textrm{King} \\ (4914)}$ $\substack{\textrm{Queen} \\ (7157)}$ & $\substack{\textrm{Apple} \\ (456)}$ & $\substack{\textrm{Orange} \\ (6257)}$ \\
+\begin{table}[h]
+  \centering
+  \begin{tabular}{l | c c c c c c }
+    & $\substack{\textrm{Man} \\ (5391)}$ & $\substack{\textrm{Woman} \\ (9853)}$ & $\substack{\textrm{King} \\ (4914)}$ & $\substack{\textrm{Queen} \\ (7157)}$ & $\substack{\textrm{Apple} \\ (456)}$ & $\substack{\textrm{Orange} \\ (6257)}$ \\
 \hline
 Gender & -1 & 1 & -0.95 & 0.97 & 0.00 & 0.01 \\
 Royal  & 0.01 & 0.02 & 0.93 & 0.95 & -0.01 & 0.00 \\
 Age    & 0.03 & 0.02 & 0.70 & 0.69 & 0.03  & -0.02 \\
 Food   & 0.04 & 0.01 & 0.02 & 0.01 & 0.95  & 0.97
-\end{table}
-\caption{\footnotesize In addition to the features above, we could envision more such as features describing \emph{size}, \emph{cost}, whether the word describes an entity which is \emph{alive}, whether a word is a \emph{verb}. For each word, we come up with a listing of values, one for each feature. We will denote by $e_i$ the word representation \emph{encoding} for the word indexed at position $i$ in our vocabulary.}
 \end{tabular}
-Notice that the representations for both orange and apple are now quite similar in the table above. Some of the features will differ because for example they have different tastes, colors, and textures. But by and large the features for both an apple and an orange are expected to be the same. By representing words in this way, we can increase the chance of our learning algorithm picking up on that ``apple juice'' is a popular or likely phrase if it has already learned that ``orange juice'' is likely.
+\caption{\footnotesize An example word embedding for a few features and a few words. In addition to the features above, we could envision more such as features describing \emph{size}, \emph{cost}, whether the word describes an entity which is \emph{alive}, whether a word is a \emph{verb}. For each word, we come up with a listing of values, one for each feature. We will denote by $e_i$ the word representation \emph{encoding} for the word indexed at position $i$ in our vocabulary.}
+\end{table}
+Notice that the representations for both orange and apple are now quite similar in the table above. Some of the features will differ because for example they have different tastes, colors, and textures. But by and large the features for both an apple and an orange are expected to be the same. By representing words in this way, we can increase the chance of our learning algorithm picking up on that ``apple juice'' is a popular or likely phrase if it has already learned that ``orange juice'' is likely. This allows us to generalize better across different words. The focus of the next section will be how to learn such an embedding; note that we won't end up with interpretable features as described above where we came up with parsimonious features just for pedagogical sake. But, most importantly this embedding, although harder to interpret, will allow
+our algorithm to realize that ``apple'' and ``orange'' are closer in space than ``apple'' and ``king'' or ``apple'' and ``queen''.
+
+\paragraph{t-SNE} One of the popular things we can do is take a word-embedding
+in a higher dimensional space and embed \emph{it} into a two dimensional space for visualization purposes; one common algorithm for accomplishing this task is the \href{https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding}{t-SNE   algorithm}.
+
+\subsubsection{Using word embeddings} Let's see how we can take word representations (embeddings) and use them as inputs into NLP applications. Suppose we have a named entity recognition task, i.e. we're trying to detect people's names in a sentence.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node (a0) at (0, 0) {$a^{\langle 0 \rangle}$};
+    \foreach \x in {1,...,6} {
+      \node[draw,rectangle] (a\x) at (2*\x,0) {$a^{\langle \x \rangle}$};
+      \node (x\x) at (2*\x, -1) {$x^{\langle \x \rangle}$};
+      %\node (y\x) at (2*\x,  1) {$y^{\langle \x \rangle}$};
+      \draw[->] (x\x) -- (a\x);
+      %\draw[->] (a\x) -- (y\x);
+    }
+    \draw[->] (a0) -- (a1);
+    \draw[->] (a1) -- (a2);
+    \draw[->] (a2) -- (a3);
+    \draw[->] (a3) -- (a4);
+    \draw[->] (a4) -- (a5);
+    \draw[->] (a5) -- (a6);
+    \node[below = 0.1cm of x1] {Sally};
+    \node[below = 0.1cm of x2] {Johnson};
+    \node[below = 0.1cm of x3] {is};
+    \node[below = 0.1cm of x4] {an};
+    \node[below = 0.1cm of x5] {orange};
+    \node[below = 0.1cm of x6] {farmer};
+    \node (y1) at (2*1,  1) {$1$};
+    \node (y2) at (2*2,  1) {$1$};
+    \node (y3) at (2*3,  1) {$0$};
+    \node (y4) at (2*4,  1) {$0$};
+    \node (y5) at (2*5,  1) {$0$};
+    \node (y6) at (2*6,  1) {$0$};
+    \foreach \x in {1,...,6} {
+      \draw[->] (a\x) -- (y\x);
+    }
+  \end{tikzpicture}
+  \caption{\footnotesize One way that we know that Sally Johnson is the name of a person rather than, say, a corporation is the presence of the phrase ``orange farmer''. If we can use word embeddings as opposed to one-hot encoded vectors, then if we see a new input ``Robert Lin is an apple farmer'', then knowing that ``orange'' and ``apple'' are similar will make it easier for the learning algorithm to generalize to figure out that Robert Lin is also a human, and therefore a person's name. Note that in a named entity recognition task, we're given the entire sentence up-front and so a bi-directional RNN would make much more sense, but for simplicity we've drawn a uni-directional RNN.}
+\end{figure}
+An even more interesting case than that depicted above is when we see \emph{much less} common words in our unseen test set. E.g. ``Robert Lin is a durian cultivator''. A durian is a type of fruit that is popular in Singapore and a few other countries, but with a small labeled dataset for a named entity recognition task you might not have seen the word durian (or even cultivator) in your training set. But, if we've learned a word embedding that tells us that durian is a fruit, so it's like an orange, and that someone who cultivates is like a farmer, then you \emph{might} be able to generalize from having seen an orange farmer in your training set to knowing that a durian cultivator is also a person. The reason that a word embedding can do this is that we often learn word embeddings by examining large corpuses of text, perhaps found off the internet; this allows us to gather very large data sets (perhaps even a hundred billion words) of unlabeled text. It is through downloading these unlabeled text datasets (for free) that we can figure out that orange and durian are similar, and that farmer and cultivator are also similar. We can then take our word embedding, learned from a large internet dataset, and apply it to our named entity recognition task where we have a much smaller (say 100,000 words) dataset.
+
+\paragraph{Transfer Learning}
+This effectively allows us to carry out transfer learning, where we take information from huge amounts of unlabeled text that we can suck down essentially for free off the internet to figure out that orange, apple, and durian are all fruits. And then, we can transfer this knowledge to another task, such as named entity recognition, for which we have a relatively small labeled dataset. So, by replacing one-hot vectors with embedding vectors, we can generalize better or learn from much less data.
+\begin{enumerate}
+  \item Learn word embeddings from large text corpus (1-100B words), \emph{or}     download pre-trained embedding online.
+\item Transfer embedding to new task with smaller training set (say, 100k   words).
+\item Optional: continue to fine tune the word embeddings with new data.
+\end{enumerate}
+One nice benefit of encodings is that they allow for a lower-dimensional, albeit dense, representation for our words.
+\paragraph{Encodings vs. Embeddings} Recall our facial recognition task, in which we use a siamese network architecture to learn an \emph{encoding} for each input image; we can then compare two encodings to determine if they refer to the same face. The word encoding and embedding mean fairly similar things; one difference is that for face recognition, we want to train a neural network that can take as input any face picture, even one we've never seen before, and have a neural network compute an encoding for that image. Whereas what we'll do in the context of embedding is to have a fixed size vocabulary, of say 10k words, and we'll learn vectors $e_1, \ldots, e_{10,000}$ that simply learns a \emph{fixed} embedding for each wof the words in our vocabulary.
+
+\subsubsection{Properties of word embeddings}
 \end{document}
 
 
