@@ -5034,10 +5034,31 @@ Note that one common variation is to introduce what's referred to as a \emph{pee
 
 \paragraph{Gate Derivatives} For backward propagation, we need to know how to take derivatives with respect to our various gates.
 \begin{align*}
-  \D \Gamma_0^{\langle t \rangle} &= \D a_{\texttt{next}} * \tanh(c_{\texttt{next}}) * \Gamma_0^{\langle t \rangle} * (1 - \Gamma_0^{\langle t \rangle})
+  \D \Gamma_0^{\langle t \rangle} &= \D a_{\texttt{next}} * \tanh(c_{\texttt{next}}) * \Gamma_0^{\langle t \rangle} * (1 - \Gamma_0^{\langle                                     t \rangle}) \\
+  \D \tilde c^{\langle t \rangle} &= \left( \D c_{\texttt{next}} * \Gamma_u^{\langle t \rangle} + \Gamma_o^{\langle t \rangle} * \left(1 - \tanh(c_{\texttt{next}})^2\right)*\Gamma_u^{\langle t \rangle} * \D a_{\texttt{next}}\right) * \left(1 - \left(\tilde c^{\langle t                                     \rangle}\right)^2\right) \\
+  \D \Gamma_u^{\langle t \rangle} &= \left( \D c_{\texttt{next}} * \tilde c^{\langle t \rangle} + \Gamma_o^{\langle t \rangle} * \left(1 - \tanh(c_{\texttt{next}})^2\right) * \tilde c^{\langle t \rangle} * \D a_{\texttt{next}}\right) * \Gamma_u^{\langle t \rangle} * \left(1 -                                     \Gamma_u^{\langle t \rangle}\right) \\
+  \D \Gamma_f^{\langle t \rangle} &= \left( \D c_{\texttt{next}} * c_{\texttt{prev}} + \Gamma_o^{\langle t \rangle} * \left(1 - \tanh(c_{\texttt{next}})^2\right)*c_{\texttt{prev}}*\D a_{\texttt{next}}\right)*\Gamma_f^{\langle t \rangle} * \left(1 - \Gamma_f^{\langle t \rangle}\right).
 \end{align*}
 \paragraph{Parameter Derivatives}
-
+\begin{align*}
+  \D W_f &= \D \Gamma_f^{\langle t \rangle} \begin{bmatrix}  a_{\texttt{prev}} &     x_t   \end{bmatrix} \\
+  \D W_u &= \D \Gamma_u^{\langle t \rangle} \begin{bmatrix}a_{\texttt{prev}} &     x_t     \end{bmatrix} \\
+  \D W_c &= \D \tilde c^{\langle t \rangle} \begin{bmatrix} a_{\texttt{prev}} & x_t
+\end{bmatrix} \\
+  \D W_o &= \D \Gamma_o^{\langle t \rangle} \begin{bmatrix} a_{\texttt{prev}} & x_t
+  \end{bmatrix}.
+\end{align*}
+In order to calculate $\D b_f, \D b_u, \D b_c, \D b_o$ we simply need to sum across the horizontal axis, \texttt{axis=1} on $\D \Gamma_f^{\langle t \rangle}, \D \Gamma_u^{\langle t \rangle}, \D \tilde c^{\langle t \rangle}, \D \Gamma_o^{\langle t \rangle}$ respectively, using the \texttt{keepdims = True} option.
+Finally, we'll need to compute the derivative with respect to the previous hidden state, the previous memory state, and the input:
+\[
+  \D a_{\texttt{prev}} = W_f^T \D \Gamma_f^{\langle t \rangle} + W_u^T \D \Gamma_u^{\langle t \rangle} + W_c^T \D \tilde c^{\langle t \rangle} + W_o^T \D \Gamma_o^{\langle t \rangle}.
+\]
+Note that in the above equation, the weights only include the first $n_a$ terms, e.g. $W_f = W_f[:,:n_a]$, etc. Further, it can be shown that
+\begin{align*}
+  \D c_{\texttt{prev}} &= \D c_{\texttt{next}} * \Gamma_f^{\langle t \rangle} + \Gamma_o^{\langle t \rangle} * \left(1 - \tanh(c_{\texttt{next}})^2\right) *                          \Gamma_f^{\langle t \rangle} * \D a_{\texttt{next}}, \\
+  \D x^{\langle t \rangle} &= W_f^T \D \Gamma_f^{\langle t \rangle} + W_u^T \D \Gamma_u^{\langle t \rangle} + W_c^T\D \tilde c^{\langle t \rangle} + W_o^T \D \Gama_o^{\langle t \rangle}
+\end{align*}
+where in the last equation above the weights are from $n_a$ through the end, e.g. $W_f = W_f[:, n_a:]$, etc.
 \subsubsection{Bi-directional RNN} A bi-directional RNN lets us take information from \emph{both} earlier \emph{and} later in the sequence. Consider a familiar network in the context of named entity recognition.
 
 \begin{figure}[h]
@@ -5150,6 +5171,29 @@ Take as an example $a^{[2]\langle 3 \rangle}$ in the computational graph above, 
 Note that the parameters are shared at the \emph{layer} level \emph{across} the sequence.
 
 \paragraph{Common variations} Instead of adding many layers that are shared across the sequence, one common technique is to start with the network architecture as depicted in our deep RNN example, but then instead of immediately predicting $\hat y^{\langle t \rangle }$ after the third layer, we can instead feed the activation through a stand-alone (from the rest of the sequence) deep network before making a prediction.
+
+\subsection{Word Embeddings}
+Natural language processing is a field which is being revolutionized by deep learning. One key idea is that of a \emph{word embedding}, which is a way of representing words. This allows our algorithms to understand analogies such as ``man is to woman as king is to queen'' and much more. With word embeddings, we can build NLP applications even with relatively small sized training sets. In later sections, we'll learn how to de-bias word embeddings, i.e. to reduce undesireable biases (could be gender or ethnicity, etc.) that learning algorithms can sometimes pick up.
+
+\subsubsection{Word Representation}
+So far, we've been representing words using a vocabulary of words along with a one-hot encoding. We will use the notation $O_i$ to denote a \emph{one-hot} encoded vector with all zeros except for unit value in this $i$th position.
+One of the weaknesses of this representation is that it treats each word
+as a thing unto itself, and this doesn't allow a learning algorithm to generalize across words. For example, suppose you have a language model that has learned that when you see ``I want a glass of orange $\rule{1cm}{0.15mm}$'', the next words is very likely to be ``juice''. Unfortunately, with a one-hot encoding, even if the learning algorithm has picked up on that ``I want a glass of orange juice'' as a likely sentence, then if it sees ``I want a glass of apple $\rule{1cm}{0.15mm}$'', the algorithm thinks that the relationship between ``apple'' and ``orange'' is not any closer than any of the other words such as ``man'', ``woman'', ``king'', ``queen'', etc. I.e. it's not easy for our algorithm to generalize from knowing that ``orange juice'' is a popular thing to knowing that ``apple juice'' might also be a popular phrase. Mathematically, the inner-product $\langle O_i, O_j \rangle$ for any $i \neq j$ is identically zero; Euclidean distances are either zero or one in this encoding.
+
+Instead, it would be nice if we could learn features that describe words, and then for each word in our dictionary we could learn corresponding feature values. E.g. for each word we could imagine a \emph{gender} feature which takes on values in $[-1, 1]$ where the lower-boundary represents a male gender and the upper-boundary represents a female gender. Then a learning algorithm may be able to realize that this feature value might be $-0.95$ for a king, $0.97$ for a queen, and near zero for apples and oranges which are genderless. Another feature could be, ``how royal is the subject?''.  The terms man and woman are not really royal, so they may have feature values closer to zero here, whereas king and queen will have activated feature values. We could imagine another feature for \emph{age} and yet another for \emph{food}.
+
+\begin{tabular}[h]
+  \begin{table}{l | c c c c c c }
+    & $\substack{\textrm{Man} \\ (5391)}$ & $\substack{\textrm{Woman} \\ (9853)}$ & $\substack{\textrm{King} \\ (4914)}$ $\substack{\textrm{Queen} \\ (7157)}$ & $\substack{\textrm{Apple} \\ (456)}$ & $\substack{\textrm{Orange} \\ (6257)}$ \\
+\hline
+Gender & -1 & 1 & -0.95 & 0.97 & 0.00 & 0.01 \\
+Royal  & 0.01 & 0.02 & 0.93 & 0.95 & -0.01 & 0.00 \\
+Age    & 0.03 & 0.02 & 0.70 & 0.69 & 0.03  & -0.02 \\
+Food   & 0.04 & 0.01 & 0.02 & 0.01 & 0.95  & 0.97
+\end{table}
+\caption{\footnotesize In addition to the features above, we could envision more such as features describing \emph{size}, \emph{cost}, whether the word describes an entity which is \emph{alive}, whether a word is a \emph{verb}. For each word, we come up with a listing of values, one for each feature. We will denote by $e_i$ the word representation \emph{encoding} for the word indexed at position $i$ in our vocabulary.}
+\end{tabular}
+Notice that the representations for both orange and apple are now quite similar in the table above. Some of the features will differ because for example they have different tastes, colors, and textures. But by and large the features for both an apple and an orange are expected to be the same. By representing words in this way, we can increase the chance of our learning algorithm picking up on that ``apple juice'' is a popular or likely phrase if it has already learned that ``orange juice'' is likely.
 \end{document}
 
 
