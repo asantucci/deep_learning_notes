@@ -5191,7 +5191,8 @@ Gender & -1 & 1 & -0.95 & 0.97 & 0.00 & 0.01 \\
 Royal  & 0.01 & 0.02 & 0.93 & 0.95 & -0.01 & 0.00 \\
 Age    & 0.03 & 0.02 & 0.70 & 0.69 & 0.03  & -0.02 \\
 Food   & 0.04 & 0.01 & 0.02 & 0.01 & 0.95  & 0.97
-\end{tabular}
+  \end{tabular}
+  \label{tb: wordembeddingtable}
 \caption{\footnotesize An example word embedding for a few features and a few words. In addition to the features above, we could envision more such as features describing \emph{size}, \emph{cost}, whether the word describes an entity which is \emph{alive}, whether a word is a \emph{verb}. For each word, we come up with a listing of values, one for each feature. We will denote by $e_i$ the word representation \emph{encoding} for the word indexed at position $i$ in our vocabulary.}
 \end{table}
 Notice that the representations for both orange and apple are now quite similar in the table above. Some of the features will differ because for example they have different tastes, colors, and textures. But by and large the features for both an apple and an orange are expected to be the same. By representing words in this way, we can increase the chance of our learning algorithm picking up on that ``apple juice'' is a popular or likely phrase if it has already learned that ``orange juice'' is likely. This allows us to generalize better across different words. The focus of the next section will be how to learn such an embedding; note that we won't end up with interpretable features as described above where we came up with parsimonious features just for pedagogical sake. But, most importantly this embedding, although harder to interpret, will allow
@@ -5247,9 +5248,47 @@ This effectively allows us to carry out transfer learning, where we take informa
 \item Optional: continue to fine tune the word embeddings with new data.
 \end{enumerate}
 One nice benefit of encodings is that they allow for a lower-dimensional, albeit dense, representation for our words.
-\paragraph{Encodings vs. Embeddings} Recall our facial recognition task, in which we use a siamese network architecture to learn an \emph{encoding} for each input image; we can then compare two encodings to determine if they refer to the same face. The word encoding and embedding mean fairly similar things; one difference is that for face recognition, we want to train a neural network that can take as input any face picture, even one we've never seen before, and have a neural network compute an encoding for that image. Whereas what we'll do in the context of embedding is to have a fixed size vocabulary, of say 10k words, and we'll learn vectors $e_1, \ldots, e_{10,000}$ that simply learns a \emph{fixed} embedding for each wof the words in our vocabulary.
 
-\subsubsection{Properties of word embeddings}
+\paragraph{Encodings vs. Embeddings} Recall our facial recognition task, in which we use a siamese network architecture to learn an \emph{encoding} for each input image; we can then compare two encodings to determine if they refer to the same face. The word encoding and embedding mean fairly similar things; one difference is that for face recognition, we want to train a neural network that can take as input any face picture, even one we've never seen before, and have a neural network compute an encoding for that image. Whereas what we'll do in the context of embedding is to have a fixed size vocabulary, of say 10k words, and we'll learn vectors $e_1, \ldots, e_{10,000}$ that simply learns a \emph{fixed} embedding for each of the words in our vocabulary.
+
+\subsubsection{\href{https://www.aclweb.org/anthology/N13-1090/}{Properties of word embeddings}}
+One of the most fascinating properties of word embeddings is that they enable
+with analogy reasoning; by itself, word analogies are not necessarily the most important NLP application but they can help us to understand what word embeddings can do.
+
+Consider again table \ref{tb: wordembeddingtable}. Suppose we pose the question, ``Man is to woman as king is to \emph{what}?''. Is it possible for an algorithm to figure out that the answer should be Queen?
+Suppose that we take the word embedding for a man and subtract from it the word embedding for a woman, i.e. compute $e_{\texttt{man}} - e_{\texttt{woman}}$. From table \ref{tb: wordembeddingtable}, we get something approximately
+$e_{\texttt{man}} - e_{\texttt{woman}} \approx \begin{bmatrix} -2 & 0 & 0 & 0 \end{bmatrix}$. It happens to be that if we take $e_{\texttt{king}} - e_{\texttt{queen}}$ we yield quite a similar vector, approximately $\begin{bmatrix} -2 & 0 & 0 & 0 \end{bmatrix}$ where here the royalty features ``cancelled out''. What these differences in embeddings capture is that the main difference between these words is \emph{gender}. One technique for filling in analogies is to compute $e_{\texttt{anchor}} - e_{\texttt{candidate}}$ and compare this with the corresponding difference from the first part of the analogy, and choose the word candidate which maximizes the similarity.
+\[
+e_{\texttt{man}} - e_{\texttt{woman}} \approx e_{\texttt{king}} - e_{\texttt{candidate}} \implies \textrm{Find word $w$ : } \argmax_w \texttt{sim}\left(e_\texttt{candidate}, e_{\texttt{king}} - e_{\texttt{man}} + e_{\texttt{woman}}\right)
+\]
+where \texttt{sim} is some appropriate similarity function for measuring how similar is the embedding of some candidate word to the other difference. The most commonly used similarity function is cosine similarity, i.e.
+\[
+\texttt{sim}(u,v) = \frac{u^Tv}{\|u\|_2 \|v\|_2}.
+\]
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \draw[->] (0, 0) -- (1, 1) node[right] (u) {$u$};
+    \draw[->] (0, 0) -- (1, 0) node[right] (v) {$v$};
+    % \pic[<->, "$\theta$", angle eccentricity = 1.5] {angle = u--v};
+    \node at (0.5, 0.25) {$\phi$};
+    \draw[->] (3, 0) -- (10, 0) node[right] {$\phi$};
+    \draw[->] (3, -1) -- (3, 1.5) node[left]  {$\cos(\phi)$};
+    \draw[domain=3:9.28,smooth,variable=\y,orange!75]  plot     ({\y},{cos(deg(\y-3))});
+\node at (2.8, 1) {1};
+\node at (2.8,-1) {-1};
+\end{tikzpicture}
+\caption{\footnotesize Recall that we can generalize cosine similarity to higher dimensions by using an inner product, and normalizing the quantity to lie within $[-1, 1]$ by scaling by the product of the lengths of the input vectors. Another idea is that instead of maximizing similarity, we could minimize \emph{dis}-similarity by minimizing $\|u-v\|^2$.}
+\end{figure}
+
+One of the remarkable results of word embeddings is the resulting analogies that can be learned. E.g.
+\begin{itemize}
+\item Man is to woman as boy is to girl, where here again the main difference is gender.
+\item Ottawa is to Canada as Nairobi is to Kenya; the main difference is     country.
+\item Big is to bigger as tall is to taller.
+\item Yen is to Japan as ruble is to Russia.
+\end{itemize}
+All of these can be learned by just running a word embedding algorithm on a large text corpus. It can spot all these patterns by itself, just by running through large bodies of text.
 \end{document}
 
 
