@@ -5301,7 +5301,54 @@ So, the parameters for the model is the matrix $E$, which is shared across all w
 
 Let's illustrate other algorithms for learning word embeddings using a slightly more complex input sentence: ``I want a glass of orange juice to go along with my cereal''. The job of our algorithm is to predict a \emph{target} word given a \emph{context} (the last $k$ words). Researchers have experimented with different contexts: if the goal is to predict the next word, it makes sense for the context to be the words immediately preceding the target. But if your goal isn't necessarily to learn a language model per se, then you can choose other types of contexts. E.g. you can choose the context to be the $k$ words before \emph{and} after the target word. In our example, the context for target ``juice'' becomes ``a glass of orange'' and ``to go along with''. Another context could be to simply use the preceding word only: given an embedding of a single previous word, predict the target word. Another method that works surprisingly well is to take a nearby word as the context, and this is the idea behind a skip-gram, which is an example of a remarkably simple algorithm that ends up performing quite well.
 
-\subsubsection{Word2Vec}
+\subsubsection{\href{https://arxiv.org/abs/1301.3781}{Word2Vec}}
+A neural language model is one way to learn a word embedding, but another simpler and more computationally efficient way to learn these embeddings is through a Word2Vec algorithm. Suppose you're given the following sentence in your training set:
+
+\begin{verbatim}
+I want a glass of orange juice to go along with my cereal.
+\end{verbatim}
+
+In the skip-gram model, we will come up with a few context to target \emph{pairs} to create our supervised learning problem. Rather than having the context be something fixed, such as the last $k$ words before the target word,
+we will randomly pick a word to be the context word. Let's say we chose the word ``orange''. Then, what we'll do is randomly pick \emph{another} word within some window, say within $\pm 5$ words or $\pm 10$ words. Suppose that by chance we choose ``juice'' to be our target word, which just happens to be the word following our randomly chosen context word; it would be valid as well to observe a context-target pair of ``orange'' and ``glass'' respectively.
+\begin{table}
+  \centering
+  \begin{tabular}{l l}
+    Context & Target \\
+    \hline
+    orange & juice \\
+    orange & glass \\
+    orange & my
+  \end{tabular}
+  \caption{\footnotesize Some possible examples of context-target pairs chosen at random from the sentence above.} 
+\end{table}
+We'll set up a supervised learning problem where given the context word, we're asked to predict what is a randomly chosen word within some window within $\pm k$ words of that input context word. Realize that this is an incredibly challenging ask: to predict a randomly chosen word within some window. But, we're crucially not interested in the performance of our neural network on this task but rather the word embedding learned.
+
+Let's say we're still working with our $10,000$ word vocabulary. We'd like to learn a mapping from some \emph{context} $c \leadsto t$ to our \emph{target}.
+To represent the input, we can start off with a one-hot encoded vector $o_c$ for the context word. We can take our embedding matrix $E$ and multiply it by our one hot encoded vector to get our word embedding $E o_c = e_c$. We then feed this context word embedding into a softmax to predict $\hat y$, one of the words in our vocabulary. 
+
+\[
+  o_c \leadsto E \leadsto e_c \leadsto \texttt{softmax} \leadsto \hat y
+\]
+
+In detail,
+\[
+  p(t|c) = \frac{e^{\theta_t^T e_c}}{\sum_{j=1}^{|V|} e^{\theta_j^T e_c}}
+\]
+where here $\theta_t$ is the parameter associated with output $t$, i.e. the probability of a target word given some context word. We've omitted a bias term but we could include one if we wish. Finally, the loss function for softmax would be
+\[
+  \mathcal L (\hat y, y) = -\sum_{i=1}^{|V|} y_i \log \hat y_i
+\]
+where here $\hat y, y$ are of length $|V|$ and in particular $y$ is a one-hot encoded \emph{label}. Note that the matrix $E$ has parameters associated with embedding vectors $e_c$, and the softmax unit also has parameters that yield $\theta_t$. If we optimize the above loss function with respect to all of these parameters, we can realize a pretty good embedding.
+This is called the skip-gram model because it takes as input one word and then tries to predict some other word, perhaps skipping a few words to the left or right in the input sequence.
+
+\paragraph{Hierarchical softmax classifier}
+One computational bottleneck is in evaluating our softmax, since we must sum over all $|V|$ words in our vocabulary. One work-around is to use a hierarchical softmax: e.g. instead of trying to classify something into one of $|V|$ categories, start by predicting whether it lies in the first half of vocabulary $V$ \emph{or} the second half, and continue this $\log_2(|V|)$ times until we attempt to classify exactly what the word is. Notice that whereas the softmax has computational cost of $|V|$ in evaluating the sum in the denominator, running all the way through a hierarchical classifier requires only $\log_2(|V|)$ work. In practice, we don't use a perfectly balanced tree when branching in our hierarchical softmax classifier, i.e. we don't split our (remaining) vocabulary exactly in two at each step. In practice, we might place
+the common words on leaves that have shallower depth relative to the root node and less commonly occuring words on leaves that are further from the root node, such that we can require less traversals to classify frequently occuring terms.
+E.g. words such as ``the'' or ``of'' may only require a few traversals but perhaps ``durian'' requires several more.
+
+\paragraph{Sampling a context word $c$}
+Let's consider again how to sample the context $c$. Once we sample a context word $c$, we know that we can randomly choose a target word $t$ within some fixed window say at most $\pm k$ words away in the input sequence. But how do we choose the context word $c$? One thing we could do is sample uniformly at random from the training corpus. But if we do this, we'll soon realize that we oversample stop-words such as ``the'', ``of'', ``a'', ``and'', ``to'', $\ldots$. If you do that, you'll find that in your context-target pairs you observe these words quite frequently. But on the other hand, words like ``orange'' and especially ``durian'' won't appear that often. Perhaps we don't want our training set to be dominated for these frequently occuring words; after all we don't want to spend all of our time updating our embedding for the most common words at the cost of having poor performing embeddings for less common words. In practice, the distribution of words $p_c$ isn't set to $1/|V|$, but instead we can use different heuristics to balance out sampling common words together with less common words.
+
 \end{document}
 
 
