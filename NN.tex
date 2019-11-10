@@ -5414,6 +5414,38 @@ Then, we have $|V|$ possible logistic regression problems, where one of the clas
 \]
 seems to work decently.
 
+\subsubsection{\href{https://nlp.stanford.edu/pubs/glove.pdf}{GloVe word vectors}} This algorithm has gained some traction due to its simplicity; the name stands for Global Vectors for word representation. Previously, we were sampling context-target pairs by picking words that appear in close proximity to each other in our text corpus. What the GloVe algorithm does, is it starts off by making that explicit. Let
+\[
+  X_{ct} = \textrm{\# of times $t$ appears in context of $c$}
+\]
+I.e. we can run through our corpus and literally count: how many times does a (target) word appear in the (context) neighborhood of another word. It's possible that we end up with a symmetric matrix depending on our definition of context and target, e.g. if we define context and target in terms of whether or not they appear within $\pm k$ words of each other, then it would be a symmetric relationship; it's also possible we end up with an asymmetric relationship e.g. if we say that the context is the word immediately preceding the target. The GloVe model optimizes the following:
+\[
+  \min \sum_{i=1}^{|V|} \sum_{j=1}^{|V|} f(X_{ij}) \left(\theta_i^T e_j + \underbrace{b_i}_{t} + \underbrace{b_{j'}}_{c} - \log X_{ij}\right)^2
+\]
+where $i,j$ plays the role of $t,c$, i.e. $\theta_t^T e_c$. We will solve for parameters $\theta$ and $e$ by using gradient descent. Note that if $X_{ij} = 0$ then this term becomes undefined in the expression, so we will add a weighting term $f(X_{ij}) = \mathbbm 1_{\{X_{ij} \neq 0\}}$ that allows us to drop terms that would otherwise blow up, and we'll adopt the convention that $0 \log 0 = 0$. The other thing that we can do with $f(X_{ij})$ is penalize stop-words by giving them smaller weight and grant reasonable weight to lesser represented words such as ``durian''.
+
+\paragraph{Initializing weights and computing a final word embedding}
+Note as well that $\theta_i$ and $e_j$ are symmetric. They play the same role and we could reverse them around (since inner product a symmetric operator) and we would end up with the same optimization objective. So, one way to train the algorithm is to initialize $\theta$ and $e$ both uniformly at random, and use gradient descent to minimize the above objective. When you're done training your algorithm and have an embedding for every word $w$, we can do one more postprocessing step which is to take an average:
+\[
+  e_w^{\texttt{final}} = \frac{e_w + \theta_w}{2}.
+\]
+
+\paragraph{Properties of word embeddings} We started off with a featurization view to motivate embeddings; e.g. perhaps the components of our embedding vector learn to represent features such as \texttt{gender}, \texttt{royal}, \texttt{age}, and \texttt{food}. But, when we learn a word embedding what happens is that the individual components of the embedding are not necessarily interpretable. Suppose there is some space where the first axis is \texttt{gender} and the second axis is \texttt{royal}. In particular, the learning algorithm may choose a slightly different orientation of axes, perhaps ones that aren't even orthogonal.
+
+\begin{figure}[h]
+  \begin{tikzpicture}
+    \draw[->] (0,0) -- (2,0) node[right] {gender};
+    \draw[->] (0,0) -- (0,2) node[above left] {royal};
+    \draw[->,orange!50] (0,0) -- (2,1) node[right] {$e_{w,1}$};
+    \draw[->,orange!50] (0,0) -- (1,2) node[above left] {$e_{w,2}$};
+  \end{tikzpicture}
+\end{figure}
+
+One way to see this is as follows: if there was some invertible matrix $A$, then $\theta_i^T e_j$ could be replaced with $(A \theta_i)^T(A^{-T} e_j) = \theta_i^T A^T A^{-T} e_j = \theta_i^T e_j$. In particular, the first dimension of our word embedding might be a linear combination of gender, royal, age, food, cost, size,
+is it a noun or an action verb, and all the other implicitly learned features. It's very difficult to examine individual components of an embedding matrix and assign a meaningful human interpretation to them.
+
+\subsection{Applications using Word Embeddings}
+
 \end{document}
 
 
