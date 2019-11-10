@@ -5307,6 +5307,7 @@ A neural language model is one way to learn a word embedding, but another simple
 \begin{verbatim}
 I want a glass of orange juice to go along with my cereal.
 \end{verbatim}
+\label{snt: sentencesequenceorangejuice}
 
 In the skip-gram model, we will come up with a few context to target \emph{pairs} to create our supervised learning problem. Rather than having the context be something fixed, such as the last $k$ words before the target word,
 we will randomly pick a word to be the context word. Let's say we chose the word ``orange''. Then, what we'll do is randomly pick \emph{another} word within some window, say within $\pm 5$ words or $\pm 10$ words. Suppose that by chance we choose ``juice'' to be our target word, which just happens to be the word following our randomly chosen context word; it would be valid as well to observe a context-target pair of ``orange'' and ``glass'' respectively.
@@ -5348,6 +5349,70 @@ E.g. words such as ``the'' or ``of'' may only require a few traversals but perha
 
 \paragraph{Sampling a context word $c$}
 Let's consider again how to sample the context $c$. Once we sample a context word $c$, we know that we can randomly choose a target word $t$ within some fixed window say at most $\pm k$ words away in the input sequence. But how do we choose the context word $c$? One thing we could do is sample uniformly at random from the training corpus. But if we do this, we'll soon realize that we oversample stop-words such as ``the'', ``of'', ``a'', ``and'', ``to'', $\ldots$. If you do that, you'll find that in your context-target pairs you observe these words quite frequently. But on the other hand, words like ``orange'' and especially ``durian'' won't appear that often. Perhaps we don't want our training set to be dominated for these frequently occuring words; after all we don't want to spend all of our time updating our embedding for the most common words at the cost of having poor performing embeddings for less common words. In practice, the distribution of words $p_c$ isn't set to $1/|V|$, but instead we can use different heuristics to balance out sampling common words together with less common words.
+
+\subsubsection{\href{https://papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf}{Negative Sampling}}
+The skip-gram model allows us to construct a supervised learning task, such that we can learn to map from a context word to a target word; this is what allows us to learn a word embedding. The downside of this model is that the softmax objective function is slow to compute. Negative sampling allows us to do something similar to the skip-gram model, but with a more efficient learning algorithm. The core idea is to create a different supervised learning problem.
+
+\paragraph{Generating a training set}
+Given a pair of words like ``orange'' and ``juice'', we want to predict: is this a context-target pair? Given the sentence in \ref{snt: sentencesequenceorangejuice}, this would be considered a positive example. But given ``orange'' and ``king'' and the same input sequence, that would be considered a negative example. To generate our training dataset, we will deal with positive and negative labels differently. To generate positive labels, we will follow the same procedure as we did with \texttt{Word2Vec}: sample a context word, look around a window of $\pm k$ words, and pick a target word. For each positive example, we'll generate a sequence of negative examples, where we take the \emph{same} context word and then pick a word at random from our vocabulary and assign it a negative label (regardless of whether the randomly chosen word happens to appear nearby our context word in a training example, which can happen with some small probability). We will repeat this process some number of $k$ times to generate a sequence of negative labels each time we realize a context-target positive label. Our supervised learning problem is: given a pair of words, are they a context-target pair or not? Intuitively, we're asking: does the algorithm think we obtained these words by sampling two words close to each other, or do you think we obtained them at random from our vocabulary? Formally, we're trying to distinguish between these two types of distributions from which you might sample pairs of words.
+
+\paragraph{Choosing $k$} How might you choose $k$, the number of negative labels to generate for each realized context-target positive label sampled. The authors recommend $k \in \{5, \ldots, 20\}$ for smaller data sets, but if you have a large data set a smaller $k \in \{2, \ldots, 5\}$ will work well.
+
+\paragraph{The supervised learning model} Let's figure out how to determine a mapping from $x \leadsto y$. In the previous video, we saw the following softmax term:
+\[
+  p(t|c) = \frac{e^{\theta_i^T e_c}}{\sum_{j=1}^{|V|} e^{\theta_j^T e_c}}.
+\]
+And suppose that we have generated a few training examples using our example sentence input above:
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{l l r}
+    context & word & target \\
+    \hline
+    orange & juice & 1 \\
+    orange & king &  0 \\
+    orange & book &  0 \\
+    orange & the  &  0 \\
+    orange & of   &  0
+  \end{tabular}
+\end{table}
+
+We'd like to define a logistic regression model that describes the probability that a pair of words $c, t$ is a context-target pairing.
+\[
+  p(y=1 | c, t) = \sigma(\theta_t^T e_c).
+\]
+The parameters are similar as before: one parameter vector $\theta$ for each possible target word, and another separate embedding vector for each possible context word. We have our parameter $k$ that dictated the data generation process, but we can think of this as having a $k$ to $1$ ratio of negative to positive examples; so for each positive example we have $k$ negative examples with which to train this logistic regression model.
+
+Suppose our input word is ``orange'', which happens to be indexed $j$ within our vocabulary. We start with a one-hot encoded vector $o_j$ and feed it through a lookup $E o_j$ to retrieve the embedding for word $j$, $e_j$.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node (oj) at (0,0) {$o_j$};
+    \node (E)  at (1,0) {$E$};
+    \node (ej) at (2,0) {$e_j$};
+    \draw[->] (oj) -- (E);
+    \draw[->] (E) -- (ej);
+    \foreach \y in {2, 1, 0, -2} {
+      \node[draw,circle,scale=0.5] (neuron\y) at (3, \y);
+      \draw[->] (ej) -- (neuron\y);
+    }
+    \node at (3, -1) {$\vdots$};
+    \node at (4, 2) {juice?};
+    \node at (4, 1) {king?};
+    \node (vocabsize) at (5, 0) {$|V|$};
+    \draw[->] (vocabsize) -- (5, 2);
+    \draw[->] (vocabsize) -- (5,-2);
+  \end{tikzpicture}
+\end{figure}
+
+Then, we have $|V|$ possible logistic regression problems, where one of the classifiers could be, e.g. ``is the target word `juice' or not?''.  The key, however, is that we will critically \emph{not} train all $|V|$ logistic regression classifiers, but instead only five of them, i.e. $k+1$. Specifically, we're only going to train the classifiers corresponding to the actual target word we got and the $k$ randomly chosen negative examples. To summarize, we turned one giant $|V|$-way softmax classifier, which is very expensive to compute, into $|V|$ binary classifiers each of which is cheap to compute; and on each iteration, we shall only train on $k+1$ of them. So, for each training iteration we will only update weights associated with $k+1$ logistic units as opposed to the weights on a $|V|$-way softmax. The reason this technique is called negative sampling is because for each positive label we generate $k$ negative examples, i.e. negative samplings with which to train $k$ additional binary classifiers.
+
+\paragraph{Choosing negative examples} There is one critical detail in the algorithm which is how to ``randomly'' select a negative example. I.e. after having chosen a context word, how should we sample words to generate negative examples? One thing we could do is sample according to the empirical frequency observed in our input data. The problem with this is we end of up with a high representation of stop words like ``the'', ``of'', ``and'', etc. Another approach could be to sample uniformly at random from the vocabulary, i.e. with probability mass $\frac{1}{|V|}$ attached to each word, but this is non-representative of the distribution of English words. What Mikolov et. al. ended up reporting was that using a heuristic somewhere inbetween these two extremes tends to work well; if $f(w_i)$ is the frequency of word $i$ in the English language or in your vocabulary, then
+\[
+  \Pr(w_i) = \frac{f(w_i)^{3/4}}{\sum_{j=1}^{|V|}f(w_j)^{3/4}}
+\]
+seems to work decently.
 
 \end{document}
 
