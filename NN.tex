@@ -15,6 +15,7 @@
 \usepackage[margin=0.5in]{geometry}
 \usepackage{hyperref}
 \usepackage{mathtools}
+\usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 \usepackage[normalem]{ulem}
@@ -4568,7 +4569,7 @@ This simply follows from the fact that $\frac{\D}{\D u} \tanh(u) = 1 - \tanh(u)^
 \]
 E.g. in order to calculate
 \[
-  \frac{\partial J}{\partial x^{\langle t \rangle}} = \frac{\partial J }{\partial a_{\texttt{next}}} \frac{\partial a_{\texttt{next}}}{\partial x^{\langle t \rangle}} = \D a_{\texttt{next}} * W_{ax}^T * (1 - \tanh(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t - 1 \rangle} + b)^2\right).
+  \frac{\partial J}{\partial x^{\langle t \rangle}} = \frac{\partial J }{\partial a_{\texttt{next}}} \frac{\partial a_{\texttt{next}}}{\partial x^{\langle t \rangle}} = \D a_{\texttt{next}} * W_{ax}^T * \left(1 - \tanh(W_{ax} x^{\langle t \rangle} + W_{aa} a^{\langle t - 1 \rangle} + b)^2\right).
 \]
 
 Each derivative will share the common term:
@@ -5055,7 +5056,7 @@ Finally, we'll need to compute the derivative with respect to the previous hidde
 Note that in the above equation, the weights only include the first $n_a$ terms, e.g. $W_f = W_f[:,:n_a]$, etc. Further, it can be shown that
 \begin{align*}
   \D c_{\texttt{prev}} &= \D c_{\texttt{next}} * \Gamma_f^{\langle t \rangle} + \Gamma_o^{\langle t \rangle} * \left(1 - \tanh(c_{\texttt{next}})^2\right) *                          \Gamma_f^{\langle t \rangle} * \D a_{\texttt{next}}, \\
-  \D x^{\langle t \rangle} &= W_f^T \D \Gamma_f^{\langle t \rangle} + W_u^T \D \Gamma_u^{\langle t \rangle} + W_c^T\D \tilde c^{\langle t \rangle} + W_o^T \D \Gama_o^{\langle t \rangle}
+  \D x^{\langle t \rangle} &= W_f^T \D \Gamma_f^{\langle t \rangle} + W_u^T \D \Gamma_u^{\langle t \rangle} + W_c^T\D \tilde c^{\langle t \rangle} + W_o^T \D \Gamma_o^{\langle t \rangle}
 \end{align*}
 where in the last equation above the weights are from $n_a$ through the end, e.g. $W_f = W_f[:, n_a:]$, etc.
 \subsubsection{Bi-directional RNN} A bi-directional RNN lets us take information from \emph{both} earlier \emph{and} later in the sequence. Consider a familiar network in the context of named entity recognition.
@@ -5086,10 +5087,8 @@ where in the last equation above the weights are from $n_a$ through the end, e.g
     \node[below = 0.1cm of x6] {on};
     \node[below = 0.1cm of x7] {sale!''};
   \end{tikzpicture}
-  \caption{\footnotesize Consider two different input sentences, which have different outputs for a named entity recognition task.
-\begin{itemize}\item He said ``Teddy bears are on sale!''
-\item He said, ``Teddy Roosevelt was a great President!''\end{itemize}
-In order to figure out whether the third word Teddy is part of a person's name, it's not enough to just look at the first part of the sentence; to tell if $y^{\langle 3 \rangle}$ should be a zero or one, we need more information. This problem persists in any unidirectional or forward direction only RNN, no matter whether we use a standard RNN block, GRU's, or LSTM's.}
+  \caption{\footnotesize Consider two different input sentences, which have     different outputs for a named entity recognition task. Consider:
+    He said ``Teddy bears are on sale!'' vs. He said ``Teddy Roosevelt was a great President!''. In order to figure out whether the third word Teddy is part of a person's name, it's not enough to just look at the first part of the sentence; to tell if $y^{\langle 3 \rangle}$ should be a zero or one, we need more information. This problem persists in any unidirectional or forward direction only RNN, no matter whether we use a standard RNN block, GRU's, or LSTM's.}
 \end{figure}
 
 \paragraph{Bi-directional RNN (BRNN)} A bi-directional RNN allows us to take information from the entire sequence when making a prediction at any particular point within the sequence. We realize an acyclic graph:
@@ -5444,6 +5443,7 @@ One way to see this is as follows: if there was some invertible matrix $A$, then
 is it a noun or an action verb, and all the other implicitly learned features. It's very difficult to examine individual components of an embedding matrix and assign a meaningful human interpretation to them.
 
 \subsection{Applications using Word Embeddings}
+\subsubsection{Sentiment Classification}
 Sentiment classification is the task of looking at a piece of text and predicting whether someone likes or dislikes the thing they're talking about; it's a building block in NLP and is used in many applications. One challenge with sentiment classification is that you might not have a huge labeled training data set for your task. But, with word embeddings you can build a good sentiment classifier even with only modest-sized labeled training sets.
 
 Suppose we're given a sentiment classification problem, where we observe the following $x \leadsto y$ pairs.
@@ -5509,6 +5509,34 @@ For each word in the input sequence, we create one-hot encodings and then multip
   \caption{\footnotesize With an RNN, we can learn that ``things are lacking in good taste'' connotes a negative review. This is in start contrast with an algorithm that simply averages or sums up the word embeddings of the input sequence, since in the latter case we can't hope to learn that ``not good'' indicates a negative review and implies a very different meaning than the words ``good'' or ``lacking in good taste'', etc.}
 \end{figure}
 Because our word embeddings can be trained on a very large text corpus that is separate from our sentiment training label set, then even if the word ``absent'' doesn't appear in our training set for the sentiment classification problem but if it was in our say 1B text corpus that was used to train the word embeddings, we still have a chance of getting the right answer.
+
+\subsubsection{\href{https://papers.nips.cc/paper/6228-man-is-to-computer-programmer-as-woman-is-to-homemaker-debiasing-word-embeddings.pdf}{Debiasing     word embeddings}}
+ML and AI algorithms are increasingly trusted to make decisions. We'd like to ensure that, as much as is possible, they're free from undesireable forms of bias such as gender bias, ethnicity bias, sexual orientation bias, and so on. In this section we'll discuss techniques for addressing these issues. We've discussed how word embeddings can help us fill in analogies, such as ``man is to woman as king is to \ul{queen}''.
+But what if you ask:
+
+\begin{verbatim}
+Man is to computer programmer as woman is to _______?
+\end{verbatim}
+
+Bolukbasi et. al. found a somewhat horrifying result where a learned output might output ``homemaker''. This just seems wrong and enforces an unhealthy gender stereotype. It might be much more preferrable for the analogy to simply be that a ``man is to computer programmer as woman is to computer programmer''. Bolukbasi et. al. also found that the same embeddings could output that ``father is to doctor as mother is to \ul{nurse}''. What we're seeing here is that word embeddings can pick up biases that reflect the gender, ethnicity, age, sexual orientation, and other biases of the text used to train the model. ML algorithms are being used to make increasingly important decisions, incluencing college admissions, job search process, loan applications, sentencing guidelines in the criminal justice system. It's important to try and diminish undesireable algorithmic bias as much as possible.
+
+Let's say we've already learned an embedding. To be concrete, we'll consider gender bias but this process works for any type of bias. We'll start by identifying the direction corresponding to the bias. To do this, we'll take a few word embedding differences:
+\begin{align*}
+  e_{\texttt{he}} &- e_{\texttt{she}} \\
+  e_{\texttt{male}} &- e_{\texttt{female}}
+\end{align*}
+where in particular we've chosen pairs of words that differ in gender. We can take the resulting collection of differences and average them (or take an Singular Value Decomposition) to figure out the bias direction(s). The next step is a neutralization step: that is for every word that's \emph{not} definitional, project it to get rid of bias. So, there are some words that intrinsically capture gender, so words like grandmother, grandfather, girl, boy, she, and he; for htese words gender is intrinsic in the definition. Whereas there are other words like doctor and babysitter where we want the word embedding associated to be (gender) neutral. For non-definitional words, we'll project them onto the non-bias dimension to reduce this bias aspect from the word embedding. In our simple example, bias is a single dimension and we might have a $k$-dimensional word embedding and so there is a bias axis and another axis which captures the $k-1$ remaining dimensions.
+
+% \begin{figure}[h]
+%   \begin{tikzpicture}
+%     \draw[->] (-1, 0) -- (1, 0) node[right] {bias (1d)};
+%     \draw[->] (0, -1) -- (0, 1) node[above] {non-bias dimension {$k-1$         % dimensional};
+%     \node[draw,circle,fill] (babysitter) at (-0.5, 0.5) {babysitter};
+%     \node[draw,circle,fill] (grandmother) at (-0.25, -0.1) {grandmother};
+%     \node[draw,circle,fill] (girl) at (-0.34, -0.2) {girl};
+%     \node[draw,circle,fill] (she) at (-0.34, -0.5) {she};
+%   \end{tikzpicture}
+% \end{figure}
 
 \end{document}
 
