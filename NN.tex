@@ -15,7 +15,6 @@
 \usepackage[margin=0.5in]{geometry}
 \usepackage{hyperref}
 \usepackage{mathtools}
-\usepackage{multicol}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 \usepackage[normalem]{ulem}
@@ -27,7 +26,7 @@
 \usetikzlibrary{shapes}
 \usetikzlibrary{patterns}
 \usetikzlibrary{decorations.pathreplacing}
-
+\newcommand\STAR{{\tikz{\node[draw,star,star point height=.7em,minimum size=1em,scale=0.35]{};} }}
 \newcommand{\Plus}{\mathord{\begin{tikzpicture}[baseline=0ex, line width=1, scale=0.13]
 \draw (1,0) -- (1,2); \draw (0,1) -- (2,1); \end{tikzpicture}}}
 
@@ -5445,6 +5444,71 @@ One way to see this is as follows: if there was some invertible matrix $A$, then
 is it a noun or an action verb, and all the other implicitly learned features. It's very difficult to examine individual components of an embedding matrix and assign a meaningful human interpretation to them.
 
 \subsection{Applications using Word Embeddings}
+Sentiment classification is the task of looking at a piece of text and predicting whether someone likes or dislikes the thing they're talking about; it's a building block in NLP and is used in many applications. One challenge with sentiment classification is that you might not have a huge labeled training data set for your task. But, with word embeddings you can build a good sentiment classifier even with only modest-sized labeled training sets.
+
+Suppose we're given a sentiment classification problem, where we observe the following $x \leadsto y$ pairs.
+
+\begin{table}[h]
+  \begin{tabular}{l l}
+    x & y \\
+    The dessert is excellent. & \STAR \STAR \STAR \STAR \\
+    Service was quite slow.   & \STAR \STAR \\
+    Good for a quick meal, but nothing special. & \STAR \STAR                                                   \STAR \\
+    Completely lacking in good taste, good service, and good ambience. & \STAR    
+  \end{tabular}
+  \label{tbl: reviews}
+\end{table}
+
+If we could learn such an $x \leadsto y$ mappping, then we could use it to monitor comments people are saying about a restaurant that we're running. You could, for example, look at a stream of comments from social media and determine the sentiment of each; then, over time you can see if your restaurant is getting better or worse. One challenge of sentiment classification is that you might not have a huge labeled data set either; it's not uncommon to have training sets with fewer than 100k words and this is where word embeddings can really help out.
+
+\paragraph{Averaging word embeddings in an input sequence}
+Suppose that we're given the input sequence ``The dessert is excellent''. We can create one-hot encoded vectors $o_w$ for each word in the sequence, and then we can apply $E o_w$ where $E$ is an embedding matrix learned on a (possibly much larger) text corpus. We repeat this extraction process for each word in the input sequence.\footnote{If the our word embedding matrix $E$ was trained on a very large text corpus, say 1B words, then this allows us to transfer knowledge from infrequently observed words and apply this to your own problem, even if the word isn't observed in your training set directly.} One way to build a classifier is to take the word embeddings and apply an aggregation function, such as summation or average. We can then pass this vector through a softmax classifier to output a probability vector $\hat y$. Notice that by using the summation or average operation to aggregate multiple word embeddings into a single embedding, this particular algorithm works for reviews that are both short and long: we simply sum or average over all the input words to get a representation of the review in a new embedding space. One shortcoming of this algorithm is that it ignores word order. Notice that for our last example in table \ref{tbl: reviews}, it's a very negative review but the word \emph{good} appears multiple times and so this algorithm is likely to think this is a good review even though it isn't.
+
+\paragraph{Using an RNN for sentiment classification}
+In particular, let's take a look at how we can handle the review
+\begin{verbatim}
+Completely lacking in good taste, good service, and good ambiance.
+\end{verbatim}
+For each word in the input sequence, we create one-hot encodings and then multiply by an embedding matrix $E$ to get embedding vectors. We can then feed these embedding vectors as input into a many-to-one architecture to predict $\hat y$. Such an algorithm will be able to take into account word sequence, and realize that for example the fact that ``lacking'' appears before ``good'' indicates a negative connotation.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node (a0) at (0, 0) {$a^{\langle 0 \rangle}$};
+    \foreach \x in {1,2,3,4} {
+      \node[draw,rectangle] (a\x) at (2*\x,0) {$a^{\langle \x \rangle}$};
+      \node (e\x) at (2*\x,-1) {$e_{j_\x}$};
+      \node (E\x) at (2*\x,-2) {$E$};
+    }
+    \node (a5) at (2*5,0) {$\ldots$};
+    \node[draw,rectangle] (a10) at (2*6,0) {$a^{\langle 10 \rangle}$};
+    \node (e10) at (2*6,-1) {$e_{j_{10}}$};
+    \node (E10) at (2*6,-2) {$E$};
+    \draw[->] (a0) -- (a1);
+    \draw[->] (a1) -- (a2);
+    \draw[->] (a2) -- (a3);
+    \draw[->] (a3) -- (a4);
+    \draw[->] (a4) -- (a5);
+    \draw[->] (a5) -- (a10);
+    \node[below = 0.5cm of E1] (x1) {Completely};
+    \node[below = 0.5cm of E2] (x2) {lacking};
+    \node[below = 0.5cm of E3] (x3) {in};
+    \node[below = 0.5cm of E4] (x4) {good};
+    % \node[below = 0.5cm of E5] (x5) {$\ldots$};
+    \node[below = 0.5cm of E10](x10) {ambience};
+    \foreach \x in {1, 2, 3, 4,10} {
+      \draw[->] (x\x) -- (E\x);
+      \draw[->] (E\x) -- (e\x);
+      \draw[->] (e\x) -- (a\x);
+    }
+    \node[draw,rectangle,above=0.5cm of a10] (softmax) {softmax};
+    \node[above=0.5cm of softmax] (yhat) {$\hat y$};
+    \draw[->] (a10) -- (softmax);
+    \draw[->] (softmax) -- (yhat);
+  \end{tikzpicture}
+  \caption{\footnotesize With an RNN, we can learn that ``things are lacking in good taste'' connotes a negative review. This is in start contrast with an algorithm that simply averages or sums up the word embeddings of the input sequence, since in the latter case we can't hope to learn that ``not good'' indicates a negative review and implies a very different meaning than the words ``good'' or ``lacking in good taste'', etc.}
+\end{figure}
+Because our word embeddings can be trained on a very large text corpus that is separate from our sentiment training label set, then even if the word ``absent'' doesn't appear in our training set for the sentiment classification problem but if it was in our say 1B text corpus that was used to train the word embeddings, we still have a chance of getting the right answer.
 
 \end{document}
 
