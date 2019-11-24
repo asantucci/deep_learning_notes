@@ -5525,7 +5525,7 @@ Let's say we've already learned an embedding. To be concrete, we'll consider gen
   e_{\texttt{he}} &- e_{\texttt{she}} \\
   e_{\texttt{male}} &- e_{\texttt{female}}
 \end{align*}
-where in particular we've chosen pairs of words that differ in gender. We can take the resulting collection of differences and average them (or take an Singular Value Decomposition) to figure out the bias direction(s). The next step is a neutralization step: that is for every word that's \emph{not} definitional, project it to get rid of bias. So, there are some words that intrinsically capture gender, so words like grandmother, grandfather, girl, boy, she, and he; for htese words gender is intrinsic in the definition. Whereas there are other words like doctor and babysitter where we want the word embedding associated to be (gender) neutral. For non-definitional words, we'll project them onto the non-bias dimension to reduce this bias aspect from the word embedding. In our simple example, bias is a single dimension and we might have a $k$-dimensional word embedding and so there is a bias axis and another axis which captures the $k-1$ remaining dimensions.
+where in particular we've chosen pairs of words that differ in gender. We can take the resulting collection of differences and average them (or take an Singular Value Decomposition) to figure out the bias direction(s). The next step is a neutralization step: that is for every word that's \emph{not} definitional, project it to get rid of bias. So, there are some words that intrinsically capture gender, so words like grandmother, grandfather, girl, boy, she, and he; for these words gender is intrinsic in the definition. Whereas there are other words like doctor and babysitter where we want the word embedding associated to be (gender) neutral. For non-definitional words, we'll project them onto the non-bias dimension to reduce this bias aspect from the word embedding. In our simple example, bias is a single dimension and we might have a $k$-dimensional word embedding and so there is a bias axis and another axis which captures the $k-1$ remaining dimensions.
 
 % \begin{figure}[h]
 %   \begin{tikzpicture}
@@ -5537,6 +5537,151 @@ where in particular we've chosen pairs of words that differ in gender. We can ta
 %     \node[draw,circle,fill] (she) at (-0.34, -0.5) {she};
 %   \end{tikzpicture}
 % \end{figure}
+
+\subsection{Sequence to Sequence Architectures}
+Sequence-to-sequence models are useful for everything from machine translation to speech recognition. We start by learning about basic models and then later learn about concepts like beam search and the attention model.
+
+\subsubsection{Basic models} Suppose we want to translate a French sentence into an English sentence
+\[
+\textrm{Jane visite l'Afrique en septembre} \leadsto \textrm{Jane is visiting Africa in September.}
+\]
+As usual, we use $x^{\langle 1 \rangle}, \ldots, x^{\langle 5 \rangle}$ to represent the words in the input sequence, and $y^{\langle 1 \rangle}, \ldots, y^{\langle 6 \rangle}$ to represent the words in the output sequence. How can we train a neural network to learn such a mapping? The ideas here are inspired from \href{https://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf}{Sutskever et. al.'s} and \href{https://arxiv.org/abs/1406.1078}{Cho et. al.'s} 2014 papers. We first construct an \emph{encoder} RNN network, using either GRU's or LSTM's, by feeding in the French words one at a time.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node (a0) at (0,0) {$a^{\langle 0 \rangle}$};
+    \node[draw,square] (g1) at (1,0) {};
+    \node (x1) at (1,-1) {$x^{\langle 1 \rangle}$};
+    \draw[->] (a0) -- (g1);
+    \draw[->] (x1) -- (g1);
+    \draw[->] (g1) -- (1.5, 0);
+    \node (dots) at (1.75, 0) {$\ldots$};
+    \node (xtx) at (2.5, -1) {$x^{\langle T_x \rangle}$};
+    \node[draw,square] (g2) at (2.5, 0) {};
+    \draw[->] (dots) -- (g2);
+    \draw[->] (xtx)  -- (g2);
+    \draw[->] (g2) -- (4,0);
+    \node (encoderoutput) at (3.25, 1.25) {$\substack{\textrm{vector           representation} \\ \textrm{of input sequence}}$};
+    \draw[->,dashed] (encoderoutput) -- (3.25, 0);
+    \node[draw,square,orange] (gy1) at (4.25,0) {};
+    \node[above = 1 mm of gy1] (y1) {$y^{\langle 1 \rangle}$};
+    \node[draw,square,orange] (gy2) at (5.5,0) {};
+    \node[above = 1 mm of gy2] (y2) {$y^{\langle 2 \rangle}$};
+    \node[draw,square,orange] (gy3) at (6.75, 0) {};
+    \node[above = 1 mm of gy3] (y3) {$y^{\langle 3 \rangle}$};
+    \node[orange] (dotsy) at (7.5, 0) {$\ldots$};
+    \node[draw,square,orange] (gyty) at (8.5,0);
+    \node[above = 1 mm of gyty] (yty) {$y^{\langle T_y\rangle}$};
+    \draw[->,orange] (gy1) -- (gy2);
+    \draw[->,orange] (gy2) -- (gy3);
+    \draw[->,orange] (gy3) -- (dotsy);
+    \draw[->,orange] (dotsy) -- (gyty);
+    \draw[->,purple!50] plot [smooth] coordinates { (4.5, 0.8) (4.8, 1.15) (5.1, -1) (5.45, -0.35) };
+    \draw[->,purple!50] plot [smooth] coordinates { (5.75, 0.8) (6.05, 1.15)       (6.35, -1) (6.7, -0.35) };
+    \draw[->,purple!50] plot [smooth] coordinates { (7.75, -.75) (8, -1) (8.45, -0.35) };
+  \end{tikzpicture}
+  \caption{\footnotesize We build two separate networks, an encoding and decoding network. The encoding network learns a vector representation for the input sequence. The decoder's task is to ingest the encoding output and then output one word at a time until it an end-of-sequence or end-of-sentence token is output, upon which the decoder stops. As usual, we can take generated tokens from the decoder and feed them into the sequence just like we did when synthesizing text using the language model.}
+\end{figure}
+
+One of the most remarkable recent results in deep learning is that this model works, given enough pairs of French and English sentences. An architecture very similar to this also can work for image captioning: given an image, perhaps we want to automatically caption it.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.15]{fig/cat_sitting_in_chair}
+  \caption{\footnotesize Given an image as shown here, perhaps we would like it to be captioned automatically as ``A cat sitting on a chair''. We've seen how we can input an image into a (pre-trained) convolutional neural network in order to learn an encoding or a set of features for the input image. E.g. we could take the AlexNet architecture, remove the final softmax unit, and be left with a 4,096 dimensional feature vector which can be used to represent any input image. This can serve as our \emph{encoder} network. You can then feed \emph{this} feature vector as input into an RNN, whose job it is to generate a caption one word at a time. This works better when the captions are not so long. See Mao's 2014 paper on \href{https://arxiv.org/abs/1412.6632}{Deep Captioning}, and Karpathy's 2015 paper on \href{https://cs.stanford.edu/people/karpathy/cvpr2015.pdf}{Deep Visual Semantic Alignments for Generating Image Descriptions}.}
+\end{figure}
+
+\subsubsection{Picking the most likely output sequence} There are some similarities between the sequence-to-sequence machine translation model and the language models that we saw previously, but there are also significant differences; machine translation can be seen as building a \emph{conditional} language model. Language models allow us to estimate the probability of a sentence; we can also use such a model to generate novel sequences of text.
+
+\begin{figure}[h]
+    \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$};
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0);
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2) -- (0.25, 2.5) node[above] {$\hat y^{\langle 1         \rangle}$};
+    \draw[->,purple!50] plot [smooth] coordinates { (0.6, 3) (1, 3) (1.75, 1.5) };
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}   ;
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    \draw[->] (2.25, 2) -- (2.25, 2.5) node[above] {$\hat y^{\langle 2         \rangle}$};
+    \draw[->,purple!50] plot [smooth] coordinates { (2.6, 3) (3, 3) (3.5, 1.5) };
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (6, 1) node[above left] {$a^{\langle T_y - 1 \rangle}$};
+    \draw (6, 0.25) rectangle (6.5, 2);
+    \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (6.25, 1.7) {};
+    \draw[->] (6.25, 2.25) -- (6.25, 2.75) node[above] {$\hat y^{\langle T_y         \rangle}$};
+    \draw[->,purple!50] plot [smooth] coordinates { (5, 3) (5.5, 3) (5.75, 1.5) };
+\end{tikzpicture}
+\caption{\footnotesize A language model architecture.}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+    \begin{tikzpicture}
+    \node[green] (a0) at (0,0) {$a^{\langle 0 \rangle}$};
+    \node[draw,square,green] (g1) at (1,0) {};
+    \node[green] (x1) at (1,-1) {$x^{\langle 1 \rangle}$};
+    \draw[->,green] (a0) -- (g1);
+    \draw[->,green] (x1) -- (g1);
+    \draw[->,green] (g1) -- (1.5, 0);
+    \node[green] (dots) at (1.75, 0) {$\ldots$};
+    \node[green] (xtx) at (2.5, -1) {$x^{\langle T_x \rangle}$};
+    \node[draw,square,green] (g2) at (2.5, 0) {};
+    \draw[->,green] (dots) -- (g2);
+    \draw[->,green] (xtx)  -- (g2);
+    \draw[->] (g2) -- (4,0);
+%     \node (encoderoutput) at (3.25, 1.25) {$\substack{\textrm{vector           % representation} \\ \textrm{of input sequence}}$};
+%     \draw[->,dashed] (encoderoutput) -- (3.25, 0);
+    \node[draw,square,orange] (gy1) at (4.25,0) {};
+    \node[above = 1 mm of gy1,orange] (y1) {$y^{\langle 1 \rangle}$};
+    \node[draw,square,orange] (gy2) at (5.5,0) {};
+    \node[above = 1 mm of gy2,orange] (y2) {$y^{\langle 2 \rangle}$};
+    \node[draw,square,orange] (gy3) at (6.75, 0) {};
+    \node[above = 1 mm of gy3,orange] (y3) {$y^{\langle 3 \rangle}$};
+    \node[orange] (dotsy) at (7.5, 0) {$\ldots$};
+    \node[draw,square,orange] (gyty) at (8.5,0);
+    \node[above = 1 mm of gyty,orange] (yty) {$y^{\langle T_y\rangle}$};
+    \draw[->,orange] (gy1) -- (gy2);
+    \draw[->,orange] (gy2) -- (gy3);
+    \draw[->,orange] (gy3) -- (dotsy);
+    \draw[->,orange] (dotsy) -- (gyty);
+    \draw[->,purple!50] plot [smooth] coordinates { (4.5, 0.8) (4.8, 1.15) (5.1, -1) (5.45, -0.35) };
+    \draw[->,purple!50] plot [smooth] coordinates { (5.75, 0.8) (6.05, 1.15)       (6.35, -1) (6.7, -0.35) };
+    \draw[->,purple!50] plot [smooth] coordinates { (7.75, -.75) (8, -1) (8.45, -0.35) };
+\end{tikzpicture}
+\caption{\footnotesize The decoder network above is essentially identical to that of a language model architecture, except that instead of always starting with a vector of all zeros it instead has an encoded representation for an input sequence (or image). Instead of modeling the probability of any sentence, we are now modeling the probability of, e.g. the output English translation conditional on some input French sentence. I.e. we're estimating the probability of a translation: e.g. what's the chance that the translation is ``Jane is visiting Africa in September'' conditional on the French input sequence being ``Jane visite l'Afrique en septembre''. Our model is estimating the probability of an English sentence conditional on an input French sentence.}
+\end{figure}
+
+If $x$ is our input sentence in French, ``Jane visite l'Afrique en septembre'', our model now tells us what is the probability of different English translations of that French input. We do \emph{not} want to sample outputs at random; if we did sample words from this distribution, $p(y|x)$, we'd get different translations each time (of varying quality), e.g.
+\begin{itemize}
+\item Jane is visiting Africa in September.
+\item Jane is going to be visiting Africa in September.
+\item In September, Jane will visit Africa.
+\item Her African friend welcomed Jane in September.
+\end{itemize}
+We'd like to instead select the output sequence that maximizes the conditional probability; the most common method for finding the most probable output sequence is called Beam Search. But, before learning about that it's worthy to consider why a greedy approach wouldn't work: one in which we generate the first word according to the most likely word specified by our conditional language model, and then having picked the first word, we proceed to pick the next word that is most likely conditional on the first, etc. Instead of this approach, we'd like to select the output sequence that maximizes the joint probability of $\Pr(\hat y^{\langle 1 \rangle}, \ldots, \hat y^{\langle T_y \rangle})$. To demonstrate, consider two translations, the first of which is better given our example.
+\begin{itemize}
+\item Jane is visiting Africa in September.
+\item Jane is going to be visiting Africa in September.
+\end{itemize}
+Since the first one is a better translation, hopefully our machine translation model will suggest that $p(y_1|x) > p(y_2 | x)$; the first sentence is a better and more succinct translation, whereas the second is a bit verbose and has superfluous words. However, if an algorithm has output ``Jane is'' as the first two words, then because ``going'' is a more common English word than ``visiting'', it may turn out that the $\Pr(\textrm{going} | \textrm{Jane is}) > \Pr(\textrm{visiting} | \textrm{Jane is})$. Further, the total number of combinations of words in the output sequence space is exponentially large, since if we have a vocabulary of size $|V|$ and we are contemplating translations up to ten words long, there are $|V|^{10}$ sentences to choose from. Since it's impossible to rank all sentences, the most common thing to do is to use an approximate search.
+
+\subsubsection{Beam Search}
 
 \end{document}
 
