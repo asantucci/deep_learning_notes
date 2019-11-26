@@ -5431,6 +5431,7 @@ Note as well that $\theta_i$ and $e_j$ are symmetric. They play the same role an
 \paragraph{Properties of word embeddings} We started off with a featurization view to motivate embeddings; e.g. perhaps the components of our embedding vector learn to represent features such as \texttt{gender}, \texttt{royal}, \texttt{age}, and \texttt{food}. But, when we learn a word embedding what happens is that the individual components of the embedding are not necessarily interpretable. Suppose there is some space where the first axis is \texttt{gender} and the second axis is \texttt{royal}. In particular, the learning algorithm may choose a slightly different orientation of axes, perhaps ones that aren't even orthogonal.
 
 \begin{figure}[h]
+  \centering
   \begin{tikzpicture}
     \draw[->] (0,0) -- (2,0) node[right] {gender};
     \draw[->] (0,0) -- (0,2) node[above left] {royal};
@@ -5594,6 +5595,7 @@ One of the most remarkable recent results in deep learning is that this model wo
 \subsubsection{Picking the most likely output sequence} There are some similarities between the sequence-to-sequence machine translation model and the language models that we saw previously, but there are also significant differences; machine translation can be seen as building a \emph{conditional} language model. Language models allow us to estimate the probability of a sentence; we can also use such a model to generate novel sequences of text.
 
 \begin{figure}[h]
+  \centering
     \begin{tikzpicture}
     \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$};
     %% First input in the sequence.
@@ -5633,17 +5635,17 @@ One of the most remarkable recent results in deep learning is that this model wo
 \begin{figure}[h]
   \centering
     \begin{tikzpicture}
-    \node[green] (a0) at (0,0) {$a^{\langle 0 \rangle}$};
-    \node[draw,square,green] (g1) at (1,0) {};
-    \node[green] (x1) at (1,-1) {$x^{\langle 1 \rangle}$};
-    \draw[->,green] (a0) -- (g1);
-    \draw[->,green] (x1) -- (g1);
-    \draw[->,green] (g1) -- (1.5, 0);
-    \node[green] (dots) at (1.75, 0) {$\ldots$};
-    \node[green] (xtx) at (2.5, -1) {$x^{\langle T_x \rangle}$};
-    \node[draw,square,green] (g2) at (2.5, 0) {};
-    \draw[->,green] (dots) -- (g2);
-    \draw[->,green] (xtx)  -- (g2);
+    \node[blue!50] (a0) at (0,0) {$a^{\langle 0 \rangle}$};
+    \node[draw,square,blue!50] (g1) at (1,0) {};
+    \node[blue!50] (x1) at (1,-1) {$x^{\langle 1 \rangle}$};
+    \draw[->,blue!50] (a0) -- (g1);
+    \draw[->,blue!50] (x1) -- (g1);
+    \draw[->,blue!50] (g1) -- (1.5, 0);
+    \node[blue!50] (dots) at (1.75, 0) {$\ldots$};
+    \node[blue!50] (xtx) at (2.5, -1) {$x^{\langle T_x \rangle}$};
+    \node[draw,square,blue!50] (g2) at (2.5, 0) {};
+    \draw[->,blue!50] (dots) -- (g2);
+    \draw[->,blue!50] (xtx)  -- (g2);
     \draw[->] (g2) -- (4,0);
 %     \node (encoderoutput) at (3.25, 1.25) {$\substack{\textrm{vector           % representation} \\ \textrm{of input sequence}}$};
 %     \draw[->,dashed] (encoderoutput) -- (3.25, 0);
@@ -5681,7 +5683,77 @@ We'd like to instead select the output sequence that maximizes the conditional p
 \end{itemize}
 Since the first one is a better translation, hopefully our machine translation model will suggest that $p(y_1|x) > p(y_2 | x)$; the first sentence is a better and more succinct translation, whereas the second is a bit verbose and has superfluous words. However, if an algorithm has output ``Jane is'' as the first two words, then because ``going'' is a more common English word than ``visiting'', it may turn out that the $\Pr(\textrm{going} | \textrm{Jane is}) > \Pr(\textrm{visiting} | \textrm{Jane is})$. Further, the total number of combinations of words in the output sequence space is exponentially large, since if we have a vocabulary of size $|V|$ and we are contemplating translations up to ten words long, there are $|V|^{10}$ sentences to choose from. Since it's impossible to rank all sentences, the most common thing to do is to use an approximate search.
 
-\subsubsection{Beam Search}
+\subsubsection{Beam Search} In machine translation and audio recognition, we don't simply want to output just \emph{any} random sequence, but rather the best or \emph{most probable}. To make things concrete, let's suppose we're tasked with translating ``Jane visite l'Afrique en Septembre'' from French to English. The beam search algorithm still operates on our English vocabulary, and accepts as input the output from an \emph{encoder} in the form of a vector of floating point values.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node (vocabsize) at (-2,0) {$|V|$};
+    \draw[->] (vocabsize) -- (-2, 2);
+    \draw[->] (vocabsize) -- (-2,-2);
+    \node at (0,0) {$\begin{bmatrix} \textrm{a} \\ \vdots \\ \textrm{in} \\ \vdots \\ \textrm{jane} \\ \vdots \\ \textrm{september} \\ \vdots \\ \textrm{zulu}        \end{bmatrix}$};
+  \end{tikzpicture}
+\end{figure}
+
+Whereas greedy search will pick the most likely word and move on, what Beam Search does is consider multiple alternatives. In particular, there is a parameter $B$ that describes the beam width, and what this implies is that the Beam Search will consider $B$ tokens at a time when creating an output sequence. 
+\begin{figure}[h]
+  \centering
+    \begin{tikzpicture}
+    \node[blue!50] (a0) at (0,0) {$a^{\langle 0 \rangle}$};
+    \node[draw,square,blue!50] (g1) at (1,0) {};
+    \node[blue!50] (x1) at (1,-1) {$x^{\langle 1 \rangle}$};
+    \draw[->,blue!50] (a0) -- (g1);
+    \draw[->,blue!50] (x1) -- (g1);
+    \draw[->,blue!50] (g1) -- (1.5, 0);
+    \node[blue!50] (dots) at (1.75, 0) {$\ldots$};
+    \node[blue!50] (xtx) at (2.5, -1) {$x^{\langle T_x \rangle}$};
+    \node[draw,square,blue!50] (g2) at (2.5, 0) {};
+    \draw[->,blue!50] (dots) -- (g2);
+    \draw[->,blue!50] (xtx)  -- (g2);
+    \draw[->] (g2) -- (4,0);
+    \node[draw,square,orange] (gy1) at (4.25,0) {};
+    \node[above = 1 mm of gy1,orange] (y1) {$\hat y^{\langle 1 \rangle}$};
+  \end{tikzpicture}
+  \caption{\footnotesize At the first step of Beam search, we feed our input sequence through the encoder and run the resulting output vector through a softmax over $|V|$ possible outputs, remembering the $B$ most likely words that might start off our output sequence; beam search will then store in memory these top $B$ possible choices.}
+\end{figure}
+
+We input our French sentence through an encoder network and then run a softmax over $|V|$ possible outcomes and keep track of the $B$ most likely tokens. We estimated $\Pr(y^{\langle 1 \rangle}|x)$ in doing so. Now, for each of these $B$ possible starting tokens, we then hardwire a choice of $y^{\langle 1 \rangle}$ into the first stage of our decoder network and allow it to run a softmax over $|V|$ possible words that could follow in the output sequence. Notice that we have $\mathcal O(B \cdot |V|)$ work to do here, since for each of the $B$ possible first words we are determining the most likely second word in the output sequence. Our network effectively tells us $\Pr(y^{\langle 2 \rangle} | x, \hat y^{\langle 1 \rangle})$, and by rules of conditional probability we can calculate
+\begin{equation}
+  \label{eq: beamsearch}
+  \Pr(y^{\langle 1 \rangle}, y^{\langle 2 \rangle} | x) = \Pr(y^{\langle 1 \rangle} | x) \Pr(y^{\langle 2 \rangle} | x, y^{\langle 1 \rangle}).
+\end{equation}
+Note that the left hand side of the equation above is ultimately the quantity that we're interested in maximizing and using as a prefix to initialize the remainder of our search.
+We compute this for all possible $B \cdot |V|$ choices of our second word, sort the probabilities from equation \ref{eq: beamsearch} and choose the $B$ most likely subsequences to form the start of our output sequence. 
+
+To be concrete, suppose we had chosen $B = 3$ and that after running our input French sentence through the encoder, the softmax unit instructed us to remember the words ``in'', ``Jane'', and ``September'' as the most likely. For each of these words, we hardwire them to $\hat y^{\langle 1 \rangle}$ and then forward propagate through our entire network to predict $\hat y^{\langle 2 \rangle}$.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node[blue!50] (a0) at (0,0) {$a^{\langle 0 \rangle}$};
+    \node[draw,square,blue!50] (g1) at (1,0) {};
+    \node[blue!50] (x1) at (1,-1) {$x^{\langle 1 \rangle}$};
+    \draw[->,blue!50] (a0) -- (g1);
+    \draw[->,blue!50] (x1) -- (g1);
+    \draw[->,blue!50] (g1) -- (1.5, 0);
+    \node[blue!50] (dots) at (1.75, 0) {$\ldots$};
+    \node[blue!50] (xtx) at (2.5, -1) {$x^{\langle T_x \rangle}$};
+    \node[draw,square,blue!50] (g2) at (2.5, 0) {};
+    \draw[->,blue!50] (dots) -- (g2);
+    \draw[->,blue!50] (xtx)  -- (g2);
+    \draw[->] (g2) -- (4,0);
+    \node[draw,square,orange] (gy1) at (4.25,0) {};
+    \node[above = 1 mm of gy1,orange] (y1) {$\hat y^{\langle 1 \rangle}$};
+    \node[above = 1 mm of y1] {in};
+    \node[draw,square,orange] (gy2) at (5.5,0) {};
+    \node[above = 1 mm of gy2,orange] (y2) {$y^{\langle 2 \rangle}$};
+    \draw[->,orange] (gy1) -- (gy2);
+    \draw[->,purple!50] plot [smooth] coordinates { (4.5, 0.8) (4.8, 1.15) (5.1, -1) (5.45, -0.35) };
+\end{tikzpicture}
+\caption{\footnotesize We show the second step of Beam search for our example in which ``in'', ``Jane'' and ``September'' were deemed the most probable words to lead the output sequence. The second step (and each subsequent step) will involve creating $B$ separate copies of our network and running our candidate words through. In this diagram, we've hardwired ``in'' as the first word in the output sequence, and forward propagation and running through another softmax layer over $|V|$ possible outputs will allow us to determine $\Pr(y^{\langle 2 \rangle} | x, \hat y^{\langle 1 \rangle})$ for each word in our vocabulary. We repeat this process for our remaining words ``Jane'' and ``September'', procuring a listing of $B \cdot |V|$ probabilities which we can use to compute
+$\Pr(y^{\langle 1 \rangle}, y^{\langle 2 \rangle} | x)$; we then take the $B$ most likely and continue on, having saved these intermediate probabilities for future use. Note that it's possible that the $B$ most likely prefixes for our output sequence do not include all or each of the $B$ words we started with as candidates for $\hat y^{\langle 1 \rangle}$; if this happens, this implicitly means a word was rejected as starting the output sequence.}
+\end{figure}
+
+Suppose that our Beam search indicated that the three most likely sentence prefixes were ``in September'', ``Jane is'', and ``Jane visits''. We'll proceed to create $B$ copies of our RNN and use these to estimate $\Pr(y^{\langle 3 \rangle} | x, y^{\langle 1 \rangle}, y^{\langle 2 \rangle})$. Hopefully, we end up with an output sequence that is quite likely and ultimately ends in an end-of-sentence token. Notice that if we set $B=1$, we recover our greedy search algorithm; but by considering $B > 1$ we'll be more likely to find a better output sequence than what a greedy algorithm would give us.
 
 \end{document}
 
