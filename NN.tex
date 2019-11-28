@@ -5908,6 +5908,8 @@ We've previously seen the importance of having a single real number evaluation m
     \path[->,orange!50] (af1) edge[bend left] (af2);    
     \path[->,orange!50] (af2) edge[bend left] (af3);    
     \path[->,orange!50] (af3) edge[bend left] (af4);
+    \path[->,orange!50] (af4) edge[bend left] (af5);
+    \path[->,purple!50] (ab5) edge[bend left] (ab4);
     \path[->,purple!50] (ab4) edge[bend left] (ab3);
     \path[->,purple!50] (ab3) edge[bend left] (ab2);
     \path[->,purple!50] (ab2) edge[bend left] (ab1);
@@ -5916,8 +5918,78 @@ We've previously seen the importance of having a single real number evaluation m
     \node at (3*3, -2) {l'Afrique};
     \node at (3*4, -2) {en};
     \node at (3*5, -2) {septembre};
+    \node (c1) at (3, 2) {c};
+    \node (s0) at (2, 3) {$s^{\langle 0 \rangle}$};
+    \node[draw,square] (s1) at (3, 3) {$s^{\langle 1 \rangle}$};
+    \node[above=1cm of s1,draw,rectangle] (yhat1) {jane};
+    \draw[->] (s0) -- (s1);
+    \draw[->] (c1) -- (s1);
+    \draw[->] (s1) -- (yhat1);
+    \foreach \y in {1, ..., 5} {
+      \draw[->,dashed] (y\y) -- (c1);
+      \node[right = 1mm of y\y] {$\alpha_{1,\y}$};
+    }
   \end{tikzpicture}
+  \caption{\footnotesize Here, we use a bi-directional RNN. Note that we're not doing a word-for-word translation, and so the length of the output sequence need not equal the length of the input sequence. But by using a BRNN, we've effectively created a rich set of features for each word in the input sequence and perhaps surrounding words in the sentence. To generate the English translation, we'll use another RNN, but to avoid confusion with the activations in our encoder BRNN, we will use $s^{\langle i \rangle}$ to denote the activation for the $i$th layer. The hope is that the first output in the sequence will be ``Jane'', but when the network is trying to generate the first word, what part of the input sentence should it be looking at? Seems reasonable that we should be looking at the first word and nearby words, but that we don't need to look toward the very end of the sentence. The attention model computes a set of attention weights $\alpha_{i,j}$ which tell us how much weight should we give the $j$th word in the input sequence when determining the $i$th word in the output sequence. Ultimately, these weights create a context vector $c$ which is fed as input to the first building block of our decoder RNN.}
+\label{fig: machinetranslationattentionmodel1}
 \end{figure}
+
+Diagram \ref{fig: machinetranslationattentionmodel1} depicts just one step of the RNN for our machine translation task.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \foreach \x in {1,...,5} {
+      \node[draw,rectangle] (af\x) at (3*\x-0.65,0) {$\overrightarrow a^{\langle \x \rangle}$};
+      \node[draw,rectangle] (ab\x) at (3*\x+0.65,0) {$\overleftarrow a^{\langle \x \rangle}$};
+      \node (x\x) at (3*\x, -1) {$x^{\langle \x \rangle}$};
+      \node (y\x) at (3*\x,  1) {}; %{$\hat y^{\langle \x \rangle}$};
+      \draw[->] (x\x) -- (af\x);
+      \draw[->] (x\x) -- (ab\x);
+      \draw[->] (af\x) -- (y\x);
+      \draw[->] (ab\x) -- (y\x);
+    }
+    \path[->,orange!50] (af1) edge[bend left] (af2);    
+    \path[->,orange!50] (af2) edge[bend left] (af3);    
+    \path[->,orange!50] (af3) edge[bend left] (af4);
+    \path[->,orange!50] (af4) edge[bend left] (af5);
+    \path[->,purple!50] (ab5) edge[bend left] (ab4);
+    \path[->,purple!50] (ab4) edge[bend left] (ab3);
+    \path[->,purple!50] (ab3) edge[bend left] (ab2);
+    \path[->,purple!50] (ab2) edge[bend left] (ab1);
+    \node at (3, -2) {jane};
+    \node at (3*2, -2) {visite};
+    \node at (3*3, -2) {l'Afrique};
+    \node at (3*4, -2) {en};
+    \node at (3*5, -2) {septembre};
+    \node (c1) at (3, 2) {c};
+    \node (s0) at (2, 3) {$s^{\langle 0 \rangle}$};
+    \node[draw,square] (s1) at (3, 3) {$s^{\langle 1 \rangle}$};
+    \node[above=1cm of s1,draw,rectangle] (yhat1) {jane};
+    \draw[->] (s0) -- (s1);
+    \draw[->] (c1) -- (s1);
+    \draw[->] (s1) -- (yhat1);
+    \node[draw,square,purple!50] (s2) at (6, 3) {$s^{\langle 2 \rangle}$};
+    \draw[->,purple!50] plot [smooth] coordinates { (3.5, 4.5) (4,4) (4.5, 2.5) (5.5, 2.5)};
+    \node (c2) at (6, 2) {$c$};
+    \node[above = 1 cm of s2,draw,rectangle,purple!50] (yhat2) {visits};
+    \draw[->,purple!50] (s2) -- (yhat2);
+    \foreach \y in {1, ..., 5} {
+      \draw[->,dashed,purple!50] (y\y) -- (c2);
+      \node[right = 1mm of y\y,purple!50] {$\alpha_{2,\y}$};
+    }
+    \draw[->,purple!50] (c2) -- (s2);
+    \draw[->,purple!50] (s1) -- (s2);
+  \end{tikzpicture}
+  \caption{\footnotesize At the second step, we will have a new hidden state $s^{\langle 2 \rangle}$, a context vector $c$ that depends on $\alpha_{2,j}$ for $j \in \{1, \ldots, T_x\}$ which tells us how much weight to place on the $j$th word when outputting the second word in the output sequence. We'll also feed the $\hat y_1$ as input, which in this case hopefully is the word (or rather name) ``Jane''.}
+\label{fig: machinetranslationattentionmodel2}
+\end{figure}
+
+Note that in figure \ref{fig: machinetranslationattentionmodel2}, at this point we still haven't defined exactly how to create the context vector $c$, as well as how to compute the attention weights $\alpha_{i,j}$. In general, $\alpha_{i,j}$ depends on the activations from the BRNN in the input sequence at that time-step $t$, $\overrightarrow a^{\langle t \rangle}$ and $\overleftarrow a^{\langle t \rangle}$ as well as the state from previous steps which is embedded in $s^{\langle t \rangle}$.
+
+The key is that the RNN marches forward one step at a time until we eventually generate an EOS token. At each step when we're trying to generate the $t$-th word in the output sequence, we have a set of attention weights that tell us how much weight to place on the $t'$-th words in the input sequence; perhaps this informs us to only look within a local window within the input sequence in order to determine the correct output translation word.
+
+\subsubsection{Attention Model} The attention model allows a neural network to pay attention to only part of an input sequence when generating a single word in the output translation. Let's now focus on the implementation details. Let's assume we're using a BRNN, with either GRU's or LSTM's as building blocks, for our encoder network; this is our means for computing features for word in the input sequence. Note that since we have a bi-directionall RNN, we have a set of forward \emph{and} backward activations for each word in the input sequence. For simplicity of notation, in this section only let us denote by $a^{\langle t \rangle} = \left( \overrightarrow a^{\langle t \rangle}, \overleftarrow a^{\langle t \rangle} \right)$ i.e. we will consider both forward and backward activations as part of our features for the $t$th word in the input sequence.
 
 \end{document}
 
