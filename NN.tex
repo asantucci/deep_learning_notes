@@ -5755,6 +5755,106 @@ $\Pr(y^{\langle 1 \rangle}, y^{\langle 2 \rangle} | x)$; we then take the $B$ mo
 
 Suppose that our Beam search indicated that the three most likely sentence prefixes were ``in September'', ``Jane is'', and ``Jane visits''. We'll proceed to create $B$ copies of our RNN and use these to estimate $\Pr(y^{\langle 3 \rangle} | x, y^{\langle 1 \rangle}, y^{\langle 2 \rangle})$. Hopefully, we end up with an output sequence that is quite likely and ultimately ends in an end-of-sentence token. Notice that if we set $B=1$, we recover our greedy search algorithm; but by considering $B > 1$ we'll be more likely to find a better output sequence than what a greedy algorithm would give us.
 
+\subsubsection{Refinements to Beam Search}
+\paragraph{Length Normalization} This small change allows us to obtain much better results with beam search. Beam search seeks to maximize the following probability:
+\begin{equation}
+  \label{eq: lengthnorm}
+  \argmax_y \prod_{t=1}^{T_y} \Pr(y^{\langle t \rangle} | x, y^{\langle 1 \rangle}, \ldots, y^{\langle t-1 \rangle})
+\end{equation}
+where the product of probabilities is really representing the probability of the entire output sequence conditional on the input $x$, i.e. it is equivalent to
+maximizing $\Pr(y^{\langle 1 \rangle}, \ldots, y^{\langle T_y \rangle})$ by definitions of conditional probability. Notice that each probability is some number in the unit interval, but that most of our probabilities are small; multiplying many tiny floating points together increases our chance of numerical underflow, i.e. that the floating point representation is insufficient to store our resulting value accurately. Instead of maximizing a product of probabilities, we instead use logarithms.
+
+\begin{equation}
+  \label{eq: loggedlengthnorm}
+  \argmax_y \sum_{y=1}^{T_y} \log \Pr(y^{\langle t \rangle} | x, y^{\langle 1 \rangle}, \ldots, y^{\langle t-1 \rangle})
+\end{equation}
+
+By taking logarithms, our algorithm becomes more numerically stable and less prone to rounding errors or numerical underflow. Since the logarithm function is strictly monotone increasing, maximizing \ref{eq: loggedlengthnorm} will give the same result as maximizing \ref{eq: lengthnorm}
+
+There's one more change we can also make to improve our machine translation algorithm. Our original objective \ref{eq: lengthnorm} involves multiplying more numbers less than one as the output sequence grows in length: this means that longer sentences become quite unlikely, or put differently, that our objective function prefers short translations and output sequences. The same phenomena holds true for \ref{eq: loggedlengthnorm} in that since each probability lies in the unit interval, taking the logarithm yields a negative value, and so adding more negative values (for longer output sequences) decreases the objective function we are trying to maximize. Therefore, we modify our objective:
+
+\[
+  \frac{1}{T_y} \argmax_y \sum_{y=1}^{T_y} \log \Pr(y^{\langle t \rangle} | x, y^{\langle 1 \rangle}, \ldots, y^{\langle t-1 \rangle})  
+\]
+This reduces the penalty for longer translation. In practice, as a heuristic instead of dividing by $T_y$ we might try scaling by $\frac{1}{T_y^{\alpha}}$ for some $\alpha \in [0, 1]$; if $\alpha = 1$ then we normalize by length, and if $\alpha = 0$ we do not apply any normalization. Here, $\alpha$ becomes another hyperparameter that we can tune to try and obtain better results.
+Although there is little theoretical justification for this, many groups have found it works well in practice.
+
+\paragraph{Summarizing beam search} Suppose we run beam search for 30 steps, i.e. we consider output sequences up to 30 tokens in length. If we had a beam width of three, then at each step we would keep track of the top three possibilities for each possible sentence length in the set $\{1, 2, \ldots, 30\}$. We would then look at the output of all sentences and score them against our objective function, choosing the one which achieves the highest value on the normalized log-probability functional form.
+
+\paragraph{Choosing Beam Width?} How do we choose the beam width $B$? The larger $B$ is, the more possibilities we're considering, and there is an increased chance that we'll find a better translation. But, the larger $B$ is, the more computationally expensive our algorithm becomes, because we have to keep track of all these different possible output sequences we could be emitting. If the beam width is very large, then you consider more possibilities but our algorithm is slower, and the memory requirements grow. If you use a beam width that is very small, you get a worse result because you're keeping in mind fewer possibilities as the algorithm is running. But, you're getting a result faster and the memory requirements are lower. In production systems, it's not uncommong to see a beam width of maybe 10; 3 is quite small and a beam width of 100 would be considered very large for a production system. For research applications where people are focused on squeezing out each extra bit of performance, it's not uncommon to see beam widths up to several thousand. There are often diminishing returns as $B$ grows very large. Beam search is not guaranteed to return the exact maximum for our objective function.
+
+\subsubsection{Error analysis in beam search} We've previously seen how error analysis can help you focus your time on the most useful work for your project. Since Beam Search is an approximation algorithm, it doesn't necessarily return the best possible output sequence. What if our algorithm makes a mistake? It's worth knowing whether beam search was the culprit, or if it was our RNN model architecture. Continuing with our example, ``Jane visite l'Afrique en septembre'', suppose that a human provided the following translation as part of a training example: ``Jane visits Africa in September''. Let us denote this translation by a human by $y^*$, since it's our target reference. Now, suppose our algorithm outputs $\hat y$ as ``Jane visited Africa in September''. This is a much worse translation since it changes the fundamental meaning of the sentence. Now, if we have constructed an encoder-decoder network and we are also using beam search to output translations, wouldn't it be nice if we could know which of these two components is responsible for the error? Just like it may be tempting to collect more training data as this typically doesn't hurt the performance of our algorithm, it could also be tempting to expand the beam search width; but in the same way that getting more training data doesn't always get us the performance that we'd like, the same is true for increasing the beam width hyperparameter.
+
+The most useful thing we can do is use our RNN network to compute $\Pr(y^*|x)$ and compare it with $\Pr(\hat y | x)$.
+\begin{itemize}
+\item If $\Pr(y^*|x) > \Pr(\hat y|x)$, our Beam Search algorithm failed to find   the best $\argmax_y$.
+\item If $\Pr(y^*|x) \leq \Pr(\hat y|x)$, then our RNN model is at fault in the sense that it doesn't recognize the hand-crafted translation is superior to what it output.
+\end{itemize}
+Note that if we're using some form of length normalization, we should be comparing the values our optimization objective function takes on rather than the raw probabilities. So in going through an error analysis, we'd go through a development set and find examples of mistakes made by our algorithm. We'd then construct a table:
+\begin{table}
+  \begin{tabular}{l | l | c | c | c}
+    Human translation & Algorithm output & $\Pr(y^*|x)$ & $\Pr(\hat y | x)$ & At                                                           fault? \\
+    \hline
+    Jane visits Africa in September & Jane visited Africa in September & $2 \times 10^{-10}$ & $1 \times 10^{-10}$ & Beam search
+  \end{tabular}
+  \caption{\footnotesize An example entry we might create when examining errors our algorithm made on the development set. Through this process, we can determine what fraction of errors are made due to beam search vs. the RNN model. It's only if we find that beam search is responsible for a sizeable proportion of errors that we'd want to increase beam width. Else, we find the RNN is perhaps at fault most of the time and we could go through a deeper level of analysis to determine whether to add regularization, obtain more training data, or try a different network architecture, or something else.}
+\end{table}
+
+Error analysis like this is particularly helpful when we have an aproximation algorithm such as Beam Search, that is working to optimize some objective function.
+
+\subsubsection{\href{https://www.aclweb.org/anthology/P02-1040.pdf}{Bleu} Score} One of the challenges with machine translation is the fact that there can be multiple valid translations, each equally good. How can we evaluate a machine translation system when there are several equally valid translations? Unlike an image recognition system where there is only one right answer, in which case we can measure accuracy, the way to measure performance when there are multiple correct answers is through something called a BLEU score, a Bi-lingual Evaluation Understudy.\footnote{In the context of theatre, the understudy is someone who learns the role of a more senior actor so they can take over if necessary. The motivation for BLEU is that, whereas we could ask human evaluators to evaluate the machine translation system, the BLEU score is an understudy, which could be a substitute for having humans evaluate every output of a machine translation system.}
+
+Suppose we are given a French sentence
+\begin{verbatim}
+Le chat est sur le tapis.
+\end{verbatim}
+We are also given a reference, human generated: ``the cat is on the mat''. But a different human could have translated this as ``there is a cat on the mat'', which is just as acceptable. The BLEU score, allows us to automatically compute a score that measures how good is our machine translation. The idea is that so long as the machine generated translation is pretty close to any of the references provided by humans, then it should get a high BLEU score.
+
+\paragraph{Why Precision is not a useful metric in machine translation}
+In a bit more detail, we're going to look at the machine generated output and see if the types of words it generated appear in at least one of the human generated references which are provided as part of the dev and test set. To start, let's consider an extreme example. Suppose the machine translation is the word ``the'' repeated seven times over, which is clearly a pretty terrible translation. One way to measure the precision of the machine translation output would be to look at each word in the output sequence and see if it appears in the references. In our poor translation, the word ``the'' appears in both references; we're hitting $7/7 = 1$ and it appears that precision is not a particularly useful measure.
+
+\paragraph{Modified precision}
+Let's instead consider a modified precision measure, where we give each word credit only up to the maximum number of times it appears in the reference sentences. Since the word ``the'' appears up to two times in some of our reference translations, we're only going to allow up to two credits when calculating modified precision, which for our example would be $2/7$. The discussion thus far has been for calculating modified precision one word at a time, or for words in isolation.
+
+\paragraph{BLEU Score Components}
+For the BLEU score, we're interested in looking at bigrams as well, i.e. words appearing next to each other. Suppose our reference (human) translations are still ``the cat is on the mat'' and ``there is a cat on the mat'' but our machine translation is now ``the cat the cat on the mat''. Here, there are several possible bi-grams in the machine translation output:
+\begin{table}[h]
+  \centering
+  \begin{tabular}{l| c c}
+    & Count & $\textrm{Count}_{\textrm{Clipped}}$ \\
+    \hline
+    the cat & 2 & 1 \\
+    cat the & 1 & 0 \\
+    cat on  & 1 & 1 \\
+    on the  & 1 & 1 \\
+    the mat & 1 & 1
+  \end{tabular}
+  \caption{\footnotesize In calculating $\textrm{Count}_{\textrm{Clipped}}$, we allow our algorithm to get credit only up to the maximum number of times that the bigram appears in any one of our human translations. Finally, our modified bi-gram precision will be the sum of $\textrm{Count}_{\textrm{Clipped}}$ divided by the total number of bi-grams (the sum of $\textrm{Count}$).}
+\end{table}
+
+Formally,
+
+\[
+p_1 = \frac{\sum_{\textrm{unigrams } \in \hat y} \texttt{Count}_{\texttt{clipped}}(\textrm{unigram})}{\sum_{\textrm{unigrams } \in \hat y} \texttt{Count}(\textrm{unigram})}
+\]
+where the subscript denotes uni-grams. We can also do this for $n$-grams:
+\[
+p_n = \frac{\sum_{\textrm{n-grams } \in \hat y} \texttt{Count}_{\texttt{clipped}}(\textrm{n-gram})}{\sum_{\textrm{n-grams } \in \hat y} \texttt{Count}(\textrm{n-gram})}.
+\]
+These modified precision scores allow us to measure the degree to which our machine translation overlaps with our human translation references. In the event that our machine translation is equal to either one of our references, we achieve $p_i$'s all equal to unit value. The combined BLEU score is given by
+\[
+\texttt{BP} \cdot \exp\left(\frac{1}{4} \sum_{n=1}^4 p_n\right)
+\]
+where \texttt{BP} stands for a brevity penalty. This is because with short translations, we have a higher chance of having the few words that do appear in our machine translation to also appear in the human reference translations. But, we don't want our translations to be unnecessarily short. The brevity penalty is an adjustment factor that looks like
+\begin{equation*}
+  \texttt{BP} = \begin{cases}
+    1 & \textrm{ if } \texttt{Mach.Transl.}_{\textrm{output length}} >     \texttt{Ref.Transl.}_{\textrm{output length}} \\
+    \exp\left(1 - \frac{\texttt{ReferenceTranslation}_{\textrm{output length}}}{  \texttt{MachineTranslation}_{\textrm{output length}}}\right) & \textrm{ otherwise}
+  \end{cases}
+\end{equation*}
+We've previously seen the importance of having a single real number evaluation metric. Although BLEU is by no means perfect, it does give us a yardstick and that can enable progress to be measured. BLEU can be used not only in evaluating machine translations, but also in assessing the performance of image captioning systems: we would have a neural network generate a translation and then use a BLEU score to see how much of that caption overlaps with captions generated by people. Note that BLEU is only applicable when there are multiple equally good options for the output sequence; it does not apply to speech recognition since there we are trying to get an output sequence that is word for word correct, and there isn't a notion of multiple equally good outputs.
+
+
 \end{document}
 
 
