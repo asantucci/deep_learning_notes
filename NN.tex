@@ -6050,16 +6050,26 @@ i.e. for each fixed value of $t$, if we sum over $t'$ we get unit value as outpu
 
 \paragraph{Computational Complexity} One downside of this algorithm is that its runtime is quadratic: if you have $T_x$ words in the input and $T_y$ words in the output, then the total number of attention parameters we need to set are $T_x \times T_y$. It's worth noting that in machine translation, each sentence isn't necessarily too long, and so perhaps quadratic complexity is acceptable.
 
-\paragraph{\href{https://arxiv.org/abs/1502.03044}{Image Captioning}} The task is to look at a picture and generate a caption describing it. It turns out we can also use the attention here: simply look at the picture and only pay attention to parts of the picture at a time when generating a caption. 
+\paragraph{\href{https://arxiv.org/abs/1502.03044}{Image Captioning}} The task is to look at a picture and generate a caption describing it. It turns out we can also use the attention here: simply look at the picture and only pay attention to parts of the picture at a time when generating a caption.
+
+\subsection{Speech Recognition - Audio Data}
+\subsubsection{Speech Recognition} One of the most exciting developments with sequence-to-sequence models has been the rise of very accurate speech recognition systems. The speech recognition problem is that you're given an audio clip $x$ and you're asked to produce a transcript $y$. What a microphone really does is measure miniscule changes in air pressure; an audio clip plots air pressure against time.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.35]{fig/audio_waveform}
+\end{figure}
+
+Realize that the human ear does not process raw waveforms, but instead has physical structures that measures the amount of intensity of different frequencies. A common pre-processing step for audio data is to run your raw audio clip and generate a \emph{spectrogram}: a plot where the horizontal axis is time, the vertical axis is frequencies, and the colors at a grid location show the amount of energy. I.e. how loud is the sound at different frequences and at different times. Once upon a time, speech recognition systems were built using phonemes and these were hand-engineered basic units of sounds. So, for example, ``the quick brown'' can be represented using phonemes, something like ``de kwik brawn''. But with end-to-end deep learning, we're realizing t hat phoneme representations are no longer necessary: instead we can build systems that input an audio clip and directly output a transcript without needing to use hand-engineered representations like these mentioned above. Critically, this was made possible by moving toward much larger datasets; 3,000 hours of transcribed audio might be considered reasonable for a research application, but today the best commercial systems are trained on sometimes over 100k hours of audio.
+
+In the last video, we discussed the attention model. This can be applied here as well. One method that works well is \href{https://www.cs.toronto.edu/~graves/icml_2006.pdf}{Connectionist Temporal Classification}. Suppose the audio clip is of someone saying ``the quick brown fox''. We're going to use an RNN where $T_x = T_y$; we can use a bi-directional RNN with GRU's or LSTM's and we can make our BRNN deep in practice, but for simplicity sake we will just draw out a uni-directional RNN and abstract away details. What's unique about audio recognition problems is that the number of input time steps is much bigger than the number of output time steps. E.g. if you have 10 seconds of audio and your features come in at 100 hertz i.e. 100 samples per second, we end up with 1k inputs. But your output may not have 1k characters in the vocabulary. The CTC cost function allows the RNN to generate an output like follows
+\begin{verbatim}
+ttt_h_eee___ ___qqq
+\end{verbatim}
+where the \texttt{\_} represents a special blank character and the previous snippet would be considered a correct output for our example input. Note that we have a space separating ``the'' from the ``q'', and this is a separate character from the special blank character \texttt{\_}. The basic rule for the CTC cost function is to collapse repeated characters not separated by ``blank''. The above output gets collapsed to ``the q''. This allows the neural network to have thousands of outputs by repeating characters multiple times, inserting a bunch of blank characters, and we still end up with a much shorter output text transcript.
+
+\subsubsection{Trigger word detection} There are many devices that can be ``woken up'' with your voice, and this is known as a trigger word detection system; let's see how we can build one. We start by taking an input audio clip, pre-processing to produce spectrogram features, and then pass these through an RNN. It remains to define the target labels $y$. If at a particular point in the audio clip an individual has just finished stating the trigger word, we can label everything before that point in the clip a zero and a one right after that. This type of labeling scheme \emph{could} work. A slight disadvantage is that it creates a very imbalanced training set: there are a lot more zeros than ones. One thing you could do is instead of setting a single timestamp equal to one when a wake word is mentioned is to set multiple timestamps equal to one before reverting back to zero. This can slightly even out the ratio of ones to zeros, but this is more or less a hack.
+
+\section{Summary} Deep learning is like a superpower. We can make a computer see, have a computer synthesize a novel or music. We can have a computer translate from one language to another. We can make even look at a radiology image and render a medical diagnosis. The word today has challenges, but with AI we can potentially make the world a much better place.
 
 \end{document}
-
-
-
-
-
-
-
-
-
-
