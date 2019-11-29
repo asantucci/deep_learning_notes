@@ -5989,7 +5989,68 @@ Note that in figure \ref{fig: machinetranslationattentionmodel2}, at this point 
 
 The key is that the RNN marches forward one step at a time until we eventually generate an EOS token. At each step when we're trying to generate the $t$-th word in the output sequence, we have a set of attention weights that tell us how much weight to place on the $t'$-th words in the input sequence; perhaps this informs us to only look within a local window within the input sequence in order to determine the correct output translation word.
 
-\subsubsection{Attention Model} The attention model allows a neural network to pay attention to only part of an input sequence when generating a single word in the output translation. Let's now focus on the implementation details. Let's assume we're using a BRNN, with either GRU's or LSTM's as building blocks, for our encoder network; this is our means for computing features for word in the input sequence. Note that since we have a bi-directionall RNN, we have a set of forward \emph{and} backward activations for each word in the input sequence. For simplicity of notation, in this section only let us denote by $a^{\langle t \rangle} = \left( \overrightarrow a^{\langle t \rangle}, \overleftarrow a^{\langle t \rangle} \right)$ i.e. we will consider both forward and backward activations as part of our features for the $t$th word in the input sequence.
+\subsubsection{Attention Model} The attention model allows a neural network to pay attention to only part of an input sequence when generating a single word in the output translation. Let's now focus on the implementation details. Let's assume we're using a BRNN, with either GRU's or LSTM's as building blocks, for our encoder network; this is our means for computing features for word in the input sequence. Note that since we have a bi-directionall RNN, we have a set of forward \emph{and} backward activations for each word in the input sequence. For simplicity of notation, in this section only let us denote by $a^{\langle t' \rangle} = \left( \overrightarrow a^{\langle t' \rangle}, \overleftarrow a^{\langle t' \rangle} \right)$ i.e. we will consider both forward and backward activations and concatenate them into our features for the $t$th word in the input sequence. So, $a^{\langle t' \rangle}$ will denote the feature vector at time step $t'$. Here, our convention is that we use a prime suffix (e.g. $t'$ instead of $t$) to index into our input sequence.
+
+\paragraph{Calculating a context vector}
+Critically, our decoder network will be a single-directional RNN using hidden state $s$ to generate the translation. We will feed in $s^{\langle 0 \rangle}$ along with a context vector $c$, generated using attention parameters $\alpha_{1j}$ for $j \in \{1, \ldots, T_x\}$. The way we define context is by a weighted sum where the weights are given by the attention weights. Note that we require attention weights are non-negative and sum to one.
+\begin{align*}
+  \alpha^{\langle t, t' \rangle} \in [0,1] \hspace{5pt} \forall t, t' \hspace{35pt} \sum_{t'} \alpha^{\langle 1, t'\rangle} = 1 \hspace{25pt} \leadsto \hspace{25pt}
+  c^{i} = \sum_{t'} \alpha^{\langle i, t' \rangle} a^{\langle t \rangle}
+\end{align*}
+where again $\alpha^{\langle t, t' \rangle}$ is the amount of attention that $y^{\langle t \rangle}$ should pay attention to $a^{\langle t' \rangle}$.
+
+\paragraph{Choosing attention weights} Let's start with the formula.
+\[
+  a^{\langle t, t' \rangle} = \frac{\exp\left(e^{\langle t, t' \rangle}\right)}{\sum_{t'=1}^{T_x} \exp\left(e^{\langle t, t' \rangle}\right)}
+\]
+i.e. for each fixed value of $t$, if we sum over $t'$ we get unit value as output.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \node (a0) at (1.5,0) {$a^{\langle 0 \rangle}$};
+    \foreach \x in {1,...,4} {
+      \node[draw,rectangle,scale=1.5] (af\x) at (3*\x-0.65,0) {};
+      \node[draw,rectangle,scale=1.5] (ab\x) at (3*\x+0.65,0) {};
+      \node (y\x) at (3*\x,  1) {}; %{$\hat y^{\langle \x \rangle}$};
+      \draw[->] (x\x) -- (af\x);
+      \draw[->] (x\x) -- (ab\x);
+      \draw[->] (af\x) -- (y\x);
+      \draw[->] (ab\x) -- (y\x);
+    }
+    \draw[->] (a0) -- (af1);
+    \node (dots) at (3*2.5, 0) {$\ldots$};
+    \node (x1) at (3*1, -1) {$x^{\langle 1 \rangle}$};
+    \node (x2) at (3*2, -1) {$x^{\langle 2 \rangle}$};
+    \node (xtxm1) at (3*3, -1) {$x^{\langle T_x - 1 \rangle}$};
+    \node (xtx) at (3*4, -1) {$x^{\langle T_x \rangle}$};
+    \node (oplus) at (3*2.5, 2.5) {$\oplus$};
+    \draw[->] (y1) -- (oplus);
+    \draw[->] (y2) -- (oplus);
+    \draw[->] (y3) -- (oplus);
+    \draw[->] (y4) -- (oplus);
+    \node[above=1cm of oplus, draw, square] (st) {$s^{\langle t \rangle}$};
+    \node[left =1cm of st,    draw, square] (stm1) {$s^{\langle t - 1         \rangle}$};
+    \draw[->] (stm1) -- (st);
+    \node[above=1cm of stm1] (ytm1) {$\hat y^{\langle t - 1 \rangle}$};
+    \draw[->] (stm1) -- (ytm1);
+    \node[above=1cm of st] (yt) {$\hat y^{\langle t \rangle}$};
+    \draw[->] (oplus) -- (st);
+    \draw[->] (st) -- (yt);
+    \draw[->,purple!50] plot [smooth] coordinates { (6.25, 6) (6.5, 6) (6.5, 3.5) (7, 4)};    
+    \path[->,orange!50] (af1) edge[bend left] (af2);    
+    % \path[->,orange!50] (af2) edge[bend left] (af3);    
+    \path[->,orange!50] (af3) edge[bend left] (af4);
+    \path[->,purple!50] (ab4) edge[bend left] (ab3);
+    % \path[->,purple!50] (ab3) edge[bend left] (ab2);
+    \path[->,purple!50] (ab2) edge[bend left] (ab1);
+  \end{tikzpicture}
+  \caption{\footnotesize Where to calculate $e^{\langle \cdot, \cdot \rangle}$, we can actually use a small neural network as follows, recalling that $s^{\langle t-1 \rangle}$ is the hidden state from time-step $t-1$. It seems reasonable that $\alpha^{\langle t, t'\rangle}$ should depend on the previous hidden state of our output sequence as well as the activation features from our input sequence. Note that we haven't yet calculated the context vector yet since this depends on the weights $\alpha^{\langle \cdot, \cdot \rangle}$. Although we have an intuition as to what $\alpha^{\langle t, t'\rangle}$ should depend on, we don't know \emph{how} it depends on these parameters, so why not let a small neural network figure it out for us.}
+\end{figure}
+
+\paragraph{Computational Complexity} One downside of this algorithm is that its runtime is quadratic: if you have $T_x$ words in the input and $T_y$ words in the output, then the total number of attention parameters we need to set are $T_x \times T_y$. It's worth noting that in machine translation, each sentence isn't necessarily too long, and so perhaps quadratic complexity is acceptable.
+
+\paragraph{\href{https://arxiv.org/abs/1502.03044}{Image Captioning}} The task is to look at a picture and generate a caption describing it. It turns out we can also use the attention here: simply look at the picture and only pay attention to parts of the picture at a time when generating a caption. 
 
 \end{document}
 
