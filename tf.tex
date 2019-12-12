@@ -1,0 +1,135 @@
+\documentclass[12pt]{article}  
+
+\usepackage[boxruled,lined]{algorithm2e}
+%% \usepackage{booktabs}
+\usepackage{amsmath} 
+\usepackage{amsthm} 
+\usepackage{amsfonts} 
+\usepackage{enumitem}
+\usepackage[T1]{fontenc}
+\usepackage{xparse} 
+\usepackage{bm}
+\usepackage{bbm} 
+\usepackage{color,soul} 
+\usepackage{framed}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{multicol}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usepackage[normalem]{ulem}
+\usepackage{pgfplots}  
+\usepackage{pifont}
+\usetikzlibrary{positioning}
+\usetikzlibrary{calc}
+\usetikzlibrary{fit}
+\usetikzlibrary{shapes}
+\usetikzlibrary{patterns}
+\usetikzlibrary{decorations.pathreplacing}
+\newcommand\STAR{{\tikz{\node[draw,star,star point height=.7em,minimum size=1em,scale=0.35]{};} }}
+\newcommand{\Plus}{\mathord{\begin{tikzpicture}[baseline=0ex, line width=1, scale=0.13]
+\draw (1,0) -- (1,2); \draw (0,1) -- (2,1); \end{tikzpicture}}}
+
+\lstdefinelanguage{JavaScript}{
+  keywords={break, case, catch, continue, debugger, default, delete, do, else, finally, for, function, if, in, instanceof, new, return, switch, this, throw, try, typeof, var, void, while, with},
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+  sensitive=true
+}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\D}{\mathrm{d}}
+\SetKwInput{KwInput}{Input}
+\SetKwInput{KwOutput}{Output}
+
+\begin{document}
+\renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
+
+\tableofcontents
+\newpage
+\section{Browser Based Models with TensorFlow.js}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}
+\subsection{Training and Inference using Tensorflow.js in JavaScript} We typically think of training a neural network using GPU's or a large data center, but modern web browsers have come a long way: they contain fully fleshed out runtime environments. One of the exciting aspects of Tensorflow.js is that it allows us to train neural networks and perform inference directly from a browser. We'll see how, for example, a user can upload a picture or grab a snapshot from a webcam and then train a neural network and/or perform inference right in the browser, without ever needing to send that image up to the cloud to be processed by a server. This saves time as we cut down on communication costs,
+allows us to run our models offline, and preserves user privacy.
+
+\subsubsection{Getting Your System Ready} We're going to learn how to run all the examples and exercises for this course locally on a single machine. We'll use \href{https://www.google.com/chrome/}{Chrome} for a browser, \href{http://brackets.io/}{Brackets} for an HTML editor, and the \href{https://chrome.google.com/webstore/detail/web-server-for-chrome/ofhbbkphhbklhfoeikjpcbhemlocgigb?hl=en}{Web Server for Chrome App} as our web server. We will also use \href{https://github.com/lmoroney/dlaicourse}{github.com/lmoroney/dlaicourse} as a repository to store homework assignments.
+
+\subsubsection{Visualizing API}
+\begin{itemize}
+\item At the highest level, we have the \emph{Keras Model} layers API which   we've learned how to use in the deep learning specialization.
+\item Beneath this sits the \emph{Core API}, which is backed by a TensorFlow saved model. Using this Core API, we can interact with either a browser or node.js.
+\begin{itemize}
+\item A browser sits ontop of \href{https://en.wikipedia.org/wiki/WebGL}{webgl},   a JavaScript API for rendering graphics.
+\item \emph{Node.js} can rely on a TensorFlow CPU, GPU, or TPU.
+\end{itemize}
+\end{itemize}
+
+\subsubsection{Building a First Model} Let's start by creating the simplest possible web-page.
+\begin{verbatim}
+<html>
+<head></head>
+<body>
+  <hl>First HTML Page</hl>
+</body>
+</html>
+\end{verbatim}
+
+We'll next need to add a \emph{script tag} below the head and above the body to load the TensorFlow.js file.
+
+\begin{verbatim}
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+\end{verbatim}
+
+We're going to build a model that learns the relationship between two numbers $x,y$ where their ground truth relationship is $y = 2x - 1$. We will do this in a \emph{separate script block}, that needs to be placed above the \texttt{body} tag in your HTML page.
+
+\begin{verbatim}
+<script lang="js">
+    const model = tf.sequential();
+    model.add(tf.layers.dense({units: 1, inputShape: [1]}));
+    model.compile({loss:'meanSquaredError',
+                   optimizer:'sgd'});
+    model.summary();
+</script>
+\end{verbatim}
+
+The first line defines a \emph{sequential} model. The second line adds a single hidden layer, itself containing a single hidden neuron. We then compile the model using mean-squared-error as our loss function, which will work well to model a linear relationship $y=2x-1$, and we choose stochastic gradient descent as our method of optimization. Note that in the model summary, we'll be told there are two parameters in the model, since we are learning both a weight \emph{and} a bias term. Before closing the script tag, let's insert some data that will be used to train the neural network.
+
+\begin{verbatim}
+const xs = tf.tensor2d([-1.0, 0.0, 1.0, 2.0, 3.0, 4.0], [6, 1]);
+const ys = tf.tensor2d([-3.0, -1.0, 2.0, 3.0, 5.0, 7.0], [6, 1]);
+\end{verbatim}
+Notice that we're defining this as a \texttt{tensor2d}, since we don't have something like \texttt{numpy} from Python. As its name suggests, we must specify the extents of the two dimensions via the second argument.
+
+\subsubsection{Training the Model} Training should by \emph{asynchronous}, because it takes an indeterminate amount of time to complete. Our next piece of code will call an asynchronous function called \texttt{doTraining}, which, when it completes execution will do something. Because training can take an indeterminate amount of time, we don't want to block the browser while this is taking place, so instead we specify it as an asynchronous function that calls us back when it's done.
+\begin{verbatim}
+doTraining(model).then(() => {
+    alert(model.predict(tf.tensor2d([10], [1,1])));
+});
+\end{verbatim}
+We call the function by passing it a model we just created above; when it calls back, the model is trained and at that point we can call \texttt{model.predict()}. In this example, we're predicted $\hat y$ for an input of $x = 10$. Note that we still must use a \texttt{tensor2d}, which in this case is just a scalar i.e. a tensor of dimension $1 \times 1$. To actually define an asynchronous training function, we can do so as follows:
+
+\begin{lstlisting}[language=JavaScript]
+  async function doTraining(model){
+      const history =
+            await model.fit(xs, ys,
+                  { epochs: 500,
+                    callbacks:{
+                        onEpochEnd: asynch(epoch, logs) =>{
+                            console.log("Epoch:" + epoch + " Loss:" + logs.loss);
+                        }
+                    }
+                  });
+}
+\end{lstlisting}
+
+\end{document}
