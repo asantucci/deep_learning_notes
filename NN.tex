@@ -163,7 +163,7 @@ A Neural Network can be constructed by stacking together sigmoids, depicted as f
   \draw[->] (b1) to (z1);
   \node[draw=black,rectangle] (a1) at (8.5, -1.5) {$a^{[1]} = \sigma (z^{[1]})$};
   \draw[->] (z1) to (a1);
-  \node[draw=black,rectangle] (z2) at (12.25, -1.5) {$z^{[2]} = W^{[2]}x + a^{[1]} + b^{[2]}$};
+  \node[draw=black,rectangle] (z2) at (12.25, -1.5) {$z^{[2]} = W^{[2]}a^{[1]} + b^{[2]}$};
   \draw[->] (a1) to (z2);
   \node (w2) at (9.2, -2.25) {$W^{[2]}$};
   \node (b2) at (9.2, -2.75) {$b^{[2]}$};
@@ -4881,7 +4881,7 @@ and note that the terms on the right hand side of the equation above are exactly
 
 We remark that it's also possible to construct a \emph{character-level} language model. That is, our vocabulary could consist of the unique characters appearing in our training dataset, something like
 \[
-\texttt{Vocabulary } = \begin{bmatrix} \textrm{a} & \ldots & \textrm{z} & \textrm{\_} & \textrm{.} & \textrm{,} & \textrm{;} & 0 & \ldots & 9 & \textrm{A} & \ldots & \textrm{Z} \end{bmatrix}
+\texttt{Vocabulary } = \begin{bmatrix} \textrm{a} & \ldots & \textrm{z} & \textrm{\_} & \textrm{.} & \textrm{,} & \textrm{;} & 0 & \ldots & 9 \\ \textrm{A} & \ldots & \textrm{Z} \end{bmatrix}
 \]
 And then we could model the probability of sequences of characters instead of words. A \emph{benefit} of a character level language model is that we don't have to deal with unknown tokens, and we can assign every sequence of characters (every word) a non-zero probability of appearing elsewhere in a sequence of characters (or words); e.g. even if the type of cat ``mau'' is not frequently enough to appear in our word-vocabulary, a character-level language model could still assign this sequence of characters a probability of appearing somewhere within a sentence. The main \emph{disadvantage} is that we end up with much longer sequences; a consequence of this is that because any particular model has a finite memory, capturing long-range dependencies between earlier parts of an input sequence and much later parts of the same (very long) input sequence can be difficult.
 
