@@ -269,9 +269,9 @@ We'd like to avoid applying a \texttt{for} loop over each of our $m$ training ex
 \begin{algorithm}[h]
   \caption{Naive Forward Propagation on a 2-layer Neural Network}   \For{i = 1 to m}{
     $z^{[1](i)} = W^{[1]}x^{(i)} + b^{[1]}$ \\
-    $a^{[1](i)} = \sigma(z^{[1]}(i))$ \\
+    $a^{[1](i)} = \sigma(z^{[1](i)})$ \\
     $z^{[2](i)} = W^{[2]}a^{[1](i)} + b^{[2]}$ \\
-    $a^{[2](i)} = \sigma(z^{[2]}(i))$
+    $a^{[2](i)} = \sigma(z^{[2](i)})$
   } \end{algorithm}
 }
 \newline
@@ -550,7 +550,7 @@ Applied deep learning is a very empirical process, which means that there is a l
 \paragraph{Train, Development, and Test Data}
 Historically, it was considered best practice to split data into training and test sets of size 70\% and 30\% respectively. This maybe makes sense when we have (up to) a million records. But with bigger data sets, we don't necessarily also need larger test sets in order to validate our algorithm; it may suffice to sample 10k records and use them as hold-out or test sets. If we believe in this example that 10k records is enough to deliver an unbiased estimate of which \emph{algorithm} is better (on the development/CV/hold-out set) and what the test error is (on the test set), then our split becomes more like 98\%, 1\%, 1\%. Lastly, we remark that it may be OK to not have a test set so long as we don't need an unbiased estimator of performance.
 \vspace{-.5ex}
-\paragraph{Bias - Variance} In Deep Learning, we still talk about bias and variance, but we don't emphasize as much that there is a tradeoff between these two quantities. Andrew considers \emph{bias} to be determined by the training set error relative to how well a human can perform the same task (i.e. Bayes error), and the \emph{variance} to be determined by the relation to the training set error. 
+\paragraph{Bias - Variance} In Deep Learning, we still talk about bias and variance, but we don't emphasize as much that there is a tradeoff between these two quantities. Andrew considers \emph{bias} to be determined by the training set error relative to how well a human can perform the same task (i.e. \href{https://en.wikipedia.org/wiki/Bayes_error_rate}{Bayes error}), and the \emph{variance} to be determined by the relation to the training set error. 
 E.g. if \{\texttt{train, test}\} error is \{0.01, 0.11\} on a problem where humans can achieve perfect accuracy, we might say the algorithm has low bias but high variance. If we observe \{0.15, 0.16\}, we might say the algorithm has high bias. If we observe \{0.15, 0.30\}, we have a case of both high bias and high variance. Lastly, \{0.005, 0.01\} corresponds to both low bias and low variance.
 
 \paragraph{Basic Recipe for Machine Learning}
@@ -573,7 +573,7 @@ In all the above, $\lambda$ is the regularization hyper-parameter which is set u
 \[
 J\left(W^{[1]}, b^{[1]}, \ldots, W^{[L]}, b^{[L]}\right) = \frac{1}{m} \sum_{i=1}^{m} \mathcal L(\hat {y^{(i)}}, y^{(i)}) + \frac{\lambda}{2m} \sum_{\ell=1}^{L} \|W^{[\ell]}\|_F^2
 \]
-where we're using Frobenius norm $\|W^{[\ell]}\|_F^2 = \sum_{i=1}^{n^{[\ell-1]}} \sum_{j=1}^{n^{[\ell]}} (W_{ij}^{[\ell]})^2$, recalling that $W \in \mathbb R^{n^{[\ell]} \times n^{[\ell - 1]}}$. We need to make note that we have a new rule for back-propagation:
+where we're using Frobenius norm $\|W^{[\ell]}\|_F^2 = \sum_{i=1}^{n^{[\ell]}} \sum_{j=1}^{n^{[\ell-1]}} (W_{ij}^{[\ell]})^2$, recalling that $W \in \mathbb R^{n^{[\ell]} \times n^{[\ell - 1]}}$, and that $\frac{\partial}{\partial X} \|X\|_{\textrm{F}}^2 = \frac{\partial}{\partial X} \textrm{Tr}(XX^T) = 2X$. We need to make note that we have a new rule for back-propagation:
 \[
 \d W^{[\ell]} = \left(\texttt{from backprop}\right) + \frac{\lambda}{m} W^{[\ell]}.
 \]
@@ -598,7 +598,7 @@ a3 = np.multiply(a3, d3)
 a3 /= keep_prob  # <-- Inverted dropout technique.
 \end{verbatim}
 The last step is what gives the technique its name, and is 
-simply done in order to keep, in expectation, $z^{[4]} = W^{[4]} a^{[3]} + b^{[b]}$ the same. Note that this Boolean array \texttt{d3} is also used in back-propagation. 
+simply done in order to keep, in expectation, $z^{[4]} = W^{[4]} a^{[3]} + b^{[4]}$ the same. Note that this Boolean array \texttt{d3} is also used in back-propagation. 
 Now, if we are to make predictions given a new $X = a^{[0]}$, \emph{we don't need to   apply drop-out at test time.}
 
 \paragraph{Why does dropout work?} One intuition is that in applying dropout, we prevent our network from relying on any one particular feature too much and instead spread out the weights. We can think about this from the perspective of a single neuron in a network: since the neurons in the previous layer can be randomly eliminated, the neuron in the subsequent layer must learn not to place too much weight on any one feature and instead learn a small amount of information from each. This spread of weights has the effect of shrinking the squared norm of the weights matrix; in fact, dropout can be formally shown tobe an adaptive form of $\ell_2$ regularization.
@@ -615,21 +615,34 @@ One downside to dropout is that our cost function $J$ is no longer well defined,
 \paragraph{Data augmentation} E.g. in computer vision we can flip, rotate, and zoom into images to increase the size of our training set. By applying random distortions, we can fake additional training example. Of course, an independent training example provides more information than a synthesized example. In recognizing hand-written text, we could also apply small rotations and random perturbations to the ``thickness'' of the lines drawn. 
 
 \paragraph{Early Stopping}
-Another technique of regularization is \emph{early stopping}, whereby optimize for training error loss but also evaluate our cross-validation dataset error each iteration, and stop training when development set error starts increasing. Why does this method work? In practice, we initialize $W$ to small random numbers, and as we train more iterations of gradient descent we learn larger weights; by stopping early, we are in turn applying a shrinkage effect and encouraging a smaller Frobenius norm on $W$. Andrew likes to keep the task of Optimizing Cost Function $J(W,b)$ separate from the task of Not Overfitting, since each has its own set of workarounds; see orthogonalization.
+Another technique of regularization is \emph{early stopping}, whereby we optimize for training error loss but also evaluate our cross-validation dataset error each iteration, and stop training when development set error starts increasing. Why does this method work? In practice, we initialize $W$ to small random numbers, and as we train more iterations of gradient descent we learn larger weights; by stopping early, we are in turn applying a shrinkage effect and encouraging a smaller Frobenius norm on $W$. Andrew likes to keep the task of Optimizing Cost Function $J(W,b)$ separate from the task of Not Overfitting, since each has its own set of workarounds; see orthogonalization.
 
 \section{Setting Up Your Optimization Problem}
 \subsection{Normalizing input data}
 Suppose we have a two dimensional data-set as follows; we plot out $(x_1, x_2)$ pairs.
 
-\begin{tikzpicture}[     declare function={a(\x)=0.75;},     declare function={b(\x)=0.25;} ] \begin{axis}[     domain=1:5,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[     declare function={a(\x)=0.75;},     declare function={b(\x)=0.25;} ] \begin{axis}[     domain=1:5,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+\caption{\footnotesize Raw data $(x_1, x_2)$ pairs.}
+\end{figure}
 
-We standardize our data by first subtracting out the mean: $\mu = \frac{1}{m} \sum_{i=1}^{m} x^{(i)}$, $x -= \mu$.
+We begin to standardize our data by first subtracting out the mean: $\mu = \frac{1}{m} \sum_{i=1}^{m} x^{(i)}$, $x -= \mu$.
 
-\begin{tikzpicture}[     declare function={a(\x)=0.25;},     declare function={b(\x)=-0.25;} ] \begin{axis}[     domain=-2:2,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[     declare function={a(\x)=0.25;},     declare function={b(\x)=-0.25;} ] \begin{axis}[     domain=-2:2,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+\caption{\footnotesize Data after the mean has been subtracted out from each dimension.}
+\end{figure}
 
 We then divide through by the variance, $\sigma^2 = \frac{1}{m} \sum_{i=1}^{m} x^{(i)}**2$ where we remark that the $**$ denotes element-wise multiplication and further that typically $\textrm{Var}(Z) = \mathbb E [Z^2] - \mathbb E [Z]^2$, but we've already de-meaned our random vector.
 $x /= \sigma^2$.
-\begin{tikzpicture}[scale=0.5,     declare function={a(\x)=0.25;},     declare function={b(\x)=-0.25;} ] \begin{axis}[     domain=-.5:.5,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[scale=0.5,     declare function={a(\x)=0.25;},     declare function={b(\x)=-0.25;} ] \begin{axis}[     domain=-.5:.5,     axis lines=middle,     axis equal image,     xtick=\empty, ytick=\empty,     enlargelimits=true,     clip mode=individual, clip=false ] \addplot [red, only marks, mark=*, samples=100, mark size=0.75]     {0.5*(a(x)+b(x)) +   0.5*rand*(a(x)-b(x))}; \end{axis} \end{tikzpicture}
+\caption{\footnotesize Data after rescaling by the variance.}
+\end{figure}
 
 We remark that the same $\mu$ and $\sigma^2$ should be used to normalize the development and test data-sets.
 
