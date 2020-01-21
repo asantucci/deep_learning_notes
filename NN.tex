@@ -761,7 +761,8 @@ The next step is to take $\d W^{[1]}, \d b^{[1]}, \ldots, \d W^{[L]}, \d b^{[L]}
 
 \begin{algorithm}
   \caption{\texttt{Grad-check}}   \For{each $i$} {
-    $\d \theta_{\texttt{approx}}^{[i]} = \frac{J(\theta_1, \theta_2, \ldots, \theta_i + \epsilon, \ldots) - J(\theta_1, \theta_2, \ldots, \theta_i - \epsilon, \ldots)}{2\epsilon}$
+    \tcp{\footnotesize Requires two calls to feed-forward network to evaluate loss with perturbed inputs.}
+$\d \theta_{\texttt{approx}}^{[i]} = \frac{J(\theta_1, \theta_2, \ldots, \theta_i + \epsilon, \ldots) - J(\theta_1, \theta_2, \ldots, \theta_i - \epsilon, \ldots)}{2\epsilon}$ 
   } \end{algorithm}
 We now end up with two vectors, each the same length, $\d \theta_{\texttt{approx}}^{[i]}$ and $\d \theta$. We can now compare them using Euclidean norms,
 \begin{equation}
@@ -769,7 +770,7 @@ We now end up with two vectors, each the same length, $\d \theta_{\texttt{approx
 \frac{\| \d \theta_{\texttt{approx}} - \d \theta\|_2}{\|\d \theta_{\texttt{approx}}\|_2 + \| \d \theta \|_2}
 \end{equation}
 
-Now, suppose we implement gradient checking with $\epsilon = 10^{-7}$. If \ref{eq: normed-diff} is $O(10^{-7})$ or smaller, then great! We've implemented back propagation correctly. If \ref{eq: normed-diff} outputs something $O(10^{-5})$, it would be prudent to check the components (elements) of $\d \theta_{\texttt{approx}} - \d \theta\|_2$ and see if any one of them is particularly large, if so we might want to double check our implementation for that layer. If, however, \ref{eq: normed-diff} outputs something $O(10^{-3})$, it's indicative of a bug in our implementation. Again, the method is to inspect the components of \ref{eq: normed-diff} to locate the source of our bug.
+Now, suppose we implement gradient checking with $\epsilon = 10^{-7}$. If \ref{eq: normed-diff} is $O(10^{-7})$ or smaller, then great! We've implemented back propagation correctly. If \ref{eq: normed-diff} outputs something $O(10^{-5})$, it would be prudent to check the components (elements) of $\|\d \theta_{\texttt{approx}} - \d \theta\|_2$ and see if any one of them is particularly large, if so we might want to double check our implementation for that layer. If, however, \ref{eq: normed-diff} outputs something $O(10^{-3})$, it's indicative of a bug in our implementation. Again, the method is to inspect the components of \ref{eq: normed-diff} to locate the source of our bug.
 
 \paragraph{Implementation Notes for Gradient Checking}
 \begin{itemize}   \item Don't use in training -- only to debug. I.e. computing $\d \theta_{\texttt{approx}}^{[i]}$ for each $i$ is expensive. Once we've verified that \ref{eq: normed-diff} outputs something sufficiently small, we should turn \emph{off} \texttt{grad-check}.
@@ -787,7 +788,7 @@ We've previously seen that matrix-multiplies allow us to efficiently compute a g
 \end{equation}
 
 But in deep learning we often work with large data; 
-what if $m$ really large, e.g. 50M? This means that we have to churn through a lot of compute before taking a very small step in gradient descent. It turns out that we can often allow our algorithm to learn faster if we allow for gradient descent to start taking palce before we're done processing all $m$ training examples.
+what if $m$ really large, e.g. 50M? This means that we have to churn through a lot of compute before taking a very small step in gradient descent. It turns out that we can often allow our algorithm to learn faster if we allow for gradient descent to start taking place before we're done processing all $m$ training examples.
 
 We partition our data into mini-batches, 
 each of approximately equal size. Let us use a superscript curly-brace to denote the mini-batch number. E.g. if we choose a mini-batch size of 1e3 training examples, 
@@ -804,12 +805,13 @@ The number of mini-batches is of course given by $m/\texttt{mini-batch size}$. M
     $Z^{[1]} = W^{[1]} X^{\{t\}} + b^{[1]}$ \\
     $A^{[1]} = g^{[1]}(Z^{[1]})$ \\
     $\vdots$ \\
-    $A^{[L]} = g^{[L]}(Z^{[L]})$
+    $A^{[L]} = g^{[L]}(Z^{[L]})$ \\
     $J^{\{t\}} \gets \frac{1}{\texttt{mini-batch size}} \sum_{i=1}^{\texttt{mini-batch size}} \mathcal L(\hat y^{(i)}, y^{(i)}) + \frac{\lambda}{2 \cdot \texttt{mini-batch size}} \sum_{\ell = 1}^{L} \|W^{[\ell]}\|_F^2$ \\
     \tcp{Backpropagation to compute gradients w.r.t. $J^{\{t\}}$ (using $X^{\{t\}}, Y^{\{t\}}$).}
-    $W^{[\ell]} := W^{[\ell]} - \alpha \d W^{[\ell]}$
+    $W^{[\ell]} := W^{[\ell]} - \alpha \d W^{[\ell]}$ \\
     $b^{[\ell]} := b^{[\ell]} - \alpha \d b^{[\ell]}$
-  } \end{algorithm}
+  }
+\end{algorithm}
 
 With larger data sets, mini-batch gradient descent is likely to converge much faster.
 
