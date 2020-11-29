@@ -351,5 +351,111 @@ We might first initialize our parameters $\theta$, then update our parameters in
 \end{center}
 \end{figure}
 
+\paragraph{Analyzing whether a model generalizes well}
+To analyze model fit, we need the following: $(X_{\textrm{val}}, Y_{\textrm{val}}, \theta)$, where we have \emph{validation} data that was set aside during training, and a learned $\theta$ parameter vector. We will compute, for each example in $X_{\textrm{val}}$, the value of $h(\theta, x^{(i)})$ and compare it with our threshold value to make a prediction. In particular, our simple prediction function is given by
+\[
+  \hat Y_{\textrm{val}} = h(X_{\textrm{val}}, \theta) \geq \frac{1}{2}.
+\]
+
+In particular, we will have a vector $h = \begin{bmatrix} h_1 & h_2 & \ldots & h_m \end{bmatrix}$ where e.g. $h_i$ could equal some float in $[0,1]$, which we then convert into a binary label vector by applying our threshold. After building our predictions vector $\hat Y_{\textrm{val}}$, we can compare the predictions with the actual values and evaluate our test-set \emph{accuracy}:
+
+\begin{equation*}
+\texttt{Accuracy} = \sum_{i=1}^m \frac{\left(\texttt{pred}^{(i)} == \hat Y_{\textrm{val}}^{(i)}\right)}{m}.
+\end{equation*}
+
+This metric gives an estimate of the number of times of logistic regression model will work correctly on unseen data.
+
+\paragraph{Logistic regression: cost function} Let's examine the equation for the cost function for logistic regression:
+
+\begin{equation}
+  \label{eq: crossentropyloss}
+  J(\theta) = -\frac{1}{m} \sum_{i=1}^{m} \left[ y^{(i)} \log h(x^{(i)}, \theta) + (1 - y^{(i)}) \log \left(1 - h(x^{(i)}, \theta)\right)\right].
+\end{equation}
+
+The deep learning notes derive this equation in detail in the introduction. Let us briefly recap.
+\[
+  \Pr(y | x^{(i)}, \theta) = h(x^{(i)}, \theta)y^{(i)}\left(1 - h(x^{(i)}, \theta)\right)^{(1-y^{(i)})}.
+\]
+
+We wish to maximize our function $h(\cdot, \theta)$ over the parameter space $\theta$: when $y=0$ we want $(1 - h(x^{(i)}, \theta))$ to be zero, and therefore $h(x^{(i)}, \theta)$ close to one. When $y=1$, we want $h(x^{(i)},\theta) = 1$. To model our entire dataset and not just one observation, we make an assumption of independence to arrive at a joint likelihood:
+\[
+  L(\theta) = \prod_{i=1}^m h(x^{(i)}, \theta)^{y^{(i)}} \left(1 - h(x^{(i)}, \theta)\right)^{(1 - y^{(i)})}.
+\]
+
+Realize that if we ``mess up'' one prediction, we have the potential to ``mess up'' the entire cost function, which is what we want: we want a model that captures the entire dataset, where all datapoints are related. One issue: what happens when $m$ grows? Then $L(\theta) \leadsto 0$, because the expressions
+$h(x^{(i)}, \theta)$ and correspondingly $(1 - h(x^{(i)}, \theta)$ are bounded between $(0,1)$. Using properties of logarithms (that they are monotone and maximizing a function under a monotone transformation doesn't change the optimum, and that they turn multiplication into addition), i.e.
+\begin{align*}
+  \log(a*b*c) = \log a + \log b + \log c \, \, \, \, \, \textrm{ and } \, \, \, \, \, \log a^b = b \log a.
+\end{align*}
+We may now rewrite our optimization problem:
+\begin{align*}
+  \max_{h(x^{(i)}, \theta)} \log L(\theta) &= \log \prod_{i=1}^{m} h(x^{(i)},                                              \theta)^{y^{(i)}} \left(1 - h(x^{(i)}, \theta)\right)^{1 - y^{(i)}} \\
+  &= \sum_{i=1}^{m} \log h(x^{(i)}, \theta)^{y^{(i)}} \left(1 - h(x^{(i)},     \theta)\right)^{1 - y^{(i)}} \\
+  &= \sum_{i=1}^{m} \log h(x^{(i)}, \theta)^{y^{(i)}}  + \log \left(1 - h(x^{(i)}, \theta)\right)^{1 - y^{(i)}} \\
+  &= \sum_{i=1}^{m} y^{(i)} \log h(x^{(i)}, \theta) + (1 - y^{(i)}) \log \left(1 - h(x^{(i)}, \theta)\right)  
+\end{align*}
+
+We can then rescale by $\frac{1}{m}$ to get \emph{average} cost. Recall we are maximizing over $h(x^{(i)}, \theta)$ in the equation above, and maximizing an equation is the same as minimizing its negative. Therefore,
+\[
+  J(\theta) = -\frac{1}{m} \sum_{i=1}^{m} \left[ y^{(i)} \log h(x^{(i)}, \theta) + (1 - y^{(i)}) \log \left(1 - h(x^{(i)}, \theta)\right)\right]. 
+\]
+
+A vectorized implementation is given by
+\begin{align*}
+  h &= g(X\theta) \\
+  J(\theta) &= \frac{1}{m} \cdot \left(-y^T \log(h) - \left(1 - y \right)^T \log (1 - h)\right)
+\end{align*}
+
+Now, let's just go over some intuition here. Consider the term on the left-hand side of the parenthesized expression: this is the relevant term in your cost function when your label is 1. The term on the right is relevant when the label is zero. In general, this loss function simply says: the closer the prediction is to the observed label, the smaller the loss incurred. We can plot the cost as a function of our the prediction value for a single training example.
+
+\begin{minipage}{1.0\textwidth}
+  \begin{multicols}{2}
+    \begin{tikzpicture}[scale=3]
+      \draw[->] (0, 0) to (0, 1.4) node [left] {$J(\theta)$};
+      \draw[->] (0, 0) to (2.1, 0) node [right]{$h(x^{(i)}, \theta)$}; 
+      \draw[smooth, domain=0.1:2, color=orange, thick]
+      plot (\x,{exp(-\x)}) {};
+      % plot (\x,{-log2(\x/2)}) {};
+      \node at (1, 1) {$\log h(x^{(i)}, \theta)$};
+      \node at (1, 1.5) {$\substack{\textrm{When the label is 1,} \\ \textrm{the larger our prediction} \\ \textrm{(the closer it is to unit value),} \\ \textrm{ the smaller the loss is.}}$};
+    \end{tikzpicture}
+    \vfill\null \columnbreak
+    \begin{tikzpicture}[scale=3]
+      \draw[->] (0, 0) to (0, 1.4) node [left] {$J(\theta)$};
+      \draw[->] (0, 0) to (2.1, 0) node [right]{$h(x^{(i)}, \theta)$}; 
+      \draw[smooth, domain=0.1:1, color=orange, thick]
+      % plot (\x,{\x^2}) {};
+      plot (\x, {exp(\x/2)-1}) {};
+      \node at (2, 1) {$\log \left(1 -  h(x^{(i)}, \theta)\right)$};
+      \node at (2, 1.5) {$\substack{\textrm{When the label is 0,} \\ \textrm{the smaller our prediction} \\ \textrm{(the closer it is to zero),} \\ \textrm{ the smaller the loss is.}}$};    \end{tikzpicture}
+  \end{multicols}
+\end{minipage}
+
+\paragraph{Deriving logistic regression gradient}
+The general form of logistic regression is given by
+\begin{algorithm}
+  \caption{General form of gradient descent}
+  \While{not converged, and for all $j$}{
+    $\theta_j \gets \theta_j - \alpha \frac{\partial}{\partial \theta_j}     J(\theta)$
+  }
+\end{algorithm}
+We can work out the derivative using partial calculus to fill in the expression further:
+\begin{algorithm}
+  \caption{Gradient descent for logistic regression}
+  \While{not converged, and for all $j$}{
+    $\theta_j \gets \theta_j - \frac{\alpha}{m} \sum_{i=1}^m \left(h(x^{(i)}, \theta) - y^{(i)}\right) x_j^{(i)}$
+  }
+\end{algorithm}
+
+A vectorized implementation is given by
+\[
+  \theta := \theta - \frac{\alpha}{m} X^T \left(H(X,\theta) - Y\right).
+\]
+
+\paragraph{Partial derivative of $J(\theta)$} It'll be helpful to first calculate the derivative of the sigmoid function.
+\begin{align*}
+\end{align*}
+
+
 \end{document}
 
