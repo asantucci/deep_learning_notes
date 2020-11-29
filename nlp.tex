@@ -454,8 +454,31 @@ A vectorized implementation is given by
 
 \paragraph{Partial derivative of $J(\theta)$} It'll be helpful to first calculate the derivative of the sigmoid function.
 \begin{align*}
+  h(x)' &= \left( \frac{1}{1 + e^{-x}} \right)' = \frac{-(1 + e^{-x})'}{(1 + e^{-x})^2} = \frac{-1' - (e^{-x})'}{(1 + e^{-x})^2} = \frac{0 -           (-x)'(e^{-x})}{(1 + e^{-x})^2} = \frac{e^{-x}}{(1 + e^{-x})^2} \\
+        &= \left( \frac{1}{1 + e^{-x}} \right) \left( \frac{e^{-x}}{1 + e^{-x}} \right) = h(x) \left( \frac{+1 - 1 + e^{-x}}{1 + e^{-x}} \right) = h(x) \left(\frac{1+e^{-x}}{1+e^{-x}} - \frac{1}{1+e^{-x}}\right) = h(x) (1 - h(x)).
 \end{align*}
 
+The above was all for a computation of the derivative of the sigmoid function. But what about the derivative of $h(x^{(i)}, \theta) = \frac{1}{1 + e^{-\theta^T x^{(i)}}}$ with respect to $\theta_j$? Using the chain rule, because of the inner product $\theta^T x^{(i)}$, and applying toward $\theta_j$, we see that the derivative would be
+\[
+  h(x^{(i)},\theta)\left(1 - h(x^{(i)},\theta)\right) x_j^{(i)}.
+\]
 
+Now, we can compute the partial derivative of our loss function with respect to $\theta_j$:
+
+\begin{align*}\frac{\partial}{\partial \theta_j} J(\theta) &= \frac{\partial}{\partial \theta_j} \frac{-1}{m}\sum_{i=1}^m \left [ y^{(i)} log ( h(x^{(i)}, \theta) ) + (1-y^{(i)}) log (1 -  h(x^{(i)}, \theta)) \right ] \\ &= - \frac{1}{m}\sum_{i=1}^m \left [     y^{(i)} \frac{\partial}{\partial \theta_j} log ( h(x^{(i)}, \theta))   + (1-y^{(i)}) \frac{\partial}{\partial                                                                                  \theta_j} log (1 -  h(x^{(i)}, \theta))\right ] \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [     \frac{y^{(i)} \frac{\partial}{\partial \theta_j}  h(x^{(i)}, \theta)}{ h(x^{(i)}, \theta)}   + \frac{(1-y^{(i)})\frac{\partial}{\partial                                                      \theta_j} (1 -  h(x^{(i)}, \theta))}{1 -  h(x^{(i)}, \theta)}\right ] \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [     \frac{y^{(i)} \frac{\partial}{\partial \theta_j}  h(x^{(i)}, \theta)}{ h(x^{(i)}, \theta)}   + \frac{(1-y^{(i)})\frac{\partial}{\partial \theta_j} (1 -  h(x^{(i)}, \theta))}{1                                                              -  h(x^{(i)}, \theta)}\right ] \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [     \frac{y^{(i)}  h(x^{(i)}, \theta) (1 -  h(x^{(i)}, \theta)) \frac{\partial}{\partial \theta_j} \theta^T x^{(i)}}{ h(x^{(i)}, \theta)}   + \frac{- (1-y^{(i)})  h(x^{(i)}, \theta)(1 -  h(x^{(i)}, \theta)) \frac{\partial}{\partial \theta_j} \theta^T x^{(i)}}{1 -  h(x^{(i)},                                                              \theta)}\right ] \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [     \frac{y^{(i)}  h(x^{(i)}, \theta) (1 -  h(x^{(i)}, \theta)) \frac{\partial}{\partial \theta_j} \theta^T x^{(i)}}{ h(x^{(i)}, \theta)}   - \frac{(1-y^{(i)}) h(x^{(i)}, \theta) (1 -  h(x^{(i)}, \theta)) \frac{\partial}{\partial \theta_j} \theta^T x^{(i)}}{1 -  h(x^{(i)},                                                              \theta))}\right ] \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [     y^{(i)} (1 -  h(x^{(i)}, \theta)) x^{(i)}_j                                                              - (1-y^{(i)})  h(x^{(i)}, \theta) x^{(i)}_j\right ] \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [     y^{(i)} (1 -  h(x^{(i)}, \theta)) -                                                              (1-y^{(i)})  h(x^{(i)}, \theta) \right ] x^{(i)}_j \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [     y^{(i)} - y^{(i)}  h(x^{(i)}, \theta) -                                                               h(x^{(i)}, \theta) + y^{(i)}  h(x^{(i)}, \theta) \right ] x^{(i)}_j \\
+                                                           &= - \frac{1}{m}\sum_{i=1}^m \left [ y^{(i)} -  h(x^{(i)}, \theta) \right ] x^{(i)}_j    \\
+                                                           &= \frac{1}{m}\sum_{i=1}^m \left [  h(x^{(i)},                               \theta) - y^{(i)} \right ] x^{(i)}_j
+\end{align*}
+The vectorized version is simply given by
+\[
+  \nabla J(\theta) = \frac{1}{m} \cdot X^T \left( H(X, \theta) - Y \right).
+\]
 \end{document}
 
