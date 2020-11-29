@@ -495,5 +495,81 @@ The vectorized version is simply given by
 \[
   \nabla J(\theta) = \frac{1}{m} \cdot X^T \left( H(X, \theta) - Y \right).
 \]
+
+\section{Naive Bayes}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\subsection{Probability and Bayes Rule} Imagine you have an extensive corpus of tweets that can be categorized as either positive or negative, but not both.
+
+
+\begin{minipage}{1.0\textwidth}
+\begin{multicols}{2}
+  \begin{tikzpicture}
+    \draw[fill=green!30] (0, 1) rectangle (3, 4);
+    \draw[fill=orange!30] (0, 0) rectangle (3, 1);
+    \draw[fill=orange!30] (3, 0) rectangle (5, 2);
+    \draw[fill=green!30] (3, 2) rectangle (5, 4);
+    \draw[step=1cm, gray, very thin] (0, 0) grid (5, 4);
+    \node (neg) at (2.5, 0.5) {Negative};
+    \node (pos) at (2.5, 2.5) {Positive};
+    \node at (1.25, -0.5) {Corpus of tweets};
+  \end{tikzpicture}
+  \vfill\null \columnbreak
+  \begin{tikzpicture}
+    \draw[fill=green!30] (0, 1) rectangle (3, 4);
+    \draw[fill=orange!30] (0, 0) rectangle (3, 1);
+    \draw[fill=orange!30] (3, 0) rectangle (5, 2);
+    \draw[fill=green!30] (3, 2) rectangle (5, 4);
+    \draw[step=1cm, gray, very thin] (0, 0) grid (5, 4);
+    \node (neg) at (2.5, 0.5) {Negative};
+    \node (pos) at (2.5, 2.5) {Positive};
+    \draw[step=1cm, blue!60, thick] (0, 1) grid (4, 2);
+    \node (happy) at (2.5, 1.5) {``happy''};
+    \node at (2.25, -0.5) {Tweets containing the word ``happy''};
+  \end{tikzpicture}
+\end{multicols}
+\end{minipage}
+
+Within this corpus, observe that the word ``happy'' is sometimes associated with a positive sentiment, but also sometimes with a negative sentiment! How can this happen? Let's explore the situation using probabilities.
+
+\paragraph{Intro probability} Suppose we define an event $A$ as a positive tweet. Then, $\Pr(A) = \Pr(\textrm{Positive}) = \frac{N_{\textrm{pos}}}{N}$, i.e. the ratio between the number of positive-sentiment tweets relative to the total number of tweets observed in our data. In our example above, it comes out $\frac{13}{20}$.\footnote{Of course, because tweets can only be positive or negative but not both, the probability of a negative tweet is simply the complement, i.e. $\Pr(\textrm{Negative}) = 1 - \Pr(\textrm{Positive})$ which in our example happens to be $\frac{7}{20}$.} Let's define an event $B$ as a tweet containing the word ``happy''. In our examples above, this happens to be four, i.e. $\Pr(B) = \Pr(\textrm{``happy''}) = \frac{N_{\textrm{happy}}}{N}$ is $\frac{4}{20}$. Building on this, $\Pr(A \land B) = \Pr(A,B)$ which happens to be $\frac{3}{20}$ in our pictorial example above.
+
+\paragraph{Deriving Bayes rule} What if instead of the entire corpus, we only consider tweets that contain the word ``happy''? $\Pr(A|B) = \Pr(\textrm{Positive} | \textrm{``happy''}) = \frac{3}{4}$ in our example. But we can also do the same thing for positive tweets, i.e.
+\[
+  \Pr(B|A) = \Pr(\textrm{``happy''} | \textrm{Positive}) = \frac{3}{13}.
+\]
+
+There are two equivalent ways of thinking about conditional probabilities:
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node (cp) at (0, 0) {Conditional probabilities};
+      \node (l) at (-5, -2) {\color{orange!60} Probability of $B$, given $A$         happened};
+      \node (r) at (5, -2) {\color{purple!60} $\substack{\textrm{Looking at the elements of set } A, \textrm{ the} \\ \textrm{chance that one also belongs to set } B}$};
+\draw[->] (cp) -- (l);
+\draw[->] (cp) -- (r);
+    \end{tikzpicture}
+  \end{center}
+\end{figure}
+
+So, in our context:
+\begin{equation}
+  \label{eq: bayes1}
+  \Pr(\textrm{Positive} | \textrm{``happy''}) = \frac{\Pr(\textrm{Positive} \land \textrm{``happy''})}{\Pr(\textrm{``happy''})}.
+\end{equation}
+
+And by symmetry:
+\begin{equation}
+  \label{eq: bayes2}
+  \Pr(\textrm{``happy''} | \textrm{Positive}) = \frac{\Pr(\textrm{``happy''} \land \textrm{Positive})}{\Pr(\textrm{Positive})}.
+\end{equation}
+
+Realize that the intersection operation between two events is symmetric, i.e. that the numerator in equations \ref{eq: bayes1} and \ref{eq: bayes2} are identical. Therefore,
+\begin{equation}
+  \label{eq:bayesrulederivation}
+  \Pr(\textrm{Positive} | \textrm{``happy''}) = \Pr(\textrm{``happy''} | \textrm{Positive}) \times \frac{\Pr(\textrm{Positive})}{\Pr(\textrm{``happy''})}.
+\end{equation}
+This is an expression of Bayes rule in the context of the sentiment analysis problem. More generally: Bayes rule specifies that $\Pr(X|Y) = \Pr(Y|X) \times  \frac{\Pr(X)}{\Pr(Y)}$.
+
+\subsection{Naive Bayes} 
+
 \end{document}
 
