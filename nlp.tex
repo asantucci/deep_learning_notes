@@ -569,7 +569,18 @@ Realize that the intersection operation between two events is symmetric, i.e. th
 \end{equation}
 This is an expression of Bayes rule in the context of the sentiment analysis problem. More generally: Bayes rule specifies that $\Pr(X|Y) = \Pr(Y|X) \times  \frac{\Pr(X)}{\Pr(Y)}$.
 
-\subsection{Naive Bayes} 
+\subsection{Naive Bayes}
+Naive Bayes is often a ``very good, quick, and dirty baseline'' for many text classification tasks; it's an example of supervised machine learning and as such shares many similarities with logistic regression. It's called Naive because it makes the assumption that the features you're using for classification are all independent, which in reality is \emph{rarely} the case. As per usual, we start with two corpora: one for the positive tweets and one for the negative tweets:
+
+\begin{center}
+  \begin{tikzpicture}
+    \draw (0, 2) rectangle (8, -2);
+    \node at (1.35, 1.8) {Positive tweets};
+    \node at (3.75, 1.3) {\color{green!50!black}I am happy because I am learning NLP};
+    \node at (2.00, 0.8) {\color{green!50!black}I am happy, not sad};
+    \draw (0.1, 0.6) rectangle (7.8, 1.6);
+  \end{tikzpicture}
+\end{center}
 
 \end{document}
 
