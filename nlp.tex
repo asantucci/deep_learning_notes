@@ -7,6 +7,7 @@
 \usepackage{amsfonts} 
 \usepackage{enumitem}
 \usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{xparse} 
 \usepackage{bm}
 \usepackage{bbm} 
@@ -42,6 +43,46 @@
 \newcommand{\D}{\mathrm{d}}
 \SetKwInput{KwInput}{Input}
 \SetKwInput{KwOutput}{Output}
+
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+
+\usepackage{listings}
+
+% Default fixed font does not support bold face
+\DeclareFixedFont{\ttb}{T1}{txtt}{bx}{n}{12} % for bold
+\DeclareFixedFont{\ttm}{T1}{txtt}{m}{n}{12}  % for normal
+% Python style for highlighting
+\newcommand\pythonstyle{\lstset{
+language=Python,
+basicstyle=\ttm,
+otherkeywords={self,for,range,in},             % Add keywords here
+keywordstyle=\ttb\color{deepblue},
+emph={MyClass,__init__},          % Custom highlighting
+emphstyle=\ttb\color{deepred},    % Custom highlighting style
+stringstyle=\color{deepgreen},
+frame=tb,                         % Any extra options here
+showstringspaces=false            % 
+}}
+
+
+% Python environment
+\lstnewenvironment{python}[1][]
+{
+\pythonstyle
+\lstset{#1}
+}
+{}
+
+% Python for external files
+\newcommand\pythonexternal[2][]{{
+\pythonstyle
+\lstinputlisting[#1]{#2}}}
+
+% Python for inline
+\newcommand\pythoninline[1]{{\pythonstyle\lstinline!#1!}}
+
 
 \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
@@ -80,7 +121,172 @@ To get started building a logistic regression classifier that's capable of predi
 \paragraph{How to represent text as a vector} In order to represent text as a vector, we need to first build a vocabulary. We define the vocabulary $V$ as the \emph{set} of unique words from your input data (e.g. your listing of tweets). To get this listing, we quite literally need to comb through all words from all input data and save every new word that appears in our search.
 To represent a tweet as a vector, we can use a one-hot encoding with our vocabulary: i.e. each tweet will be represented with a length $|V|$ vector where elements are binary-valued - a one indicates the word is in the tweet and a zero indicates the absence of a word in a tweet. We call this a \emph{sparse} representation because the number of non-zero entries is relatively small when compared with the number of zero entries. Realize that if we are running a logistic regression, we would require learning $|V| + 1$ parameters which can be problematic for large vocabularies. If not prohibitive, it would make training models take excessive time and making predictions would be expensive.
 
-\paragraph{Negative and positive frequencies}
+\paragraph{Negative and positive frequencies} Let's discuss how to generate counts which can be used as features in our logistic regression classifier. Specifically, given a word, we wish to keep track of the number of times that it shows up as the positive class. Given another word, we wish to track how many times that word shows up in the negative class. Using both these counts, we can then extract features and use those features in our logistic regression classifier. Suppose we have the following corpus of tweets:
+\begin{verbatim}
+I am happy because I am learning NLP
+I am happy
+I am sad, I am not learning NLP
+I am sad
+\end{verbatim}
+Then our vocabulary is given by
+\begin{center}
+  \begin{tabular}{c}
+    \hline
+    Vocabulary \\
+    \hline
+    I \\
+    am \\
+    happy \\
+    because \\
+    learning \\
+    NLP \\
+    sad \\
+    not
+  \end{tabular}
+\end{center}
 
+For this particular example of sentiment analysis, we only have two sentiments (i.e. two classes): one class is associated with a positive sentiment and the other with a negative sentiment. So, taking your corpus, you'd have a set of two tweets that belong to the positive class, and two tweets which belong to the negative class. Let's calculate the positive frequencies by examining the first two tweets:
+
+\begin{center}
+  \begin{tabular}{c c}
+    \hline
+    Vocabulary & PosFreq(1) \\
+    \hline
+    I  & 3 \\
+    am & 3 \\
+    happy & 2 \\
+    because & 1 \\
+    learning & 1 \\
+    NLP & 1 \\
+    sad & 0 \\
+    not & 0
+  \end{tabular}
+\end{center}
+
+The same logic applies applies to getting negative frequencies. We can calculate these by examining our last two training examples.
+
+
+\begin{center}
+  \begin{tabular}{c c}
+    \hline
+    Vocabulary & NegFreq(0) \\
+    \hline
+    I  & 3 \\
+    am & 3 \\
+    happy & 0 \\
+    because & 0 \\
+    learning & 1 \\
+    NLP & 1 \\
+    sad & 2 \\
+    not & 1
+  \end{tabular}
+\end{center}
+
+So, we can now have an entire table for our corpus, where for each entry in $V$ we associate with it a scalar value \texttt{PosFreq(1)} and another scalar value \texttt{NegFreq(0)}. In practice, we use a Python dictionary \texttt{freqs} mapping from \texttt{(word, class)} $\leadsto$ frequency.
+
+\paragraph{Feature extraction with frequencies} Whereas we previously learned to encode a tweet as a vector of length $|V|$, we will now use our frequency counts to represent each tweet as a vector of length equal to one plus the number of classes in our set of labels. This gives us a much faster speed for our logistic regression classifier. How can we do this, exactly? We represent each tweet as follows:
+
+\begin{align*}
+\underbrace{X_m}_{\substack{\textrm{Features of} \\ \textrm{tweet } m}} = \bigg [ \underbrace{1}_{\textrm{Bias}}, \underbrace{\sum_w \texttt{freqs}(w, 1)}_{\substack{\textrm{Sum Pos.} \\ \textrm{Frequences}}}, \underbrace{\sum_w \texttt{freqs}(w, 0)}_{\substack{\textrm{Sum Neg.} \\ \textrm{Frequencies}}} \bigg ]
+\end{align*}
+
+I.e. the first feature is a bias unit equal to unit value, the second is the sum of positive frequencies for every unique word on tweet $m$, and the third is the sum of negative frequencies for every unique word on the tweet.
+So, to extract the features for this \emph{representation}, we only have to sum frequencies of words, which is straightforward. Let's look at an example: ``I am sad, I am not learning NLP''. The only words in our vocabulary that don't appear in this sentence are ``happy'' and ``because'': if we sum up the \texttt{PosFreq(1)} associated with the remaining words in our vocabulary, i.e. the words that appear in this tweet, we get a scalar value of eight. We do the same for the negative frequencies, and we get a scalar value of eleven. So, we represent ``I am sad, I am not learning NLP'' $\leadsto [1, 8, 11]$.
+
+\paragraph{Preprocessing} There are two major concepts here: stemming and ``stop words''. We'll learn how to apply these preprocessing steps to our data. Stop words are defined as those which don't add significant meaning to the tweets; we \emph{might} also choose to remove punctuation (if we decide it doesn't provide information in our context). In practice, this means comparing our tweet against two sets: one with stop words (in English) and another with punctuation. 
+
+\begin{minipage}{1.0\textwidth}
+  \begin{multicols}{2}
+      \begin{tabular}{c c}
+        \hline
+        Stop Words \\
+        \hline
+        and \\
+        is \\
+        are \\
+        at \\
+        has \\
+        for \\
+        a \\
+      \end{tabular}
+    \vfill\null \columnbreak  
+    \begin{tabular}{c c}
+      \hline
+      Punctuation \\
+      \hline
+      , \\
+      . \\
+      : \\
+      ! \\
+      `` \\
+      ' \\
+    \end{tabular}
+\end{multicols}
+\end{minipage}
+In practice the list of stop words and punctuation marks are much larger, but for pedagogical purposes these will serve well.
+We might start out with a tweet like
+\begin{verbatim}
+@YMourri and @AndrewYNg are tuning a GREAT AI Model at https://deeplearning.ai!!!
+\end{verbatim}
+We then preprocess by stripping stop words ``and'', ``are'', a''at'', and ``a''. The only punctuation that appears in this tweet that's also in our list is the exclamation point(s). We might further decide that tweets should have handles and URLs removed, because these don't add value for the specific task of sentiment analysis. In the end, we end up with a data point that looks like
+\begin{verbatim}
+tuning GREAT AI model
+\end{verbatim}
+It's clearly a positive tweet, and a sufficiently good model should be able to classify it. Now that the tweet contains the minimum necessary information, we can perform \emph{stemming} for every word.
+
+\paragraph{Stemming}
+Stemming in NLP is simply transforming any word to its base stem, which you could define as the set of characters that are used to construct the words and its derivatives. Let's look at the first word in the example: its stem is ``tun'', since
+\begin{center}
+  \begin{tikzpicture}
+    \node (tun) at (-1,0) {tun};
+    \node (tune) at (1, 1) {tun\color{orange!80}{e}};
+    \node (tuned) at (1, 0) {tun\color{green!80}{ed}};
+    \node (tuning) at (1, -1) {tun\color{purple!80}{ing}};
+    \draw[->,thick] (tun) -> (tune);
+    \draw[->,thick] (tun) -> (tuned);
+    \draw[->,thick] (tun) -> (tuning);
+  \end{tikzpicture}
+\end{center}
+
+If we were to perform stemming on our entire corpus, the words ``tune'', ``tuned'', and ``tuning'' all get reduced to the stem ``tun''. So, your vocabulary would be significantly reduced in performing this process. You can further reduce the size of the vocabulary without losing valuable information by \emph{lower-casing} every word, e.g. the words ``GREAT'', ``Great'', and ``great'' all get treated as the same word. Perhaps our final preprocessed tweet looks like
+\begin{verbatim}
+[tun, great, ai, model]
+\end{verbatim}
+
+In summary, for our example of sentiment analysis on tweets, we might preprocess as follows:
+\begin{enumerate}
+\item Eliminate handles and URLs
+\item Tokenize the string into words
+\item Remove stop words like ``and, is, a, on, etc.''
+\item Stemming - or convert every word to its stem. E.g. dancer, dancing,   danced, becomes ``danc''. You can use \href{https://tartarus.org/martin/PorterStemmer/}{Porter Stemmer} to take care of this.
+\item Convert all words to lowercase.
+\end{enumerate}
+
+As an applied example:
+$$
+\textrm{I am Happy Because I am learning NLP @deeplearning} \overset{\small \textrm{Preprocessing}}{\longrightarrow} [\texttt{happy, learn, nlp}] \overset{\small \textrm{Feature Extraction}}{\longrightarrow} [1, 4, 2]
+$$
+where 1 is our bias term, 4 is the sum of positive frequencies, and 2 is the sum of negative frequencies.
+In practice, we are given a set of $m$ raw tweets, and so wehave to process them one-by-one to process them into an $m \times 3$ matrix, where each row describes the features for a given tweet.
+
+\begin{equation*}
+  \begin{bmatrix}
+    1 & X_1^{(1)} & X_2^{(1)} \\
+    1 & X_1^{(2)} & X_2^{(2)} \\
+    \vdots & \vdots & \vdots \\
+    1 & X_1^{(m)} & X_2^{(m)} \\
+  \end{bmatrix}
+\end{equation*}
+
+The process is simple: (i) build the frequencies dictionary, (ii) initialize the matrix $X$ to match the number of tweets, (iii) go through your sets of tweets and carefully preprocess by deleting stop words, stemming, deleting URLs/handles, and lowercasing, and finally (iv) extract the features by summing up the positive and negative frequencies of each of the tweets.
+
+\begin{python}
+freqs = build_freqs(tweets, labels)          # Build frequencies dictionary.
+X = np.zeros((m,3))                          # Initialize matrix X.
+for i in range(m):                           # For every tweet:
+  p_tweet = process_tweet(tweets[i])         #   Process tweet.
+  X[i,:] = extract_features(p_tweet, freqs)  #   Extract features.
+\end{python}
 
 \end{document}
+
