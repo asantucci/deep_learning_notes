@@ -90,12 +90,12 @@ showstringspaces=false            %
 \tableofcontents
 \newpage
 \section{Classification and Vector Spaces}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
-\subsection{Supervised ML and Sentiment Analysis}
+\subsection{Intro to Supervised ML and Sentiment Analysis}
 In supervised ML, we have input features $X$ and a set of labels $Y$. To get the most accurate predictions, we try to minimize our \emph{error rates} or \emph{cost function} as much as possible: to do this, we'll run our prediction function which takes in parameters $\theta$ to map you input features to output labels $\hat Y$. The best mapping is achieved when the difference between the expected values $Y$ and the predicted values $\hat Y$ is minimized, which the cost function does by comparing how closely your output $\hat Y$ is to your label $Y$. You can then update your parameters and repeat the whole process until your cost is minimized.
 
 \begin{figure}[h]
 \begin{center}
-  \begin{tikzpicture}
+  \begin{tikzpicture}[scale=0.8]
     \node (x) at (0, 2) {$X$};
     \node (features) [above=1mm of x] {\color{blue!50}{Features}};
     \node (y) at (0, 0) {$Y$};
@@ -122,6 +122,7 @@ In supervised ML, we have input features $X$ and a set of labels $Y$. To get the
 How about the supervised ML classification task of sentiment analysis? Suppose we're given a tweet that says, ``I'm happy because I'm learning NLP'': and the objective in the task is to predict whether a tweet has a positive or negative sentiment. We'll do this by starting with a training set where tweets with a positive label have a label of unit value, and tweets with a negative sentiment have a label of zero.
 To get started building a logistic regression classifier that's capable of predicting sentiments of an arbitrary tweet, we first need to process the raw tweets in our training data set and extract useful features. Then, we will train our logistic regression classifier while minimimizing the cost. Finally, we'll be able to make predictions.
 
+\subsubsection{Representation of Text}
 \paragraph{How to represent text as a vector} In order to represent text as a vector, we need to first build a vocabulary. We define the vocabulary $V$ as the \emph{set} of unique words from your input data (e.g. your listing of tweets). To get this listing, we quite literally need to comb through all words from all input data and save every new word that appears in our search.
 To represent a tweet as a vector, we can use a one-hot encoding with our vocabulary: i.e. each tweet will be represented with a length $|V|$ vector where elements are binary-valued - a one indicates the word is in the tweet and a zero indicates the absence of a word in a tweet. We call this a \emph{sparse} representation because the number of non-zero entries is relatively small when compared with the number of zero entries. Realize that if we are running a logistic regression, we would require learning $|V| + 1$ parameters which can be problematic for large vocabularies. If not prohibitive, it would make training models take excessive time and making predictions would be expensive.
 
@@ -188,7 +189,7 @@ The same logic applies applies to getting negative frequencies. We can calculate
 
 So, we can now have an entire table for our corpus, where for each entry in $V$ we associate with it a scalar value \texttt{PosFreq(1)} and another scalar value \texttt{NegFreq(0)}. In practice, we use a Python dictionary \texttt{freqs} mapping from \texttt{(word, class)} $\leadsto$ frequency.
 
-\paragraph{Feature extraction with frequencies} Whereas we previously learned to encode a tweet as a vector of length $|V|$, we will now use our frequency counts to represent each tweet as a vector of length equal to one plus the number of classes in our set of labels. This gives us a much faster speed for our logistic regression classifier. How can we do this, exactly? We represent each tweet as follows:
+\subsubsection{Feature Extraction with Frequencies} Whereas we previously learned to encode a tweet as a vector of length $|V|$, we will now use our frequency counts to represent each tweet as a vector of length equal to one plus the number of classes in our set of labels. This gives us a much faster speed for our logistic regression classifier. How can we do this, exactly? We represent each tweet as follows:
 
 \begin{align*}
 \underbrace{X_m}_{\substack{\textrm{Features of} \\ \textrm{tweet } m}} = \bigg [ \underbrace{1}_{\textrm{Bias}}, \underbrace{\sum_w \texttt{freqs}(w, 1)}_{\substack{\textrm{Sum Pos.} \\ \textrm{Frequences}}}, \underbrace{\sum_w \texttt{freqs}(w, 0)}_{\substack{\textrm{Sum Neg.} \\ \textrm{Frequencies}}} \bigg ]
@@ -197,7 +198,10 @@ So, we can now have an entire table for our corpus, where for each entry in $V$ 
 I.e. the first feature is a bias unit equal to unit value, the second is the sum of positive frequencies for every unique word on tweet $m$, and the third is the sum of negative frequencies for every unique word on the tweet.
 So, to extract the features for this \emph{representation}, we only have to sum frequencies of words, which is straightforward. Let's look at an example: ``I am sad, I am not learning NLP''. The only words in our vocabulary that don't appear in this sentence are ``happy'' and ``because'': if we sum up the \texttt{PosFreq(1)} associated with the remaining words in our vocabulary, i.e. the words that appear in this tweet, we get a scalar value of eight. We do the same for the negative frequencies, and we get a scalar value of eleven. So, we represent ``I am sad, I am not learning NLP'' $\leadsto [1, 8, 11]$.
 
-\paragraph{Preprocessing} There are two major concepts here: stemming and ``stop words''. We'll learn how to apply these preprocessing steps to our data. Stop words are defined as those which don't add significant meaning to the tweets; we \emph{might} also choose to remove punctuation (if we decide it doesn't provide information in our context). In practice, this means comparing our tweet against two sets: one with stop words (in English) and another with punctuation. 
+\subsubsection{Preprocessing} There are two major concepts here: stemming and ``stop words''.
+We'll learn how to apply these preprocessing steps to our data.
+\paragraph{Stop words}
+Stop words are defined as those which don't add significant meaning to the tweets; we \emph{might} also choose to remove punctuation (if we decide it doesn't provide information in our context). In practice, this means comparing our tweet against two sets: one with stop words (in English) and another with punctuation. 
 
 \begin{minipage}{1.0\textwidth}
   \begin{multicols}{2}
@@ -300,6 +304,7 @@ for i in range(m):                           # For every tweet:
 where $i$ denotes the observation number. Note that as $\theta^T x^{(i)}$ gets closer and closer to $-\infty$, the denominator of the sigmoid expression blows up and as a result the output values gets closer to zero. Conversely, as the inner product $\theta^T x^{(i)}$ gets closer to $\infty$, the denominator of the sigmoid function approaches unit value and the resulting sigmoid expression evaluates to something near one.
 For classification, a threshold is needed, and it is natural to set it at $\frac{1}{2}$. For the logistic function, this threshold occurs when the inner product $\theta^T x^{(i)} = 0$. If the inner product is greater than (or equal to) zero, we classify as positive, else negative.
 
+\subsubsection{Learning Parameters}
 \paragraph{How to learn $\theta$?} To train a logistic regression classifier, we need to iterate until we find a set of parameters $\theta$ that minimizes our cost function. Suppose we have a loss that depends only on the parameters $\theta_1, \theta_2$: you might have a cost function that looks like follows, on the left, with the evaluation of the cost function plotted on the right as a function of the number of training iterations:
 
 \begin{minipage}{1.0\textwidth}
@@ -351,7 +356,7 @@ We might first initialize our parameters $\theta$, then update our parameters in
 \end{center}
 \end{figure}
 
-\paragraph{Analyzing whether a model generalizes well}
+\subsubsection{Assessing model generalization}
 To analyze model fit, we need the following: $(X_{\textrm{val}}, Y_{\textrm{val}}, \theta)$, where we have \emph{validation} data that was set aside during training, and a learned $\theta$ parameter vector. We will compute, for each example in $X_{\textrm{val}}$, the value of $h(\theta, x^{(i)})$ and compare it with our threshold value to make a prediction. In particular, our simple prediction function is given by
 \[
   \hat Y_{\textrm{val}} = h(X_{\textrm{val}}, \theta) \geq \frac{1}{2}.
@@ -365,7 +370,8 @@ In particular, we will have a vector $h = \begin{bmatrix} h_1 & h_2 & \ldots & h
 
 This metric gives an estimate of the number of times of logistic regression model will work correctly on unseen data.
 
-\paragraph{Logistic regression: cost function} Let's examine the equation for the cost function for logistic regression:
+\subsubsection{Deriving Gradient Descent for Logistic Regression}
+\paragraph{Motivating where cost function comes from} Let's examine the equation for the cost function for logistic regression:
 
 \begin{equation}
   \label{eq: crossentropyloss}
@@ -383,7 +389,10 @@ We wish to maximize our function $h(\cdot, \theta)$ over the parameter space $\t
 \]
 
 Realize that if we ``mess up'' one prediction, we have the potential to ``mess up'' the entire cost function, which is what we want: we want a model that captures the entire dataset, where all datapoints are related. One issue: what happens when $m$ grows? Then $L(\theta) \leadsto 0$, because the expressions
-$h(x^{(i)}, \theta)$ and correspondingly $(1 - h(x^{(i)}, \theta)$ are bounded between $(0,1)$. Using properties of logarithms (that they are monotone and maximizing a function under a monotone transformation doesn't change the optimum, and that they turn multiplication into addition), i.e.
+$h(x^{(i)}, \theta)$ and correspondingly $(1 - h(x^{(i)}, \theta)$ are bounded between $(0,1)$.
+
+\paragraph{Optimization}
+Using properties of logarithms (that they are monotone and maximizing a function under a monotone transformation doesn't change the optimum, and that they turn multiplication into addition), i.e.
 \begin{align*}
   \log(a*b*c) = \log a + \log b + \log c \, \, \, \, \, \textrm{ and } \, \, \, \, \, \log a^b = b \log a.
 \end{align*}
@@ -406,6 +415,7 @@ A vectorized implementation is given by
   J(\theta) &= \frac{1}{m} \cdot \left(-y^T \log(h) - \left(1 - y \right)^T \log (1 - h)\right)
 \end{align*}
 
+\paragraph{Intuition for loss function of logistic regression}
 Now, let's just go over some intuition here. Consider the term on the left-hand side of the parenthesized expression: this is the relevant term in your cost function when your label is 1. The term on the right is relevant when the label is zero. In general, this loss function simply says: the closer the prediction is to the observed label, the smaller the loss incurred. We can plot the cost as a function of our the prediction value for a single training example.
 
 \begin{minipage}{1.0\textwidth}
@@ -427,19 +437,24 @@ Now, let's just go over some intuition here. Consider the term on the left-hand 
       % plot (\x,{\x^2}) {};
       plot (\x, {exp(\x/2)-1}) {};
       \node at (2, 1) {$\log \left(1 -  h(x^{(i)}, \theta)\right)$};
-      \node at (2, 1.5) {$\substack{\textrm{When the label is 0,} \\ \textrm{the smaller our prediction} \\ \textrm{(the closer it is to zero),} \\ \textrm{ the smaller the loss is.}}$};    \end{tikzpicture}
-  \end{multicols}
+      \node at (2, 1.5) {$\substack{\textrm{When the label is 0,} \\ \textrm{the smaller our prediction} \\ \textrm{(the closer it is to zero),} \\ \textrm{ the smaller the loss is.}}$};
+\end{tikzpicture}
+\end{multicols}
 \end{minipage}
 
+\newpage
 \paragraph{Deriving logistic regression gradient}
 The general form of logistic regression is given by
+
 \begin{algorithm}
   \caption{General form of gradient descent}
   \While{not converged, and for all $j$}{
     $\theta_j \gets \theta_j - \alpha \frac{\partial}{\partial \theta_j}     J(\theta)$
   }
 \end{algorithm}
+
 We can work out the derivative using partial calculus to fill in the expression further:
+
 \begin{algorithm}
   \caption{Gradient descent for logistic regression}
   \While{not converged, and for all $j$}{
