@@ -93,6 +93,7 @@ showstringspaces=false            %
 \subsection{Supervised ML and Sentiment Analysis}
 In supervised ML, we have input features $X$ and a set of labels $Y$. To get the most accurate predictions, we try to minimize our \emph{error rates} or \emph{cost function} as much as possible: to do this, we'll run our prediction function which takes in parameters $\theta$ to map you input features to output labels $\hat Y$. The best mapping is achieved when the difference between the expected values $Y$ and the predicted values $\hat Y$ is minimized, which the cost function does by comparing how closely your output $\hat Y$ is to your label $Y$. You can then update your parameters and repeat the whole process until your cost is minimized.
 
+\begin{figure}[h]
 \begin{center}
   \begin{tikzpicture}
     \node (x) at (0, 2) {$X$};
@@ -112,8 +113,11 @@ In supervised ML, we have input features $X$ and a set of labels $Y$. To get the
 \draw[->,thick] (y) -- node {} ++(2cm,0) -| (cost);
 \draw[->,thick] (cost) -- node{} ++(0,2cm) -| (params);
 \draw[->,thick] (params) -- (predictionfunction);
-  \end{tikzpicture}
+\end{tikzpicture}
 \end{center}
+\label{fig: supervised_ml}
+\caption{Overview of supervised machine learning.}
+\end{figure}
 
 How about the supervised ML classification task of sentiment analysis? Suppose we're given a tweet that says, ``I'm happy because I'm learning NLP'': and the objective in the task is to predict whether a tweet has a positive or negative sentiment. We'll do this by starting with a training set where tweets with a positive label have a label of unit value, and tweets with a negative sentiment have a label of zero.
 To get started building a logistic regression classifier that's capable of predicting sentiments of an arbitrary tweet, we first need to process the raw tweets in our training data set and extract useful features. Then, we will train our logistic regression classifier while minimimizing the cost. Finally, we'll be able to make predictions.
@@ -287,6 +291,40 @@ for i in range(m):                           # For every tweet:
   p_tweet = process_tweet(tweets[i])         #   Process tweet.
   X[i,:] = extract_features(p_tweet, freqs)  #   Extract features.
 \end{python}
+
+\subsection{Logistic Regression} Previously, we've learned how to extract features, which we will now use to predict whether a tweet has a positive or negative sentiment. Logistic regression makes use of a \href{https://en.wikipedia.org/wiki/Logistic_function#Mathematical_properties}{sigmoid (or standard logistic) function} which outputs a probability between zero and one. What's the recap from supervised machine learning? Recall figure \ref{fig: supervised_ml}: in the case of logistic regression our prediction function is going to be the standard logistic function:
+
+\[
+  h(x^{(i)}, \theta) = \frac{1}{1 + e^{-\theta^T x^{(i)}}}.
+\]
+where $i$ denotes the observation number. Note that as $\theta^T x^{(i)}$ gets closer and closer to $-\infty$, the denominator of the sigmoid expression blows up and as a result the output values gets closer to zero. Conversely, as the inner product $\theta^T x^{(i)}$ gets closer to $\infty$, the denominator of the sigmoid function approaches unit value and the resulting sigmoid expression evaluates to something near one.
+For classification, a threshold is needed, and it is natural to set it at $\frac{1}{2}$. For the logistic function, this threshold occurs when the inner product $\theta^T x^{(i)} = 0$. If the inner product is greater than (or equal to) zero, we classify as positive, else negative.
+
+\paragraph{How to learn $\theta$?} To train a logistic regression classifier, we need to iterate until we find a set of parameters $\theta$ that minimizes our cost function. Suppose we have a loss that depends only on the parameters $\theta_1, \theta_2$: you might have a cost function that looks like follows, on the left, with the evaluation of the cost function plotted on the right as a function of the number of training iterations:
+
+\begin{minipage}{1.0\textwidth}
+  \begin{multicols}{2}
+\begin{tikzpicture}[scale=2]
+  \draw[->] (-1, -1) to (-1, 1);
+  \node at (-1, 1.1) {$\theta_2$};
+  \draw[->] (-1, -1) to (1, -1);
+  \node at (1.25, -1) {$\theta_1$};
+  \draw (0, 0) circle (1cm);   
+  \draw (0, 0) circle (.5cm); 
+  \draw (0, 0) circle (.25cm); 
+  \draw[->] (-1, 0) to (-.5, 0);
+  \draw[->] (-.5, 0) to (0, 0);
+\end{tikzpicture}
+\vfill\null \columnbreak
+\begin{tikzpicture}[scale=3]
+  \draw[->] (0, 0) to (0, 1.4) node [left] {cost};
+  \draw[->] (0, 0) to (2.1, 0) node [right]{\# iterations}; 
+  \draw[smooth, domain=0.2:2, color=orange, thick]
+    plot (\x,{exp(-\x)}) {};
+\end{tikzpicture}
+\end{multicols}
+\end{minipage}
+
 
 \end{document}
 
