@@ -325,6 +325,31 @@ For classification, a threshold is needed, and it is natural to set it at $\frac
 \end{multicols}
 \end{minipage}
 
+We might first initialize our parameters $\theta$, then update our parameters in the direction of the \emph{gradient of the cost function}. After a sufficient number of training steps, we will have updated $\theta$ to their optimal values where we are achieving near optimal cost. Let's quickly review this process of gradient descent for logistic regression:
+
+\begin{figure}[h]
+\begin{center}
+\begin{tikzpicture}
+  % Left partition
+  \node[draw,rectangle,color=purple] (theta) at (-2, 2) {\color{black}$\theta$};
+  \node[draw,rectangle,color=green] (h) at (-2, 1) {\color{black}$h = h(X,\theta)$};
+  \node[draw,rectangle,color=green] (gradient) at (-2, 0) {\color{black}$\nabla = \frac{1}{m} X^T (h-y)$};
+  \node[draw,rectangle,color=green] (update_eq) at (-2, -1) {\color{black}$\theta = \theta - \alpha \nabla$};
+  \node[draw,rectangle,color=blue] (cost) at (-2, -2)   {\color{black}$J(\theta)$};
+  \draw[->,thick] (cost) -- ++(2, 0) -- ++(0,3) -| (h);
+  % Right partition
+  \node[draw,rectangle,color=purple] (init) at (4, 2) {\color{black}Initialize Parameters};
+  \node[draw,rectangle,color=green] (classifypredict) at (4, 1) {\color{black}Classify/predict};
+  \node[draw,rectangle,color=green] (gradient) at (4, 0) {\color{black}Get gradient};
+  \node[draw,rectangle,color=green] (update_eq) at (4, -1) {\color{black}update};
+  \node[draw,rectangle,color=blue] (getloss) at (4, -2)   {\color{black}Get Loss};
+\draw[->,thick] (getloss) -- ++(-2, 0) -- ++(0,3) -| ++(0.25, 0);
+
+% Middle comment
+\node at (1, 0) {$\substack{\textrm{Until good} \\ \textrm{enough}}$};
+\end{tikzpicture}
+\end{center}
+\end{figure}
 
 \end{document}
 
