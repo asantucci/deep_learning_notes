@@ -866,7 +866,32 @@ Euclidean distance is a similarity metric: it identifies how far apart two point
 \caption{Here we visualize the distance between two points, i.e. the length of the line segment connecting them. In two dimensions, this is given by $d(B,A) = \sqrt{({\color{purple} B_1 - A_1})^2 + ({\color{blue}B_2 - A_2})^2}$; the first term is the horizontal distance squared, and the second term is the vertical distance squared.}
 \end{figure}
 
+\begin{table}[h]
+  \begin{center}
+  \begin{tabular}{c | c c c}
+    & data & boba & ice-cream \\
+    \hline
+    AI & 6 & 0 & 1 \\
+    drinks & 0 & 4 & 6 \\
+    food & 0 & 6 & 8 \\
+    \hline
+  \end{tabular}
+\end{center}
+\caption{Suppose boba is word $\vec w$ and ice-cream is word $\vec v$, and that we wish to calculate the Euclidean distance between these two word-vectors. This is given by $d(\vec v,\vec w) = \sqrt{(1-0)^2 + (6-4)^2 + (8-6)^2} = \sqrt{1 + 4 + 4} = \sqrt{9} = 3$.}
+\end{table}
+
 In higher dimensions, i.e. an $n$ dimensional vector, the process is similar.
+\[
+  d(\vec v,\vec w) = \sqrt{\sum_{i=1}^{n} \left(v_i - w_i\right)^2} = \|\vec v - \vec w\|_2.
+\]
+
+\paragraph{Cosine similarity} Another type of similarity function is cosine similarity. Euclidean distance can be problematic; to see why, consider the following example.
+
+\begin{center}
+  \begin{tikzpicture}
+    
+  \end{tikzpicture}
+\end{center}
 
 \end{document}
 
