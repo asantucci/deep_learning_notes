@@ -85,6 +85,12 @@ showstringspaces=false            %
 \newcommand\pythoninline[1]{{\pythonstyle\lstinline!#1!}}
 
 
+\usetikzlibrary{shapes.misc}
+
+\tikzset{cross/.style={cross out, draw=black, minimum size=2*(#1-\pgflinewidth), inner sep=0pt, outer sep=0pt},
+%default radius will be 1pt. 
+cross/.default={2pt}}
+
 \begin{document}
 \renewcommand{\d}[1]{\ensuremath{\operatorname{d}\!{#1}}}
 
@@ -962,14 +968,14 @@ If the input arguments (vectors) are perpendicular, the cosine of their inner an
 
 \paragraph{Visualization and PCA} Often, we'll have vector representations in very high dimension, but we'll want to find a way to reduce the dimensions of the vectors to two dimensions so that we may plot it on a 2-D cartesian plane. What's the intuition? Principal Component Analysis is they key: it allows us to take a representation with $d > 2$ dimensions and project it down to a lower dimension, e.g. $d=2$, which we can then plot. If you perform PCA on your data, you might find that your word representation captures relationship between pairs of words that you expect to be related, in so far as these related words appear in clusters within the plot; you can confirm known relationships and also spot new ones using this technique.
 
-\begin{figure}[h]
-  \centering
+\begin{minipage}{1.0\textwidth}
+  \begin{multicols}{3}
   \begin{tikzpicture}[
     declare function={a(\x)=1;},
     declare     function={b(\x)=0;}
   ]
   \begin{axis}[
-    domain=1:5,
+    domain=1:4,
     axis lines=middle,
     axis equal image,
     xtick=\empty,
@@ -980,9 +986,70 @@ If the input arguments (vectors) are perpendicular, the cosine of their inner an
   ]
   \addplot [red, only marks, mark=x, samples=20, mark size=2]       {x*0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))};
 \end{axis}
+\node at (4, 1) {Correlated data};
 \end{tikzpicture}
-\caption{\footnotesize Raw data $(x_1, x_2)$ pairs.}
-\end{figure}
+\vfill\null \columnbreak
+\begin{tikzpicture}
+  \draw[->] (1.5,-0.3) -- (5, -0.3);
+  \draw[->] (1.5,-0.3) -- (1.5, 1.8);
+  \node at (4, 4) {};
+  \node at (2.75, 2) {\small Un-correlated Features};
+  \draw (1.7, -0.3) node[cross,rotate=30,color=orange] {};
+  \draw (2.0, -0.4) node[cross,rotate=30,color=orange] {};
+  \draw (2.3, +0.1) node[cross,rotate=30,color=orange] {};
+  \draw (2.6, +0.2) node[cross,rotate=30,color=orange] {};
+  \draw (2.9, -1.37) node[cross,rotate=30,color=orange] {};
+  \draw (3.2, +0.15) node[cross,rotate=30,color=orange] {};
+  \draw (3.5, -1.50) node[cross,rotate=30,color=orange] {};
+  \draw (3.8, -1.35) node[cross,rotate=30,color=orange] {};
+  \draw (4.1, +0.05) node[cross,rotate=30,color=orange] {};
+  \draw (4.4, -0.45) node[cross,rotate=30,color=orange] {};
+  \draw (4.7, -0.27) node[cross,rotate=30,color=orange] {};
+\end{tikzpicture}
+\vfill\null \columnbreak
+\begin{tikzpicture}
+  \draw[->] (1.5,-0.3) -- (5, -0.3);
+  \draw[->] (1.5,-0.3) -- (1.5, 1.8);
+  \node at (4, 4) {};
+  \node at (2.75, 2) {\small Dimensionality Reduction};
+  % Original points.
+  \draw (1.7, -0.3) node[cross,rotate=30,color=orange!30] (n1) {};
+  \draw (1.8, -0.4) node[cross,rotate=30,color=orange!30] (n2) {};
+  \draw (2.3, +0.1) node[cross,rotate=30,color=orange!30] (n3) {};
+  \draw (2.4, +0.2) node[cross,rotate=30,color=orange!30] (n4) {};
+  \draw (2.9, -1.37) node[cross,rotate=30,color=orange!30] (n5)  {};
+  \draw (3.2, +0.15) node[cross,rotate=30,color=orange!30] (n6)  {};
+  \draw (3.3, -1.50) node[cross,rotate=30,color=orange!30] (n7)  {};
+  \draw (3.4, -1.35) node[cross,rotate=30,color=orange!30] (n8)  {};
+  \draw (4.1, +0.05) node[cross,rotate=30,color=orange!30] (n9)  {};
+  \draw (4.15, -0.45) node[cross,rotate=30,color=orange!30] (n10)  {};
+  \draw (4.7, -0.27) node[cross,rotate=30,color=orange!30] (n11)  {};
+  % Projected.
+  \draw (1.7, -0.3) node[cross,rotate=30,color=orange] (p1) {};
+  \draw (1.8, -0.3) node[cross,rotate=30,color=orange] (p2) {};
+  \draw (2.3, -0.3) node[cross,rotate=30,color=orange] (p3) {};
+  \draw (2.4, -0.3) node[cross,rotate=30,color=orange] (p4) {};
+  \draw (2.9, -0.3) node[cross,rotate=30,color=orange] (p5)  {};
+  \draw (3.2, -0.3) node[cross,rotate=30,color=orange] (p6)  {};
+  \draw (3.3, -0.3) node[cross,rotate=30,color=orange] (p7)  {};
+  \draw (3.4, -0.3) node[cross,rotate=30,color=orange] (p8)  {};
+  \draw (4.1, -0.3) node[cross,rotate=30,color=orange] (p9)  {};
+  \draw (4.15, -0.3) node[cross,rotate=30,color=orange] (p10)  {};
+  \draw (4.7, -0.3) node[cross,rotate=30,color=orange] (p11)  {};
+  \draw[dashed] (n1) -- (p1);
+  \draw[dashed] (n2) -- (p2);
+  \draw[dashed] (n3) -- (p3);
+  \draw[dashed] (n4) -- (p4);
+  \draw[dashed] (n5) -- (p5);
+  \draw[dashed] (n6) -- (p6);
+  \draw[dashed] (n7) -- (p7);
+  \draw[dashed] (n8) -- (p8);
+  \draw[dashed] (n9) -- (p9);
+  \draw[dashed] (n10) -- (p10);
+  \draw[dashed] (n11) -- (p11);
+\end{tikzpicture}
+\end{multicols}
+\end{minipage}
 
 \end{document}
 
