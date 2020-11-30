@@ -984,7 +984,8 @@ If the input arguments (vectors) are perpendicular, the cosine of their inner an
     clip mode=individual,
     clip=false
   ]
-  \addplot [red, only marks, mark=x, samples=20, mark size=2]       {x*0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))};
+  \addplot [orange, only marks, mark=x, samples=20, mark size=2]         {x*0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))};
+  \node at (0, -1) {};
 \end{axis}
 \node at (4, 1) {Correlated data};
 \end{tikzpicture}
@@ -1050,6 +1051,18 @@ If the input arguments (vectors) are perpendicular, the cosine of their inner an
 \end{tikzpicture}
 \end{multicols}
 \end{minipage}
+Using PCA, we first find a set of uncorrelated features. Then, we can project our data into a lower dimensional space, trying to retain as much information as possible.
+
+\paragraph{PCA algorithm} How do we get uncorrelated features? Realize that the eigenvectors of the covariance matrix of our data correspond to the uncorrelated features for our data, and the eigenvalue corresponds to the amount of information retained by each feature. Note that it's essential that our eigenvectors are sorted according to their eigenvalues from largest to smallest (in magnitude): this means that if we use the first $k$ eigenvectors to get a representation we are greedily selecting vectors that retain the most information from our data.
+
+\begin{enumerate}
+\item Mean-normalize data: $x_i = \frac{x_i - \mu_{x_i}}{\sigma_{x_i}}$.
+\item Obtain covariance matrix $\Sigma$.
+\item Perform Singular Value Decomposition on $\Sigma$ to get three matrices, where the first stores the eigenvectors $U$ (columnwise), the second $S$ stores the eigenvalues along the diagonal.
+\item Dot produt to Project your data: $X' = XU[:, 0:k]$, where $k$ is the   number of dimensions we wish to reduce to.
+\item Calculate Percentage of Retained Variance: $\frac{\sum_{i=0}^{k-1} S_{ii}}{\sum_{j=0}^{d-1} S_{jj}}$.
+\end{enumerate}
+Eigenvectors give the direction of uncorrelated features, whereas the eigenvalues are the variance of the new features. The dot product gives the projection on uncorrelated features.
 
 \end{document}
 
