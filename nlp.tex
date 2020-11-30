@@ -89,7 +89,7 @@ showstringspaces=false            %
 
 \tableofcontents
 \newpage
-\section{Classification and Vector Spaces}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\section{Sentiment Analysis with Logistic Regression}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
 \subsection{Intro to Supervised ML and Sentiment Analysis}
 In supervised ML, we have input features $X$ and a set of labels $Y$. To get the most accurate predictions, we try to minimize our \emph{error rates} or \emph{cost function} as much as possible: to do this, we'll run our prediction function which takes in parameters $\theta$ to map you input features to output labels $\hat Y$. The best mapping is achieved when the difference between the expected values $Y$ and the predicted values $\hat Y$ is minimized, which the cost function does by comparing how closely your output $\hat Y$ is to your label $Y$. You can then update your parameters and repeat the whole process until your cost is minimized.
 
@@ -496,7 +496,7 @@ The vectorized version is simply given by
   \nabla J(\theta) = \frac{1}{m} \cdot X^T \left( H(X, \theta) - Y \right).
 \]
 
-\section{Naive Bayes}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\section{Sentiment Analysis with Naive Bayes}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
 \subsection{Probability and Bayes Rule} Imagine you have an extensive corpus of tweets that can be categorized as either positive or negative, but not both.
 
 
@@ -739,6 +739,134 @@ The first is purely positive, the latter is negative. In this case, the ``not'' 
 
 \paragraph{Adversarial attacks}
 Lastly, let's discuss adversarial attacks which essentially describe a language phenomenon like sarcasm, irony, and euphemism. Humans pick these up quickly but machines are terrible at it. The tweet, ``This is a ridiculously powerful movie. The plot was gripping and I cried right through until the ending'' contains a somewhat positive movie review, but pre-processing might suggest otherwise. I.e. if we pre-process, you'll get a list of mostly negative words, but these words were in fact used to describe a movie that the author enjoyed. Applying Naive Bayes to this list of words would yield a negative score, unfortunately.
+
+\section{Vector Space Models}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\subsection{Motivating Vector Space Models}
+Let's talk about vector spaces, and what types of information vectors can encode. We'll talk about vector space models, their advantages, and some applications.
+
+Suppose you have two questions:
+\begin{verbatim}
+Where are you heading?
+Where are you from?
+\end{verbatim}
+
+The sentences are identical but for the last word. However, the meaning is entirely different. On the other hand, the two questions:
+\begin{verbatim}
+What is your age?
+How old are you?
+\end{verbatim}
+contain no overlapping words but have identical meaning. Vector space models can identify similarity even when sentences don't share common words; they can also be used for answering paraphrasing, and summarization. One advantage of vector space models is they allow us to capture dependencies between words. E.g.
+\begin{verbatim}
+You eat cereal from a bowl.
+You buy something and someone else sells it.
+\end{verbatim}
+In the first sentence, the words \emph{cereal} and \emph{bowl} are related (we're eating one thing out of the other). In the second sentence, the latter half of it depends on the first half. Vector space models can capture this and many other types of relationships among different sets of words. When using a vector space models, the way that representations are made are by identifying the \emph{context} around each word in the text, and this captures the relative meaning. ``You shall know a word by the company it keeps'' (John Firth).
+
+\subsection{Word by Word and Word by Doc}
+Let's discuss how to construct vectors based off of a co-occurrence matrix. Depending on the task you're trying to solve, you can have several possible designs.
+
+\paragraph{Word by word} To get a vector space model using a word by word design, you'll make a co-occurrence matrix and extract vector representations for the words in your corpus. We'll also discuss how to find relationships between words and vetors, also known as their similarity. We define the \textbf{co-occurrence} of two different words as the number of times they occur together within a certain distance $k$. E.g. suppose our corpus has the following two sentences:
+\begin{verbatim}
+I like simple data.
+I prefer simple raw data.
+\end{verbatim}
+Then, the row of the co-occurrence matrix corresponding to the word \texttt{data} with a value $k = 2$ would be populated with the following values:
+
+  \begin{table}[h]
+    \begin{center}
+      \begin{tabular}{l c c c c}
+        & simple & raw & like & I \\
+        \hline
+        data & 2 & 1 & 1 & 0 \\
+        \hline
+      \end{tabular}
+        \caption{The word ``data'' appears within distance one of the word ``simple'' in the first sentence, and within distance two of the word simple in the second example. Both of these are within our tolerance of $k=2$, so the word by word co-occurrence entry for ``data'' and ``simple'' in this example is the value 2. We can proceed to compare the word ``data'' with other words appearing in our vocabulary, populating a representation that is based on word by word co-occurrence counts within a certain window size.}
+  \end{center}
+\end{table}
+
+With a word by word design, you get a representation with $|V|$ entries, where $V$ is our vocabulary.
+
+\paragraph{Word by document} With a word by document design, you'll count the number of times that words from your vocabulary appear in documents that belong to specific categories.
+
+\begin{center}
+  \begin{tikzpicture}[scale=3]
+    \draw[fill=orange!30] (0, 0) rectangle (1, 1);
+    \draw[fill=purple!30] (1, 0) rectangle (2, 1);
+    \draw[fill=gray!30] (2, 0) rectangle (3, 1);
+    \draw[step=1cm, gray, very thin] (0, 0) grid (3, 1);
+    \node at (0.5, 0.5) {Entertainment};
+    \node at (1.5, 0.5) {Economy};
+    \node at (2.5, 0.5) {$\substack{\textrm{Machine}\\ \textrm{Learning}}$};
+  \end{tikzpicture}
+\end{center}
+
+Here, we'd count the number of times that our words appear in the document that belong to each of the three categories. In this example, suppose that the word data appears 500 times in documents from your corpus related to entertainment, 6,620 times in economy documents, and 9,320 in documents related to machine learning. The word film might appear in each document's category 7,000, 4,000, and 1,000 times respectively.
+
+  \begin{table}[h]
+    \begin{center}
+      \begin{tabular}{l c c c}
+        & Entertainment & Economy & $\substack{\textrm{Machine}\\ \textrm{Learning}}$ \\
+        \hline
+        data & 500 & 6620 & 9320 \\
+        film & 7000 & 4000 & 1000 \\
+        \hline
+      \end{tabular}
+    \end{center}
+  \end{table}
+
+Once you've constructed representations for multiple sets of documents or words, you'll get your vector space. For example, we could take a representation for the \emph{words} ``data'' and ``film'' by looking at the rows of the table (or matrix). However, we can also get a representation for each \emph{category} of document type by looking at the columns! In our toy example, the vector space will have two dimensions: the number of times that the words ``data'' and ``film'' appear on the type of document.
+
+\begin{figure}[h]
+\begin{center}
+  \begin{tikzpicture}
+    \draw[->] (0, 0) -- (3.1, 0) node[below right=2mm,color=green!80!black] {data};
+    \draw[->] (0, 0) -- (0, 3.1) node[above left=2mm,color=green!80!black] {film};
+    % x-axis ticks
+    \draw[-] (1.5, -0.1) -- (1.5, 0.1) node[below=1mm] {\tiny 5,000};
+    \draw[-] (0.3, -0.1) -- (0.3, 0.1) node[below=1mm] {\tiny 1,000};
+    \draw[-] (3.0, -0.1) -- (3.0, 0.1) node[below=1mm] {\tiny 10,000};
+    % y-axis ticks
+    \draw[-] (-0.1, 1.5) -- (0.1, 1.5) node[left=1mm] {\tiny 5,000};
+    \draw[-] (-0.1, 0.3) -- (0.1, 0.3) node[left=1mm] {\tiny 1,000};
+    \draw[-] (-0.1, 3.0) -- (0.1, 3.0) node[left=1mm] {\tiny 10,000};
+    \draw[->,ultra thick, orange] (0, 0) -- (0.3, 2.1) node[right=1mm] {\color{orange} Entertainment};
+    \draw[->,ultra thick, purple] (0, 0) -- (1.986, 1.2) node[right=1mm] {\color{purple} Economy};
+    \draw[->,ultra thick, gray] (0, 0) -- (2.796, 0.3) node[right=1mm] {\color{gray} ML};
+\end{tikzpicture}
+\end{center}
+\caption{In this vector representation, the document categories Economy and Machine Learning are more similar to each other than they are to entertainment. Measures of similarity include angle (cosine similarity) and distance (Euclidean, for example).}
+\end{figure}
+
+\subsection{Distance and Similarity Metrics}
+\paragraph{Euclidean distance}
+Euclidean distance is a similarity metric: it identifies how far apart two points (or vectors) are from each other. 
+
+\begin{figure}[h]
+\begin{center}
+  \begin{tikzpicture}
+    \draw[->] (0, 0) -- (3.1, 0) node[below right=2mm,color=green!80!black] {data};
+    \draw[->] (0, 0) -- (0, 3.1) node[above left=2mm,color=green!80!black] {film};
+    % x-axis ticks
+    \draw[-] (1.5, -0.1) -- (1.5, 0.1) node[below=1mm] {\tiny 5,000};
+    \draw[-] (0.3, -0.1) -- (0.3, 0.1) node[below=1mm] {\tiny 1,000};
+    \draw[-] (3.0, -0.1) -- (3.0, 0.1) node[below=1mm] {\tiny 10,000};
+    % y-axis ticks
+    \draw[-] (-0.1, 1.5) -- (0.1, 1.5) node[left=1mm] {\tiny 5,000};
+    \draw[-] (-0.1, 0.3) -- (0.1, 0.3) node[left=1mm] {\tiny 1,000};
+    \draw[-] (-0.1, 3.0) -- (0.1, 3.0) node[left=1mm] {\tiny 10,000};
+    \node[draw,circle,fill,orange] (e) at (0.3, 2.1) {};
+    \node[draw,circle,fill,gray] (ml) at (2.796, 0.3) {};
+    \draw[-,dashed] (e) -- (ml);
+    \node[right=1mm of e] {\color{orange}Entertainment};
+    \node[right=1mm of ml] {\color{gray}ML};
+    \draw[<->,dashed,blue, ultra thick] (e) -- (0.3, 0.3);
+    \draw[<->,dashed,purple,ultra thick] (0.3,0.3) -- (ml);
+\end{tikzpicture}
+\end{center}
+\caption{Here we visualize the distance between two points, i.e. the length of the line segment connecting them. In two dimensions, this is given by $d(B,A) = \sqrt{({\color{purple} B_1 - A_1})^2 + ({\color{blue}B_2 - A_2})^2}$; the first term is the horizontal distance squared, and the second term is the vertical distance squared.}
+\end{figure}
+
+In higher dimensions, i.e. an $n$ dimensional vector, the process is similar.
 
 \end{document}
 
