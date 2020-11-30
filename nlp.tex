@@ -925,5 +925,64 @@ An alternative measure to Euclidean distance is Cosine similarity: i.e. the cosi
 
 If the input arguments (vectors) are perpendicular, the cosine of their inner angle is zero (since $\cos(90\degree) = 0$), whereas if they point in the same direction their cosine angle is unit valued (since $\cos(0\degree) = 1$, even if they have differing magnitudes).
 
+\paragraph{Manipulating words in vector spaces} How can we manipulate vectors using vector arithmetic to make predictions? I.e. we will use manipulate vector representations to infer unknown relations among words. Suppose we have a vector space with countries and their capital cities. Perhaps we know that the capital of the U.S. is Washington D.C., but that we don't know the capital of Russia, and we further we'd like to use our knowledge of Washington D.C. with the U.S. to figure it out: it's as easy as applying linear algebra.
+
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[->,thick] (0,0) -- (15, 0);
+      \draw[->,thick] (0,0) -- (0, 6);
+      \node[draw,circle,fill=green!70!black] (usa) at (5, 6) {};
+      \node[draw,circle,fill=green!70!black] (russia) at (5, 5) {};
+      \node[draw,circle,fill=green!70!black] (japan) at (4, 3) {};
+      \node[draw,circle,fill=green!70!black] (turkey) at (3, 1) {};
+      \node[draw,circle,fill=blue!70!black] (washington) at (10, 5) {};
+      \node[draw,circle,fill=orange!20] (moscow_pred) at (10, 4) {};
+      \node[draw,circle,fill=blue!70!black] (moscow) at (9, 3) {};
+      \node[draw,circle,fill=blue!70!black] (tokyo) at (8.5, 2) {};
+      \node[draw,circle,fill=blue!70!black] (ankara) at (8.5, 0.9) {};
+      % Countries.
+      \node[above left=1mm of usa] {USA (5,6)};
+      \node[above left=1mm of russia] {Russia (5,5)};
+      \node[above left=1mm of japan] {Japan (4,3)};
+      \node[above left=1mm of turkey] {Turkey (3,1)};
+      % Capitals.
+      \node[right=1mm of washington] {Washington (10,5)};
+      \node[right=1mm of moscow_pred] {\color{orange!20!black!50} (10,4)};
+      \node[right=1mm of moscow] {Moscow (9,3)};
+      \node[right=1mm of tokyo] {Tokyo (8.5,2)};
+      \node[right=1mm of ankara] {Ankara (8.5,0.9)};
+      % Relations
+      \draw[->,ultra thick, purple] (usa) -- (washington);
+      \draw[->,ultra thick, purple] (russia) -- (moscow_pred);
+    \end{tikzpicture}
+  \end{center}
+  \caption{From \href{https://papers.nips.cc/paper/2013/file/9aa42b31882ec039965f3c4923ce901b-Paper.pdf}{Mikolov et. al. ``Distributed Representations of Words and Phrases and their Compositionality''}: in this representation, the vector between capitals Washington and USA is given by $[\texttt{Washington} - \texttt{USA}] = [5, -1]$. The easiest way to predict the capital of Russia is to simply take $\texttt{Russia} + [5, -1] = [10, 4]$. Because there are no cities with that representation, we'll search for the capital city that is most similar by comparing each vector with the Euclidean distances (or Cosine similarities). The catch is that we need a vector space where the representations capture the relative meaning of words.}
+\end{figure}
+
+\paragraph{Visualization and PCA} Often, we'll have vector representations in very high dimension, but we'll want to find a way to reduce the dimensions of the vectors to two dimensions so that we may plot it on a 2-D cartesian plane. What's the intuition? Principal Component Analysis is they key: it allows us to take a representation with $d > 2$ dimensions and project it down to a lower dimension, e.g. $d=2$, which we can then plot. If you perform PCA on your data, you might find that your word representation captures relationship between pairs of words that you expect to be related, in so far as these related words appear in clusters within the plot; you can confirm known relationships and also spot new ones using this technique.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[
+    declare function={a(\x)=1;},
+    declare     function={b(\x)=0;}
+  ]
+  \begin{axis}[
+    domain=1:5,
+    axis lines=middle,
+    axis equal image,
+    xtick=\empty,
+    ytick=\empty,
+    enlargelimits=true,
+    clip mode=individual,
+    clip=false
+  ]
+  \addplot [red, only marks, mark=x, samples=20, mark size=2]       {x*0.5*(a(x)+b(x)) + 0.5*rand*(a(x)-b(x))};
+\end{axis}
+\end{tikzpicture}
+\caption{\footnotesize Raw data $(x_1, x_2)$ pairs.}
+\end{figure}
+
 \end{document}
 
