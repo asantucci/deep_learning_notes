@@ -570,17 +570,113 @@ Realize that the intersection operation between two events is symmetric, i.e. th
 This is an expression of Bayes rule in the context of the sentiment analysis problem. More generally: Bayes rule specifies that $\Pr(X|Y) = \Pr(Y|X) \times  \frac{\Pr(X)}{\Pr(Y)}$.
 
 \subsection{Naive Bayes}
+\label{sec: naivebayes}
 Naive Bayes is often a ``very good, quick, and dirty baseline'' for many text classification tasks; it's an example of supervised machine learning and as such shares many similarities with logistic regression. It's called Naive because it makes the assumption that the features you're using for classification are all independent, which in reality is \emph{rarely} the case. As per usual, we start with two corpora: one for the positive tweets and one for the negative tweets:
 
-\begin{center}
+\begin{minipage}{1.0\textwidth}
+  \begin{multicols}{2}
+    \begin{center}
   \begin{tikzpicture}
     \draw (0, 2) rectangle (8, -2);
     \node at (1.35, 1.8) {Positive tweets};
     \node at (3.75, 1.3) {\color{green!50!black}I am happy because I am learning NLP};
     \node at (2.00, 0.8) {\color{green!50!black}I am happy, not sad};
     \draw (0.1, 0.6) rectangle (7.8, 1.6);
+    \node at (6.5, 0) {Negative tweets};
+    \node at (4.95, -0.5) {\color{purple!90} I am sad, I am not learning NLP};
+    \node at (6.05, -1) {\color{purple!90} I am sad, not happy};
+    \draw (1.9, -1.25) rectangle (7.95, -0.25);
   \end{tikzpicture}
 \end{center}
+\vfill\null \columnbreak
+\begin{tabular}{c c c}
+  \hline
+  word & {\color{green!50!black} Pos} & {\color{purple!90} Neg} \\
+  \hline
+  I & 3 & 3 \\
+  am & 3 & 3 \\
+  happy & 2 & 1 \\
+  because & 1 & 0 \\
+  learning & 1 & 1 \\
+  NLP & 1 & 1 \\
+  sad & 1 & 2 \\
+  not & 1 & 2 \\
+  \hline
+  $N_{\textrm{class}}$ & 13 & 13
+\end{tabular}
+\end{multicols}
+\end{minipage}
+
+The above word frequencies table is the backbone input to our naive bayes algorithm: it allows us to compute conditional probabilities. E.g. $\Pr(\textrm{I} | \textrm{Pos}) = \frac{3}{13}$. We can do this for each word in our vocabulary, i.e. compute the conditional probability of it appearing in each class. Notice that if you sum over the probabilities for a particular class, you get 1.
+
+\begin{center}
+\begin{tabular}{c c c}
+  \hline
+  word & {\color{green!50!black} Pos} & {\color{purple!90} Neg} \\
+  \hline
+  I & $\frac{3}{13}$ & $\frac{3}{13}$ \\
+  am & $\frac{3}{13}$ & $\frac{3}{13}$ \\
+  {\color{green!50!black} happy} & $\frac{2}{13}$ & $\frac{1}{13}$ \\
+  because & $\frac{1}{13}$ & 0 \\
+  learning & $\frac{1}{13}$ & $\frac{1}{13}$ \\
+  NLP & $\frac{1}{13}$ & $\frac{1}{13}$ \\
+  {\color{purple!90}sad} & $\frac{1}{13}$ & $\frac{2}{13}$ \\
+  {\color{purple!90}not} & $\frac{1}{13}$ & $\frac{2}{13}$ \\
+  \hline
+  Sum & 1 & 1
+\end{tabular}
+\end{center}
+
+Let's inspect some of the entries: notice that for a few words in the vocabulary, their conditional probabilities of appearing in either class are (nearly) identical: words that are equally probable don't add anything to the sentiment. On the other hand, words like {\color{green!50!black} happy}, or {\color{purple!90} sad, not} are ``power'' words which tend to express one sentiment or another. These words carry a lot of weight in determining your tweet sentiments. As a separate note, examine the word \texttt{because}: it only appears in the positive corpus, and so its conditional probability for the negative class is zero: when this happens we have no way of comparing between the two corpora which will become a problem for subsequent calculations. We'll see how we can ``smooth'' our probability function.
+
+Suppose we get a new tweet, ``I am happy today; I am learning.'' and we want to classify its sentiment. We use the following expression:
+\[
+  \prod_{i=1}^{m} \frac{\Pr(w_i | \textrm{pos})}{\Pr(w_i|\textrm{neg})}
+\]
+
+So, for our tweet example, we have (word by word, and skipping ``today'' because it doesn't appear in our vocabulary):
+\[
+  \frac{\frac{3}{13}}{\frac{3}{13}} \times \frac{\frac{3}{13}}{\frac{3}{13}} \times \frac{\frac{2}{13}}{\frac{1}{13}} \times \frac{\frac{3}{13}}{\frac{3}{13}} \times \frac{\frac{3}{13}}{\frac{3}{13}} \times \frac{\frac{1}{13}}{\frac{1}{13}} = \frac{2}{13} {\color{green!50!black} > 1}.
+\]
+
+Because the ratio is greater than unit value, we conclude that overall the sentiment of the tweet is positive.
+
+\paragraph{Laplacian smoothing} This is a technique we use to avoid probabilities being identically zero. Typically, the expression used to calculate the conditional probability of a word, given the class, is
+\[
+  \Pr(w_i | \textrm{class}) = \frac{\texttt{freq}(w_i, \textrm{class})}{N_{\textrm{class}}} \hspace{35pt} \textrm{class} \, \in \, \{\textrm{Positive}, \textrm{Negative}\}
+\]
+where $N_{\textrm{class}} = \textrm{ frequency of all words in class}$. Laplacian smoothing does the following; supposing $|V|$ is the number of unique words in the vocabulary
+\begin{equation}
+  \label{eq: laplaciansmoothing}
+  \Pr(w_i | \textrm{class}) = \frac{\texttt{freq}(w_i, \textrm{class}) + 1}{N_{\textrm{class}} + |V|}.  
+\end{equation}
+
+By adding a one to our numerator, we ensure the expression is non-zero. However, this is not correctly normalized by $N_{\textrm{class}}$, and so we add a new term to the denominator $|V|$; this ensures the probabilities all sum to one. E.g. in our example table in section \ref{sec: naivebayes} describing positive and negative word frequencies in our corpora of tweets, we can use this to compute
+\[
+  \Pr(\textrm{I} | \textrm{Pos}) = \frac{3+1}{13+8}.
+\]
+We can apply Laplacian smoothing to every entry in our table and end up with a new table of conditional probabilities where the column-sums are unit valued.
+Notice that if we apply this technique to the word ``because'' in our example, and specificially for the negative class, that $\Pr(\textrm{because} | \textrm{Negative}) = \frac{0 + 1}{13 + 8} > 0$ which solved our original problem of getting a divide by zero in the formula for Naive Bayes $\prod_{i=1}^m \frac{\Pr(w_i | \textrm{Pos})}{\Pr(w_i | \textrm{Neg})}$.
+
+\paragraph{Log likelihoods} Words can have many shades of emotional meaning, but for the purpose of sentiment classification they can be simplified into three categories: neutral, positive, and negative. A word can be taxonomized according to its conditional probabilities. We simply calculate for each word
+\[
+  \textrm{ratio}(w_i) = \frac{\Pr(w_i | \textrm{{\color{green!50!black}\textrm{Pos}}})}{\Pr(w_i | {\color{purple!90} \textrm{Neg}})} \approx \frac{\texttt{freq}(w_i, {\color{green!50!black} 1}) + 1}{\texttt{freq}(w_i, {\color{purple!90} 0}) + 1}.
+\]
+
+If this ratio is identically unit valued, the word is neutral. Words that are more positive tend to have higher ratios (larger than one), and words that are more negative tend to have lower ratios (less than one). Observe that the ratio can lie in $[0, \infty)$.
+
+It turns out that in our previous formulation of Naive Bayes, we assumed balanced class sizes. The correct formula for the likelihood includes the prior ratio, which becomes important for unbalanced datasets (where e.g. the number of positive and negative tweets is not equal):
+\begin{equation}
+  \label{eq: completenaivebayeswithprior}
+  \frac{\Pr(\textrm{Pos})}{\Pr(\textrm{Neg})} \prod_{i=1}^{m} \frac{\Pr(w_i | \textrm{pos})}{\Pr(w_i|\textrm{neg})}  
+\end{equation}
+
+Recognize that this computation involves the product of many probabilities that lie in $(0,1]$, and we run the risk of numerical underfluw if the number returned ``is so small it can't be stored on your device''. There is a nice mathematical trick that avoids this pitfall, and that's to use properties of logarithms: $\log(a \times b) = \log (a) + \log (b)$.
+\[
+\log  \frac{\Pr(\textrm{Pos})}{\Pr(\textrm{Neg})} \prod_{i=1}^{m} \frac{\Pr(w_i | \textrm{pos})}{\Pr(w_i|\textrm{neg})}  \leadsto \underbrace{\log \frac{\Pr(\textrm{Pos})}{\Pr(\textrm{Neg})}}_{\textrm{log prior}} + \underbrace{\sum_{i=1}^{m} \log \frac{\Pr(w_i | \textrm{Pos})}{\Pr(w_i | \textrm{Neg})}}_{\textrm{log likelihood}}.
+\]
+Let $\lambda(w) = \log \frac{\Pr(w | \textrm{Pos})}{\Pr(w | \textrm{Neg})}$; we calculate this for each word in our vocabulary. Realize that neutral words (i.e. ones where $\Pr(w | \textrm{Pos}) = \Pr(w | \textrm{Neg})$) have $\lambda(w) = \log(1) = 0$. A positive sentiment is indicated by $\lambda(w) > 0$, and correspondingly $\lambda < 0$ indicates a negative sentiment. By using logarithms, we can reduce the risk of numerical underflow.
+Realize that our log-likelihood term can be expressed as $\sum_{i=1}^{m} \log \frac{\Pr(w_i | \textrm{Pos})}{\Pr(w_i | \textrm{Neg})} = \sum_{i=1}^m \lambda(w_i) \in (-\infty, \infty)$; we emphasize that our decision boundary is zero with our log-likelihood formula.
 
 \end{document}
 
