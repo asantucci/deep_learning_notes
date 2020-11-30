@@ -678,5 +678,23 @@ Recognize that this computation involves the product of many probabilities that 
 Let $\lambda(w) = \log \frac{\Pr(w | \textrm{Pos})}{\Pr(w | \textrm{Neg})}$; we calculate this for each word in our vocabulary. Realize that neutral words (i.e. ones where $\Pr(w | \textrm{Pos}) = \Pr(w | \textrm{Neg})$) have $\lambda(w) = \log(1) = 0$. A positive sentiment is indicated by $\lambda(w) > 0$, and correspondingly $\lambda < 0$ indicates a negative sentiment. By using logarithms, we can reduce the risk of numerical underflow.
 Realize that our log-likelihood term can be expressed as $\sum_{i=1}^{m} \log \frac{\Pr(w_i | \textrm{Pos})}{\Pr(w_i | \textrm{Neg})} = \sum_{i=1}^m \lambda(w_i) \in (-\infty, \infty)$; we emphasize that our decision boundary is zero with our log-likelihood formula.
 
+\paragraph{Training Naive Bayes} In the context of Naive Bayes, ``train'' means something different than in logistic regression or deep learning: there's no gradient descent; we're just counting word frequencies in a corpus. There are five steps for training a Naive Bayes model:
+
+\begin{enumerate}
+\item Collect and annotate corpus (e.g. with positive and negative tweets)
+\item Preprocessing (e.g. $\texttt{process\_tweet}(\textrm{tweet}) \leadsto [w_1, w_2, \ldots, ]$)
+    \begin{itemize}
+    \item Lowercase
+    \item Remove punctuation, urls, names, etc.
+    \item Remove stop words
+    \item Stemming
+    \item Tokenize sentences
+  \end{itemize}
+\item Compute word counts, i.e. $\texttt{freq}(w, \textrm{class})$ and   $N_{\textrm{class}}$.
+\item Apply Laplacian smoothing to compute $\Pr(w | \textrm{class}) = \frac{\texttt{freq}(w, \textrm{class}) + 1}{N_{\textrm{class}} +   |V_{\textrm{class}}|}$.
+\item Calculate $\lambda(w) = \log \frac{\Pr(w | \textrm{Pos})}{\Pr(w |     \textrm{Neg})}$.
+\item Get the log-prior, which involves first counting $D_{\textrm{Pos}} = $ number of positive tweets and $D_{\textrm{Neg}} = $ number of negative tweets, whereby $\log \textrm{ prior } = \log \frac{D_{\textrm{Pos}}}{D_{\textrm{Neg}}}$.\footnote{If the dataset is balanced, the log-prior is zero since $D_{\textrm{Pos}} = D_{\textrm{Neg}}$ and $\log(1) = 0$.}
+\end{enumerate}
+
 \end{document}
 
