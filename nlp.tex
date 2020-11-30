@@ -696,7 +696,49 @@ Realize that our log-likelihood term can be expressed as $\sum_{i=1}^{m} \log \f
 \item Get the log-prior, which involves first counting $D_{\textrm{Pos}} = $ number of positive tweets and $D_{\textrm{Neg}} = $ number of negative tweets, whereby $\log \textrm{ prior } = \log \frac{D_{\textrm{Pos}}}{D_{\textrm{Neg}}}$.\footnote{If the dataset is balanced, the log-prior is zero since $D_{\textrm{Pos}} = D_{\textrm{Neg}}$ and $\log(1) = 0$.}
 \end{enumerate}
 
-\paragraph{Testing Naive Bayes} Once you've trained your model, you test it by taking the conditional probabilities derived and using them to predict the sentiments of new unseen tweets. We can evaluate model performance using test set accuracy. In particular, suppose we are given a tweet ``I passed the NLP interview!'', and then after preprocessing we end up with $[\textrm{I, pass, the, NLP, interview}]$. We then look up our $\lambda(w)$'s that were calculated when we ``trained'' our model and compute the score, i.e. the log-prior plus log-likelihood for the unseen test case and compare it to our threshold (of zero). The values of the words that aren't in our vocabulary are treated as neutral (i.e. zeros) and do not contribute to the final score (likelihood) of the unseen word: $\texttt{pred} = \mathbbm 1_{\texttt{score} > 0}$. If we are given a bunch of unseen words, i.e. data set aside during training ($X_{\textrm{val}}, Y_{\textrm{val}}$), we (i) compute $\texttt{score} = \texttt{predict}(X_{\textrm{val}}, \lambda, \texttt{log-prior})$ and then (ii) predict $\texttt{pred} = \mathbbm 1_{\texttt{score} > 0}$, and then (iii) compute test accuracy given by $\frac{1}{m} \sum_{i=1}^m \left(\texttt{pred}_i == Y_{\textrm{val}_i}\right)$.
+\paragraph{Testing Naive Bayes} Once you've trained your model, you test it by taking the conditional probabilities derived and using them to predict the sentiments of new unseen tweets. We can evaluate model performance using test set accuracy. In particular, suppose we are given a tweet ``I passed the NLP interview!'', and then after preprocessing we end up with $[\textrm{I, pass, the, NLP, interview}]$. We then look up our $\lambda(w)$'s that were calculated when we ``trained'' our model and compute the score, i.e. the log-prior plus log-likelihood for the unseen test case and compare it to our threshold (of zero). The values of the words that aren't in our vocabulary are treated as neutral (i.e. zeros) and do not contribute to the final score (likelihood) of the unseen word: $\texttt{pred} = \mathbbm 1_{\texttt{score} > 0}$. If we are given a bunch of unseen words, i.e. data set aside during training ($X_{\textrm{val}}, Y_{\textrm{val}}$), we (i) compute $\texttt{score} = \texttt{predict}(X_{\textrm{val}}, \lambda, \texttt{log-prior})$ and then (ii) predict $\texttt{pred} = \mathbbm 1_{\texttt{score} > 0}$, and then (iii) compute test accuracy given by $\frac{1}{m} \sum_{i=1}^m \left(\texttt{pred}_i   == Y_{\textrm{val}_i}\right)$.
+
+\paragraph{Applications of Naive Bayes} There's more we can do than just sentiment analysis. For example, we could do author identification: if you had two large corpora each written by different authors, you could train the model to recognize whether a document was written by one author or the other. Or, if you had some works by Shakespeare and some works by Hemmingway, you could calculate the $\lambda$ for each word to predict how likely a new word is to be used by Shakespeare or alternatively Hemmingway. Another common use is spam filtering: $\frac{\Pr(\textrm{spam} | \textrm{email})}{\Pr(\textrm{non-spam}|\textrm{email})}$. One of the earliest applications of Naive Bayes was to filter between relevant and irrelevant documents in a database. I.e. given a set of keywords in a query, in this case, you can calculate the likelihood of the documents given the query:
+\[
+  \Pr(\textrm{document}_k | \textrm{query}) \propto \prod_{i=0}^{|\textrm{query}|} \Pr(\textrm{query}_i | \textrm{document}_k).
+\]
+Then, we have a decision rule that suggests retrieval if $\Pr(\textrm{document}_k | \textrm{query}) > \textrm{threshold}$, and then \emph{sort} the documents based on their likelihoods; perhaps we choose to keep the first $m$ results or ones with a likelihood above a certain threshold. Lastly, we can also use Naive Bayes for word disambiguation, i.e. breaking words down for contextual clarity. Consider that you have two possible interpretations of a given word within a text: let's say you don't know if the word ``bank'' in a text is referring to the bank of a river or a financial institution. To disambiguate your word, calculate the score of the document: $\frac{\Pr(\textrm{river} | \textrm{text})}{\Pr(\textrm{money} |   \textrm{text})}$.
+
+\subsubsection{Assumptions of Naive Bayes} Naive Bayes is a very simple model: it doesn't involve setting any parameters. The method is called ``naive'' because of the assumptions it makes about the data. The first assumption is independence between predictors within each class, and the second has to do class (im)-balance with your validation sets. Let's explore each in detail and how they can affect our results.
+
+\paragraph{Independence} To illustrate what independence between features looks like, lets consider the following example:
+\begin{verbatim}
+It is sunny and hot in the Sahara Desert.
+\end{verbatim}
+Naive Bayes assumes the words in a piece of text are independent of one another, but as you can see this is not always the case: the words ``sunny'' and ``hot'' often appear together as they do in this example. When taken together, they might also be related to the thing they're describing like a beach or a desert; so the words in a sentence aren't really independent of one another. But, Naive Bayes assumes that they are. The implication is that we could end up under \emph{or} over estimating the conditional probabilities of individual words. E.g. if your task was to complete the sentence: ``It's always cold and snowy in \{blank\}'', then Naive Bayes might assign equal probability to the words spring, summer, fall, and winter even though from the context winter is the most likely candidate.\footnote{More sophisticated methods can deal with this issue.}
+
+\paragraph{Distribution of training data} A good data set will contain the same proportion of (e.g. positive and negative) classes as a random sample would. However, most available annotated corpora are artificially balanced. E.g. in a real tweet stream a positive tweet is more likely to be sent than a negative tweet. Part of this has to do with platform decisions to perhaps ban content that is inappropriate or contains offensive vocabulary. Assuming that reality behaves as your training corpus could result in a very optimistic \emph{or} pessimistic model.
+
+\subsubsection{Error Analysis} No matter what NLP method you use, you'll one day find yourself faced with an error, e.g. a missclassified sentence. How can we analyze such errors? Let's consider some possible errors in the model prediction that can be caused by:
+\begin{itemize}
+\item Removing punctuation and stop words -- semantic meaning can be lost in the preprocessing step.
+\item Word order -- can affect the meaning of a sentence.
+\item Adversarial attacks -- language quirks can confuse Naive Bayes classifiers.
+\end{itemize}
+
+\paragraph{Removing punctuation}
+Let's consider an example tweet: ``My beloved grandmother :(''. The sad face punctuation in this case is \emph{very} important to the sentiment of the tweet because it tells you what's happening; but, if we remove punctuation then the processed tweet will leave behind a different (positive) sentiment. After processing, we may end up with $[\textrm{belov, grandmoth}]$ which appear positive in nature.
+
+\paragraph{Removing (stop) words}
+It's not just about punctuation either, consider as an example ``this is not good, because your attitude is not even close to being nice''. If we remove stop words, we're left with $[\textrm{good, attitude, close, nice}]$. From this set of words, any classifier would infer that the sentiment is positive. There are techniques we will learn about later to handle ``nots'' and word-order. For now, the takeaway is to look at the processed data to make sure your model can get an accurate read.
+
+\paragraph{Word order}
+The input pipeline isn't the only source of trouble. E.g. consider the following two tweets:
+
+\begin{verbatim}
+I am happy because I did not go.
+I am not happy because I did go.
+\end{verbatim}
+
+The first is purely positive, the latter is negative. In this case, the ``not'' is important to the sentiment but gets missed by the Naive Bayes classifier: word order can be as important as spelling.
+
+\paragraph{Adversarial attacks}
+Lastly, let's discuss adversarial attacks which essentially describe a language phenomenon like sarcasm, irony, and euphemism. Humans pick these up quickly but machines are terrible at it. The tweet, ``This is a ridiculously powerful movie. The plot was gripping and I cried right through until the ending'' contains a somewhat positive movie review, but pre-processing might suggest otherwise. I.e. if we pre-process, you'll get a list of mostly negative words, but these words were in fact used to describe a movie that the author enjoyed. Applying Naive Bayes to this list of words would yield a negative score, unfortunately.
 
 \end{document}
 
