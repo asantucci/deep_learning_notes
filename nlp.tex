@@ -58,8 +58,8 @@
 \newcommand\pythonstyle{\lstset{
 language=Python,
 basicstyle=\ttm,
-otherkeywords={self,for,range,in},             % Add keywords here
-keywordstyle=\ttb\color{deepblue},
+otherkeywords={self,for,range,in,True},             % Add keywords here
+keywordstyle=\ttb\color{deepgreen},
 emph={MyClass,__init__},          % Custom highlighting
 emphstyle=\ttb\color{deepred},    % Custom highlighting style
 stringstyle=\color{deepgreen},
@@ -1318,7 +1318,42 @@ for word in words_in_document:
 print(document_embedding)
 \end{python}
 
-Reference: \href{https://www.amazon.com/Speech-Language-Processing-Daniel-Jurafsky-ebook-dp-B00XIGSJQK/dp/B00XIGSJQK/ref=mt_kindle?_encoding=UTF8&me=&qid=1591993888}{``Speech and Language Processing'' by Jurafsky, Martin, Norvig, and Russell}.
+Reference: \href{https://www.amazon.com/Speech-Language-Processing-Daniel-Jurafsky-ebook-dp-B00XIGSJQK/dp/B00XIGSJQK/ref=mt_kindle?_encoding=UTF8&me=&qid=1591993888}{``Speech   and Language Processing'' by Jurafsky, Martin, Norvig, and Russell}.
+
+\section{Autocorrect and Minimum Edit Distance}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\subsection{Autocorrect} What is autocorrect exactly? It can mean slightly different things depending on the context. A key concept in performing autocorrect is quantifying how far apart two strings are, and calculating the minimum number of characters needed to be changed to go from one string to another.
+\paragraph{What is autocorrect?} It changes misspelled into the correct ones. E.g.
+\[
+  \texttt{Happy birthday {\color{red} deah} friend!} \leadsto \texttt{Happy birthday {\color{green!80!black} dear} frend!}
+\]
+But what if we typed ``deer'' instead of ``deah'' or ``dear'': the word might be spelled correctly, but its context is incorrect. This is a more sophisticated problem that we will revisit later; for now, let's focus on \emph{misspelled} words.
+\begin{enumerate}
+\item Identify a misspelled word.
+\item Find strings $n$ edit distance away: a string that is 1-edit distance away might be more likely to be a correct replacement than a string that is 2-edit distance away.
+\item Filter candidates - only retain real words that are spelled correctly.
+\item Calculate word probabilities - this informs us how likely each word is to appear in the context; we choose the most likely candidate as our replacement.
+\end{enumerate}
+
+\paragraph{Identify a misspelled word} How do we know that a word is misspelled? Well, if it's spelled correctly, we could look it up in a dictionary; otherwise, it's probably a misspelled word.
+\begin{python}
+if word not in vocab:
+  misspelled = True
+\end{python}
+If a word is not in a dictionary, we flag it for correction. Recall that we've limited our focus to just spelling errors, not contextual errors. There are more sophisticated techniques for identifying words that are probably incorrect by looking at neighboring words, but for now, identifying a word as incorrect by its apparent misspelling will yield a powerful model that works well.\footnote{We conceded this means a word like ``deer'' in our introductory   example would not be flagged by this autocorrect program.}
+
+\paragraph{Find strings $n$-edit distance away} An edit is a type of operation performed on a string to change it into another string. Edit distance counts the number of these operations, so that the $n$-edit distance metric tells us how far away one string is from another.
+\begin{itemize}
+  \item Consider an \emph{insert} operation, which adds a letter to a string at any position. E.g. if we take ``to'' and insert a ``p'' at the end we get ``top'', or if we insert a ``w'' in the middle we get ``two''.
+\item We can also apply \emph{delete} operations, which remove a letter from a string. E.g. we can start with ``hat'' and delete single characters to yield ``ha'', ``at'', ``ht''.
+\item There's also a \emph{swap} operation, which allows us to swap two adjacent letters. E.g. we can start with ``eta'' and swap to get ``eat'' or ``tea''. This does \emph{not} include switching two non-adjacent letters, i.e. a swap does not let us create ``ate'' by switching the ``e'' and the non-adjacent ``a'' in ``eta''.
+\item We can also \emph{replace} one letter with another. E.g. ``jaw'' can be made into ``jar'' or ``paw''.
+\end{itemize}
+
+By combining these edits, we can finda list of all possible strings that are $n$-edits away from a given string. For auto-correct, $n$ is usually 1-3 edits.
+
+\paragraph{Filter candidates} Notice how many of the strings generated don't look like actual words: to filter strings and keep real words we'll want to only consider correctly spelled words from our candidate list. We can again use a known dictionary to make comparisons against a known vocabulary.
+
+\paragraph{Calculate probabilities} The final step is to calculate word probabilities and find the most likely word from the candidates. 
 
 \end{document}
 
