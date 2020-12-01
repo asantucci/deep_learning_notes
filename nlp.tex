@@ -1234,6 +1234,52 @@ Notice that in our \texttt{hash\_function()} definition, we are using a \emph{di
 \end{figure}
 
 \paragraph{Visualizing a dot product} Let's visualize the dot product further.
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[<->,gray] (-2, 0) -- (2, 0);
+      \draw[<->,gray] (0, -1) -- (0, 2);
+      \draw[->,thick,purple!80] (0,0) -- (1.5, 1.5) node[above] {\color{black} $P$};
+      \draw[->,thick,blue!80] (0,0) -- (1, 0.2) node[right] {\color{black}                 $V_1$};
+      \draw[-,dotted] (0.8, 0.8) -- (1, 0.2);
+      \draw[->,ultra thick] (0,0) -- (0.8,0.8);
+      \draw [decorate,decoration={brace,amplitude=5pt},xshift=-4pt,yshift=0pt]
+(0,0) -- (0.8,0.8) node [black,midway,xshift=-0.4cm,yshift=1pt,rotate=45] 
+{\footnotesize Projection};
+    \end{tikzpicture}
+  \end{center}
+  \caption{To visualize the dot product, imagine one of the vectors such as $P$, as if it's the surface of the Earth. Gravity pulls all objects \emph{straight} down towards the surface of the Earth. Next, pretend you're standing at the end of the vector $V_1$. You tie a string to a rock and let gravity pull the rock to the surface of vector $P$: the string is prependicular to vector $P$. Now, if you draw a vector that's in the same direction of $P$ but ends up at the rock, you'll have what's called the \emph{projection} of vector $V_1$ onto vector $P$. The magnitude or length of that vector is equal to the dot product of $V_1$ and $P$, i.e. $\|PV_1^T\|$. The sign of the dot product indicates the direction with respect to the purple normal vector: a positve sign indicates a vector is pointed in the same direction, whereas a negative sign means they are pointed in opposite directions.}
+\end{figure}
+
+We can implement a simple Python function to determine whether a vector $v$ is pointed in the same or oppositive direction of a normal vector $P$:
+\begin{python}
+def side_of_plane(P,v):
+  dotproduct = np.dot(P, v.T)
+  sign_of_dot_product = np.sign(dotproduct)
+  sign_of_dot_product_scalar = np.asscalar(sign_of_dot_product)
+  return sign_of_dot_product_scalar
+\end{python}
+
+We first compute the inner product, then examine the sign, then convert the sign to a one, zero, or minus one depending on whether the inner product is positive, zero, or negative.
+
+\paragraph{Multiple planes} How can we combine information from multiple planes into a single hash value? Previously, we saw how we can examine the sign of the dot product between the normal vector of a plane and a vector representing our data, and we could get a notion of position relative to the plane. Here, we're going to examine how to use information from multiple planes in order to get a single hash value for your data in your vector space, since in order to divide your vector space into manageable regions, you'll want to use more than one plane.
+
+\begin{itemize}
+\item For each plane, find out whether a vector is on the positive or negative side of that plane: you'll get multiple signals, one for each plane and we need to find a way to combine them all into a single hash value. I.e. compute $P V_i^T \leadsto \textrm{sign}_i \leadsto h_i$ where $h_i \in \{0,1\}$ according to $h_i = \mathbbm 1_{\textrm{sign}_i \geq 0}$, indicating the side of the plane that the vector lies on.
+\item Compute $\texttt{hash} = \sum_{j=1} h_j 2^{j-1}$.
+\end{itemize}
+
+\begin{python}
+def hash_multiple_plane(P_l, v):
+  hash_value = 0
+  for i, P in enumerate(P_l):
+    sign = side_of_plane(P, v)
+    hash_i = 1 if sign >= 0 else 0
+    hash_value += 2**i * hash_i
+  return hash_value
+\end{python}
+
+
 
 \end{document}
 
