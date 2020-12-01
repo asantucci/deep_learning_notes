@@ -1167,6 +1167,73 @@ Notice that in our \texttt{hash\_function()} definition, we are using a \emph{di
   \caption{A good hash-function places similar word vectors in the same bucket.}
 \end{figure}
 
+\paragraph{Locality sensitive hashing} A key method for reducing the computational cost of finding $k$-nearest neighbors in high-dimensional spaces is locality-sensitive hashing. Let's start with examples of word vectors with two dimensions.
+
+\begin{table}
+  \begin{center}
+    \begin{tikzpicture}[scale=5]
+      % Gray nodes.
+      \node[draw,circle,fill=gray!50,scale=0.5] at (-0.2, -0.1) {};
+      \node[draw,circle,fill=gray!50,scale=0.5] at (-0.25, 0.07) {};
+      \node[draw,circle,fill=gray!50,scale=0.5] at (-0.05, 0.02) {};
+      \node[draw,circle,fill=gray!50,scale=0.5] at (-0.10, 0.10) {};
+      \node[draw,circle,fill=gray!50,scale=0.5] at (-0.13, 0.13) {};
+      \node[draw,circle,fill=gray!50,scale=0.5] at (-0.08, 0.18) {};
+      \node[draw,circle,fill=gray!50,scale=0.5] at (-0.15, 0.12) {};
+      % Green nodes.
+      \node[draw,circle,fill=green!50!black,scale=0.5] at (0.00, -0.20) {};
+      \node[draw,circle,fill=green!50!black,scale=0.5] at (0.05, -0.05) {};
+      \node[draw,circle,fill=green!50!black,scale=0.5] at (0.10, +0.05) {};
+      \node[draw,circle,fill=green!50!black,scale=0.5] at (0.12, -0.15) {};
+      \node[draw,circle,fill=green!50!black,scale=0.5] at (0.13, -0.175) {};
+      % Orange nodes.
+      \node[draw,circle,fill=orange!50,scale=0.5] at (+0.15, 0.02) {};
+      \node[draw,circle,fill=orange!50,scale=0.5] at (+0.20, 0.08) {};
+      \node[draw,circle,fill=orange!50,scale=0.5] at (+0.22, 0.05) {};
+      \node[draw,circle,fill=orange!50,scale=0.5] at (+0.17, 0.25) {};
+      \node[draw,circle,fill=orange!50,scale=0.5] at (+0.15, 0.30) {};
+      % Blue nodes.
+      \node[draw,circle,fill=blue!50,scale=0.5] at (+0.30, -0.08) {};
+      \node[draw,circle,fill=blue!50,scale=0.5] at (+0.35, -0.10) {};
+      \node[draw,circle,fill=blue!50,scale=0.5] at (+0.27, -0.13) {};
+      % Plands
+      \draw[-,dashed,ultra thick, blue!50] (-0.3,0.3) -- (0.3,-0.3);
+      \draw[-,dashed,ultra thick, gray!50] (-0.3,-0.3) -- (0.3,0.3);
+    \end{tikzpicture}
+  \end{center}
+  \caption{Let's say you want to find a way to know that these blue dots are somehow close to each other, and that these gray dots are also related to each other. First, divide the space using dashed lines, called \emph{planes}. Notice that the blue plane slices up the space into vectors that are above it or below it, where the blue bectors all happens to be on the same side of the blue plane. Similarly, the gray vectors all lie above the gray plane. It looks like the planes can help us bucket the vectors into subsets based on their location, which is exactly what we want: a hashing function that is sensitive to the location of the items that it's assigning into buckets.}
+\end{table}
+
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[<->,gray] (-2, 0) -- (2, 0);
+      \draw[<->,gray] (0, -2) -- (0, 2);
+      \draw[-,dashed,gray] (-2,+2) -- (2,-2);
+      \draw[->,thick,blue!80] (0,0) -- (1,-1);
+      \draw[->,thick,orange!80] (0,0) -- (-1.5, 1.5);
+      \draw[->,thick,purple!80] (0,0) -- (1, 1);
+    \end{tikzpicture}
+  \end{center}
+  \caption{A plane can be visualized in 2-D space by a dashed gray line. It actually represents all possible vectors that would be sitting on that plane, i.e. the orange and blue vectors that are parallel to the plane. You can define a plane with a single vector. The magenta vector is perpendicular to the plane, and it's called the normal vector to that plane: it is perpendicular to any vectors that lie on the plane.}
+\end{figure}
+
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[<->,gray] (-2, 0) -- (2, 0);
+      \draw[<->,gray] (0, -2) -- (0, 2);
+      \draw[-,dashed,gray] (-2,+2) -- (2,-2);
+      \draw[->,thick,purple!80] (0,0) -- (1, 1) node[above] {\color{black} $P = (1, 1)$};
+      \draw[->,thick,blue!80] (0,0) -- (1.5, 0.75) node[right] {\color{black} $V_1 = (1, 2)$};
+      \draw[->,thick,orange!80] (0,0) -- (-1, 1) node[left] {\color{black} $V_2         = (-1, 1)$};
+      \draw[->,thick,green!80!black] (0,0) -- (-2, -1) node[left] {\color{black} $V_3         = (-2, -1)$};
+    \end{tikzpicture}
+  \end{center}
+  \caption{Consider three sample vectors in blue, orange, and green. The normal vector to the plane is labeled $P$. Let's focus on vector $V_1$: observe that the inner product $\langle P, V_1 \rangle = 3$. Similarly, $\langle P, V_2 \rangle = 0$, and $\langle P, V_3 \rangle = -3$. Realize that when the inner product is positive with the normal vector, the vector is on one side of the plane, and if the inner product is negative it's on the opposite side of the plane. If the dot product is zero, the vector is on the plane.}
+\end{figure}
+
+\paragraph{Visualizing a dot product} Let's visualize the dot product further.
 
 \end{document}
 
