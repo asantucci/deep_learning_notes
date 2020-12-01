@@ -1085,6 +1085,87 @@ If we start with a random matrix $R$, we can gradually improve upon it in an ite
 \]
 where $m$ is the number of rows in our training matrix.
 
+\paragraph{Finding k-nearest neighbors of a vector} In the context of Machine Translation, notice that the transformed word vector after the transformation of its embedding through a matrix $R$ would be in the French vector space, but! it's not going to be identically equal to any of the word vectors in the French vector space. We need to search through the French word vectors to find a French word that is similar to the one we created from the transformation.
+
+To solve this problem, let's look at a related problem: how do you find your friends who are living nearby? One way to do this is to go through your address book and for each friend, get their addres, and calculate how far away they are from our hometown of San Francisco. We then sort our friends according to their distance from San Francisco. Notice that if we have a lot of friends, this is a time intensive process. A more efficient way is to observe that, if it were somehow possible to \emph{filter} our friends list to only those who live in the same continent, for example, then we could cut down our search space drastically. When you think about organizing subsets of a dataset efficiently, you might think about placing your data into buckets. If you think about buckets, then you'll definitely want to think about hash-tables.
+
+\paragraph{Hash tables} Let's say we have several data items and we want to group them into buckets by some kind of similarity. One bucket can hold more than one item and each item is always assigned to the same bucket.
+
+\begin{figure}[h]
+\begin{center}
+\begin{tikzpicture}[>=latex,shorten >=2pt,shorten <=2pt,shape aspect=1]
+\node (A) at (0, 0) [cylinder, shape border rotate=90, draw,minimum height=3cm,minimum width=2cm,fill=blue!30]
+{0};
+\draw[fill=blue,scale=2] (-0.25,-0.25) ellipse (1mm and 2mm);
+\draw[fill=blue,scale=2] (+0.25,-0.25) ellipse (2mm and 1mm);
+\node (B) at (4, 0) [cylinder, shape border rotate=90, draw,minimum height=3cm,minimum width=2cm,fill=gray!30]
+{1};
+\draw[fill=gray] (+3.10,-0.75) rectangle (3.75, -0.25);
+\draw[fill=gray] (+4,-0.75) rectangle (4.5, -0.5);
+\node (C) at (8, 0) [cylinder, shape border rotate=90, draw,minimum height=3cm,minimum width=2cm,fill=red!30]
+{2};
+\draw[fill=purple] (7.1, -0.75) -- (7.6, -0.25) -- (8.1, -0.75) -- cycle;
+\draw[fill=purple] (8.3, -0.75) -- (8.55, +0.25) -- (8.8, -0.75) -- cycle;
+\end{tikzpicture}
+\end{center}
+\caption{Here's one pictorial example of hash buckets. One bucket might end up storing blue ovals, another might store gray rectangles, and a third may store magenta triangles.}
+\end{figure}
+
+How can we do this with word vectors? Let's first assume that word vectors have 1-dimension instead of several hundred. So, each word is represented by a \emph{single} scalar value. We need to figure out a mapping from values to hash buckets, i.e.
+\[
+  \texttt{HashFunction}(\textrm{vector}) \longrightarrow \textrm{Hash Value}.
+\]
+
+A function that assigns a hash value is called a hash function.
+
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw (0,0) grid (10, 1);
+      \foreach \x in {0.5, 1.5, ..., 9.5} {
+        \node at (\x, 0.5) {\pgfmathparse{int(\x-0.5)}\pgfmathresult};
+      }
+      \node[draw,rectangle,fill=gray] at (0.5, -0.5) {100};
+      \node[draw,rectangle,fill=gray] at (0.5, -1.5) {10};
+      \node[draw,rectangle,fill=gray] at (4.5, -0.5) {14};
+      \node[draw,rectangle,fill=gray] at (7.5, -0.5) {17};
+      \node[draw,rectangle,fill=gray] at (7.5, -1.5) {97};
+    \end{tikzpicture}
+  \end{center}
+  \caption{One example could be, in our context of a 1-D embedding, to take the value modulo ten and assign it to one of ten buckets $\{0,1,\ldots,9\}$.}
+\end{figure}
+
+To build this example out in code, we simply define
+
+\begin{python}
+def basic_hash_table(value_l, n_buckets):
+  def hash_function(value_l, n_buckets):
+    return int(value) % n_buckets
+  hash_table = {i:[] for i in range(n_buckets)}
+  for value in value_l:
+    hash_value = hash_function(value, n_buckets)
+    hash_table[hash_value].append(value)
+  return hash_table
+\end{python}
+
+Notice that in our \texttt{hash\_function()} definition, we are using a \emph{dictionary}-comprehension, where we are associating integer keys with empty lists as value; this initializes our hash-table. Now, realize that our original goal was to place similar word vectors into the \emph{same} bucket. In the example above, it doesn't look like numbers that are close to each other are in the same bucket, e.g. 10, 14, and 17 are all in different buckets. Idealy, we want a hash function that places similar word vectors in the same bucket; this brings us to locality sensitive hashing. Locality is another word for location, and sensitive is another word for caring. So locality sensitive hashing is a hashing method that cares very deeply about assigning items based on where they're located in vector space.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \draw (0,0) grid (10, 1);
+      \foreach \x in {0.5, 1.5, ..., 9.5} {
+        \node at (\x, 0.5) {\pgfmathparse{int(\x-0.5)}\pgfmathresult};
+      }
+      \node[draw,rectangle,fill=purple!60] at (0.5, -0.5) {14};
+      \node[draw,rectangle,fill=purple!60] at (0.5, -1.5) {10};
+      \node[draw,rectangle,fill=purple!60] at (0.5, -2.5) {17};
+      \node[draw,rectangle,fill=orange!60] at (8.5, -0.5) {100};
+      \node[draw,rectangle,fill=orange!60] at (8.5, -1.5) {97};
+    \end{tikzpicture}
+  \end{center}
+  \caption{A good hash-function places similar word vectors in the same bucket.}
+\end{figure}
 
 
 \end{document}
