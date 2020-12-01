@@ -1085,6 +1085,7 @@ If we start with a random matrix $R$, we can gradually improve upon it in an ite
 \]
 where $m$ is the number of rows in our training matrix.
 
+\subsection{Approximate $k$-nearest neighbors and Locality Sensitive Hashing}
 \paragraph{Finding k-nearest neighbors of a vector} In the context of Machine Translation, notice that the transformed word vector after the transformation of its embedding through a matrix $R$ would be in the French vector space, but! it's not going to be identically equal to any of the word vectors in the French vector space. We need to search through the French word vectors to find a French word that is similar to the one we created from the transformation.
 
 To solve this problem, let's look at a related problem: how do you find your friends who are living nearby? One way to do this is to go through your address book and for each friend, get their addres, and calculate how far away they are from our hometown of San Francisco. We then sort our friends according to their distance from San Francisco. Notice that if we have a lot of friends, this is a time intensive process. A more efficient way is to observe that, if it were somehow possible to \emph{filter} our friends list to only those who live in the same continent, for example, then we could cut down our search space drastically. When you think about organizing subsets of a dataset efficiently, you might think about placing your data into buckets. If you think about buckets, then you'll definitely want to think about hash-tables.
@@ -1169,7 +1170,7 @@ Notice that in our \texttt{hash\_function()} definition, we are using a \emph{di
 
 \paragraph{Locality sensitive hashing} A key method for reducing the computational cost of finding $k$-nearest neighbors in high-dimensional spaces is locality-sensitive hashing. Let's start with examples of word vectors with two dimensions.
 
-\begin{table}
+\begin{figure}
   \begin{center}
     \begin{tikzpicture}[scale=5]
       % Gray nodes.
@@ -1202,7 +1203,7 @@ Notice that in our \texttt{hash\_function()} definition, we are using a \emph{di
     \end{tikzpicture}
   \end{center}
   \caption{Let's say you want to find a way to know that these blue dots are somehow close to each other, and that these gray dots are also related to each other. First, divide the space using dashed lines, called \emph{planes}. Notice that the blue plane slices up the space into vectors that are above it or below it, where the blue bectors all happens to be on the same side of the blue plane. Similarly, the gray vectors all lie above the gray plane. It looks like the planes can help us bucket the vectors into subsets based on their location, which is exactly what we want: a hashing function that is sensitive to the location of the items that it's assigning into buckets.}
-\end{table}
+\end{figure}
 
 \begin{figure}
   \begin{center}
@@ -1234,6 +1235,7 @@ Notice that in our \texttt{hash\_function()} definition, we are using a \emph{di
 \end{figure}
 
 \paragraph{Visualizing a dot product} Let's visualize the dot product further.
+\newpage
 \begin{figure}
   \begin{center}
     \begin{tikzpicture}
@@ -1252,6 +1254,7 @@ Notice that in our \texttt{hash\_function()} definition, we are using a \emph{di
 \end{figure}
 
 We can implement a simple Python function to determine whether a vector $v$ is pointed in the same or oppositive direction of a normal vector $P$:
+
 \begin{python}
 def side_of_plane(P,v):
   dotproduct = np.dot(P, v.T)
@@ -1279,7 +1282,43 @@ def hash_multiple_plane(P_l, v):
   return hash_value
 \end{python}
 
+\paragraph{Approximate $k$-nearest neighbors} Let's devise an algorithm that computes $k$-nearest neighbors much faster than brute search. We've seen how a few planes can help to divide a vector space into regions. But how do you know if a set of planes is the \emph{optimal} way to divide the vector space? You can't, so why not create multiple sets of random planes to divide up the vector space into multiple, independent sets of hash tables? This is akin to creating multiple copies of the universe, or a multiverse. You can make all of these different sets of random planes in order to help find a good set of $k$-nearest neighbors, as follows:
+\begin{itemize}
+\item Create multiple sets of planes, in parallel.
+\item For each \emph{set} of planes, determine the neighbors i.e. the words that   are in the same hash-bucket as the word in question.
 
+(Note that each set of planes will yield a different (possibly overlapping) set of neighbors)
+\end{itemize}
+By using multiple sets of random planes for locality-sensitive hashing, you have a more robust way of searching the vector space for a set of vectors that are possible candidates to be nearest neighbors. This technique is known as \emph{approximate} nearest neighbors because you're not searching the entire vector space, but just a subset of it. So the output is not the absolute $k$-nearest neighbors, but it's approximately the $k$k-nearest neighbors. We sacrifice precision in order to gain efficiency in our search.
+
+How can we do this in code?
+
+\begin{python}
+num_dimensions = 2
+num_planes = 3
+random_planes_matrix = np.random.normal(size = (num_planes, num_dimensions))
+v = np.array([[2,2]]);
+def side_of_plane_matrix(P,v):
+  dotproduct = np.dot(P, v.T)
+  sign_of_dot_product = np.sign(dotproduct)
+  return sign_of_dot_product
+
+num_planes_matrix = side_of_plan_matrix(random_planes_matrix, v)
+\end{python}
+
+\paragraph{Searching documents} How can we use approximate $k$-nearest neighbors to search for pieces of text related to a query in a large collection of documents? We simply create vectors for both and find the nearest neighbors. In order to get ready to perform document search, we need to think through how to represent documents as vectors, instead of just words as vectors. Let's say you have a document composed of three words: ``I love learning''. How can we represent the entire document as a vector? We could find the word vectors for each individual word, and then simply add them together; in this case the resulting document vector has the same dimension as the word vector representation. Let's code this up:
+
+\begin{python}
+word_embedding = {'I': np.array([1, 1, 1]), 'love': np.array([-1, 0, 1]), 'learning': np.array([1,0,1])}
+words_in_document = ['I', 'love', 'learning']
+document_embedding = np.array([0, 0, 0])
+for word in words_in_document:
+  document_embedding += word_embedding.get(word, 0)
+
+print(document_embedding)
+\end{python}
+
+Reference: \href{https://www.amazon.com/Speech-Language-Processing-Daniel-Jurafsky-ebook-dp-B00XIGSJQK/dp/B00XIGSJQK/ref=mt_kindle?_encoding=UTF8&me=&qid=1591993888}{``Speech and Language Processing'' by Jurafsky, Martin, Norvig, and Russell}.
 
 \end{document}
 
