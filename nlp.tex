@@ -966,6 +966,7 @@ If the input arguments (vectors) are perpendicular, the cosine of their inner an
   \caption{From \href{https://papers.nips.cc/paper/2013/file/9aa42b31882ec039965f3c4923ce901b-Paper.pdf}{Mikolov et. al. ``Distributed Representations of Words and Phrases and their Compositionality''}: in this representation, the vector between capitals Washington and USA is given by $[\texttt{Washington} - \texttt{USA}] = [5, -1]$. The easiest way to predict the capital of Russia is to simply take $\texttt{Russia} + [5, -1] = [10, 4]$. Because there are no cities with that representation, we'll search for the capital city that is most similar by comparing each vector with the Euclidean distances (or Cosine similarities). The catch is that we need a vector space where the representations capture the relative meaning of words.}
 \end{figure}
 
+\subsection{Principal Components Analysis}
 \paragraph{Visualization and PCA} Often, we'll have vector representations in very high dimension, but we'll want to find a way to reduce the dimensions of the vectors to two dimensions so that we may plot it on a 2-D cartesian plane. What's the intuition? Principal Component Analysis is they key: it allows us to take a representation with $d > 2$ dimensions and project it down to a lower dimension, e.g. $d=2$, which we can then plot. If you perform PCA on your data, you might find that your word representation captures relationship between pairs of words that you expect to be related, in so far as these related words appear in clusters within the plot; you can confirm known relationships and also spot new ones using this technique.
 
 \begin{minipage}{1.0\textwidth}
@@ -1063,6 +1064,28 @@ Using PCA, we first find a set of uncorrelated features. Then, we can project ou
 \item Calculate Percentage of Retained Variance: $\frac{\sum_{i=0}^{k-1} S_{ii}}{\sum_{j=0}^{d-1} S_{jj}}$.
 \end{enumerate}
 Eigenvectors give the direction of uncorrelated features, whereas the eigenvalues are the variance of the new features. The dot product gives the projection on uncorrelated features.
+
+\section{Machine Translation}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\subsection{Transforming Word Vectors}
+Word vectors can capture important properties of words. Let's make use of them to learn to align words into different languages, which will give us a basic translation program; locality sensitive hashing will speed it up.
+
+\paragraph{Overview of translation}
+In order to translate an English word to a French word, one naive way could be to generate an extensive list of English words and their associated French word. If you ask a human to do this, you would find someone who knows both languages to start making a list. If, however, you want a machine to do this, you need to first calculate word embeddings associated with English and word embeddings associated with French. Next, retrieve the English word embedding of a particular English word such as ``cats'', then find some way to transform the English word embedding into word embedding that has a meaning in the French word vector space; we'll see how to convert between vector spaces in a moment. The next step is to search for word vectors in the French word vector space that are most similar to the transformed vector representation: the most similar words are candidate words for our translation.
+
+\paragraph{Transforming vectors using matrices} Define a randomly selected matrix $R$ and see how well it works to transform our English vector space representation $X$ into our French vector space representation $Y$, i.e. compute $XR \approx Y$. In order for this to work, you'll need to first get a subset of English words and their French equivalence, get the respective word vectors, and stack the word vectors in their respective matrices $X$ and $Y$. They key is to keep the rows lined up (or to align the row vectors): i.e. if the first row of the English matrix $X$ contains the word representation for ``cat'', then so should the French matrix $Y$ contain the word representation for the translated word. It's natural at this point to ask: if we already have the mappings from $X \leadsto Y$ (i.e. the translation pairs), then why not just store them in an associative data-structure like a dictionary...why train a model at all? The nice property of our transformation matrix $R$ is that it will \emph{generalize} to translate unseen example inputs. So, we only need to train on a subset of the English-French vocabulary, and \emph{not} the entire vocabulary.
+
+\paragraph{Finding a good transformation matrix} We define our loss function as
+\[
+  \texttt{Loss} = \|XR - Y\|_F.
+\]
+where $\|A\|_F = \sqrt{\sum_{i=1}^m \sum_{j=1}^n |A_{ij}|^2}$.
+If we start with a random matrix $R$, we can gradually improve upon it in an iterative fashion. We first compute the gradient by taking the gradient of the loss function with respect to matrix $R$, i.e. $g = \frac{\partial}{\partial R}\texttt{Loss}$, then update using gradient descent, i.e. $R \gets R - \alpha g$. We can either pick a fixed number of times to go through the loop, or exit the loop when the loss falls below a certain threshold. In practice, it's easier to minimize the the square of the norm instead. What about the gradient of the loss function, which is defined as the derivative of the loss with respect to the matrix $R$. With our loss:
+\[
+  g = \frac{\partial}{\partial R} \texttt{Loss} = \frac{2}{m} \left(X^T(XR - Y)\right),
+\]
+where $m$ is the number of rows in our training matrix.
+
+
 
 \end{document}
 
