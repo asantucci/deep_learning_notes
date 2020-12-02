@@ -1427,7 +1427,7 @@ We'll start by laying out the problem as follows.
 
 \begin{figure}[h]
   \begin{center}
-    \begin{tikzpicture}
+    \begin{tikzpicture}[scale=0.8]
       \draw (0, 0) grid (5, 5);
       \draw[draw=black, fill=green!30] (0, 5) grid (5, 6) rectangle (0, 5);
       \draw[draw=black, fill=blue!30] (-1,0) grid (0,5) rectangle (-1, 0);
@@ -1452,12 +1452,60 @@ We'll start by laying out the problem as follows.
       \draw[->,ultra thick, orange] (0.5, 4.5) -- (2.5, 4.5);
       \draw[->,ultra thick, orange] (0.5, 4.5) -- (2.1, 2.9);
       \draw[->,ultra thick, orange] (0.5, 4.5) -- (0.5, 2.5);
+      \node at (0.5, 4.5) {0};
+      \draw[ultra thick, green!60] (0, 4) rectangle (1, 5);
+      \node at (1.5, 4.5) {1};
+      \draw[ultra thick, red!60] (1, 4) rectangle (2, 5);
+      \node at (0.5, 3.5) {1};
+      \draw[ultra thick, blue!60] (0, 3) rectangle (1, 4);
+      \node at (1.5, 3.5) {2};
     \end{tikzpicture}
   \end{center}
   \caption{The \# represents an empty string, and we've also set up row and column indices. If our table above is called $D$, we want the entries $D[i,j] = \textrm{source}[:i] \leadsto \textrm{target}[:j]$.}
 \end{figure}
 
 We've defined $D_{i,j}$ to represent the minimum edit distance between $\textrm{source}[:i]$ and $\textrm{target}[:j]$. If we have a source of length $m$ and a target of length $n$ then $D_{m,n}$ represents the minimum edit distance to transform one entire word to another. We'll compute this from the shortest substring to the full string. The intuition is that we can build upon each sub-problem by combining solutions, e.g. finding the minimum edit distance between two letters is easy. Then, we increase the problem size one letter at a time, building on what you already know.
+
+\begin{itemize}
+\item The first step is to transform the source empty string into the target empty string: this requires zero operations and so the edit distance is simply zero.
+\item Now, we can move on to transforming our source ``p'' into an empty string,   which we can do with a single delete: edit distance is unit value.
+\item We can also move on to transforming our source empty string to a target   ``s'', which we can do with a single insertion: edit distance is unit value.
+\item Now, let's look at how to go from source ``p'' to target ``s'': there is more than one possible way to make this transformation. Each possible sequence of edits is known as a \emph{path}:
+  \begin{itemize}
+    \item starting with ``p'', you can insert ``s'' on the end to get ``ps'', then delete ``p'' from the beginning to get ``s''. This has a cost of one insert and one delete; notice that we've already calculated the cost of inserting a letter ``s'' as its given by the table entry above (in red) that we've already filled in. So, we actually just calculate the cost of deleting the ``p'' and add it onto the cost that you've stored in the red box above, which is $1+1 = 2$.
+    \item starting with ``p'', we can delete ``p'' to get hashtag (empty string) and then insert ``s'' to get ``s''. Notice again that we've already calculated the cost of deleting ``p'' (in blue) to the left: the blue box is the cost of going from ``p'' to hashtag (empty string) by deleting ``p'', so we can calculate the cost of inserting ``s'' and add it to the cost that you've stored in the blue box on the left. This is $1 + 1 = 2$.
+\item The third way is to replace ``p'' with ``s'' with a replacement, which has cost 2. We can think of this as going from the green cell to the target cell.
+\end{itemize}
+\item Now, we take the minimum of all three of these paths which yields 2 in this case.
+\end{itemize}
+
+Realize that in order to fill in a cell, we need to know the values of the cells above, to the left, and adjacent upper-left. In doing so, we can benefit from calculations already performed. We can We can generalize this to a formula such that we can fill in the entire table; but first, we must fill in the first row and first column in order to get the sufficient inputs to calculate the remaining entries.
+
+\paragraph{Filling in first column:} this corresponds to transforming ``play'' into the empty string. We can use the following reccurrence relation:
+\[
+  D_{i,j} = D_{i-1,j} + \texttt{del\_cost}.
+\]
+I.e. we simply look at the cell above and add an extra delete edit. I.e. to make the string ``p'' into the empty string, we need one delete operation. To make ``pl'' into the empty string, we need to delete ``p'' and ``l'', which are two delete operations, and so on. Now, at $D_{4,0}$ we have the minimum edit distance for ``play'' to be transformed into the empty string, which is of course simply given by four deletions with a cost of four.
+
+\paragraph{Filling in first row:} this corresponds to transforming the empty string into ``stay''. We can use the following, slightly different reccurrence relation:
+\[
+  D_{i,j} = D_{i,j-1} + \texttt{ins\_cost}.
+\]
+I.e. we simply look at the cell to the left and add an extra insertion edit.
+
+\paragraph{Generalized dynamic programming formula for minimum edit distance} There is also a general formula for filling in each entry of our table
+
+\[
+  D_{i,j} = \min \begin{cases}
+    D_{i-1, j} + \texttt{del\_cost} \\
+    D_{i, j-1} + \texttt{ins\_cost} \\
+    D_{i-1,j-1} + \mathbbm 1_{\texttt{src[i]} \neq \texttt{tar[j]}} \times \texttt{rep\_cost}
+  \end{cases}
+\]
+
+The first argument to the \texttt{min} operator corresponds to ``coming from the cell above'', whereas the second argument corresponds to ``coming from the cell to the left'', and finally if you come from the cell to the upper-left then you do one of two things: either (i) add the replacement cost if the two corresponding letters between source and target don't match, or (ii) add nothing if they do (because there is no edit to be done for letters that are already the same).\footnote{It can be interesting to color the table according to the magnitude of the edit distances in the cells. This can reveal some interesting patterns. In our example table, fours will lie along the diagonal beyond ``the middle'' of the table, because this corresponds to where the prefixes have been made the same and no more edits are to be made.}
+
+\paragraph{Levenshtein distance and backtrace} We've been using \href{https://en.wikipedia.org/wiki/Levenshtein_distance#Definition}{Levenshtein distance metric}. Finding the minimum edit distance doesn't always solve the whole problem. Sometimes, we need to know how we got there as well: we can do this by storing a backtrace which is simply a pointer in each cell letting you know where you came from to get there. So, you know the path taken across the table from the top-left corner to the bottom right corner (i.e. how we transformed our string); this tells us the edits that were made and is particularly useful in problems dealing with string alignment. We lastly mention that our algorithm laid out in the last section is an example of dynamic programming: we solve the smallest subproblem first and then reuse that result to solve the next bigger subproblem, saving that result, and continuing on. This is a well known technique in computer science.
 
 \end{document}
 
