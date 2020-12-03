@@ -1735,5 +1735,88 @@ To formally calculate transition probabilities, we do so in several steps:
   where $n$ is the number of tags in our vocabulary.
 \end{enumerate}
 
+As an example, suppose you want to train a model for a Haiku, which is a type of Japanese poetry: your training corpus is the following Haiku from Exra Pound, written in 1913:
+
+\begin{verbatim}
+In a station of the Metro
+The apparition of these faces in the crowd:
+Petals on a wet, black bough.
+\end{verbatim}
+
+Consider each line of the corpus as a separate sentence. We'll first add a start token to each line or sentence in order to be able to calculate the initial probabilities using the previously defined formula. We then transform all words in the corpus to lowercase, so that the model is case insensitive.
+
+\paragraph{Populating the transition matrix} Now that we've processed our text corpus, it's time to populate the transition matrix, which will hold the probabilities of going from one state to another in our Markov model. We fill the first column of our matrix with the counts of the associated tags as in figure \ref{fig: countsezra}.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node (a) at (-1,2) {$A = $};
+      \draw (0, 0) grid (4, 5);
+      \draw[fill=orange!30] (0,3) rectangle (1, 4);
+      \draw[fill=green!30] (0,2) rectangle (1, 3);
+      \draw[fill=purple!30] (0,1) rectangle (1, 2);
+      \draw[fill=blue!30] (0,0) rectangle (1, 1);
+      % Left column.
+      \node at (0.5, 3.5) {$\pi$};
+      \node at (0.5, 2.5) {$\texttt{NN}$};
+      \node at (0.5, 1.5) {$\texttt{VB}$};
+      \node at (0.5, 0.5) {$\texttt{O}$};
+      % Top row
+      \node at (1.5, 4.5) {$\texttt{NN}$};
+      \node at (2.5, 4.5) {$\texttt{VB}$};
+      \node at (3.5, 4.5) {$\texttt{O}$};
+      % Count formulae
+      \node at (1.5, 3.5) {\tiny $C(\pi, \texttt{NN})$};
+      \node at (1.5, 2.5) {\tiny $C(\texttt{NN}, \texttt{NN})$};
+      \node at (1.5, 1.5) {\tiny $C(\texttt{VB}, \texttt{NN})$};
+      \node at (1.5, 0.5) {\tiny $C(\texttt{O}, \texttt{NN})$};
+      % Haiku
+      \draw (6, 1) rectangle (15, 4);
+      \node at (8.9, 3.5) {{\color{orange}<s>} {\color{blue}in a} {\color{green}station} {\color{blue}of the} {\color{green}metro}};
+      \node at (10.5, 2.5) {{\color{orange}<s>} \color{blue}{the} \color{green}{apparition} \color{blue}{of these} \color{green}{faces} \color{blue}{in the} \color{green}{crowd}:};
+      \node at (9.35, 1.5) {{\color{orange}<s>} \color{green}{petals} \color{blue}{on a wet, black} \color{green}{bough}};
+\end{tikzpicture}
+  \caption{Using the formula provided and our example corpus, we see that $C(\pi, \texttt{NN}) = 1$, and similarly for our first column 
+$C(\texttt{NN}, \texttt{NN}) = 0$
+$C(\texttt{VB}, \texttt{NN}) = 0$
+$C(\texttt{O}, \texttt{NN}) = 6$. We might further realize that there are no parts of speech that are tagged \texttt{VB}, so this entire row is identically zero. Also, for the last entry in the table given by count $C(\texttt{O}, \texttt{O}) = 8$, realize that we need to count the comma character as its own word-token; we use a sliding window of length two counting bigrams of \texttt{other}-\texttt{other} parts of speech.}
+\end{center}
+\end{figure}
+\label{fig: countsezra}
+
+After having calculated a counts matrix $A$, we cal calculate the transition probabilities according to the formulae $\Pr(t_i, t_{i-1}) = \frac{C(t_{i-1}, t_i)}{\sum_{j=1}^N C(t_{i-1}, t_i)}$: realize that the entries in the table correspond to the numerator term, and the denominator corresponds to row-sums in our table $A$ above.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{|l | c | c | c | c |}
+      \hline
+      & \texttt{NN} & \texttt{VB} & \texttt{O} & \\
+      \hline
+      $\pi$ & 1 & 0 & 2 & 3 \\
+      \hline
+      \texttt{NN} & 0 & 0 & 6 & 6 \\
+      \hline
+      \texttt{VB} & 0 & 0 & 0 & 0 \\
+      \hline
+      \texttt{O}  & 6 & 0 & 8 & 14 \\
+      \hline
+    \end{tabular}
+    \caption{In this table, we've simply calculated $C(\cdot, \cdot)$ for each entry given our Haiku by Ezra Pound.}
+  \end{center}
+\end{table}
+
+E.g. in our example
+\[
+\Pr(\texttt{NN} | \pi) = \frac{C(\pi, \texttt{NN})}{\sum_{j=1}^N C(\pi, t_j)} = \frac{1}{3}
+\]
+
+Or similarly, $\Pr(\texttt{NN} | \texttt{O}) = \frac{C(\texttt{O}, \texttt{NN})}{\sum_{j=1}^N C(\texttt{O}, t_j)} = \frac{6}{14}$. Problems arise: (i) we have an identically zero row which means its conditional probabilities can't be computed, and (ii) a lot of entries in the \emph{counts} matrix $A$ are zero which mean the corresponding transition probabilities are also zero. This won't work if we want our model to generalie well to other haikus, which may contain verbs! To handle this, we can add some small $\epsilon > 0$ to our formula, a technique known as \emph{smoothing}:
+
+\[
+  \Pr(t_i | t_{i-1}) = \frac{C(t_{i-1}, t_i) + \epsilon }{\sum_{j=1}^{n} C(t_{i-1}, t_j) + N*\epsilon}.
+\]
+
+The consequences of smoothing are (i) we no longer have zeros in our transition probability matrix, and (ii) cases where we had identically zero rows before now have a uniform prior over parts of speech which seems reasonable (e.g. in our example when smoothing is applied $\Pr(\texttt{VB}, \cdot) = \frac{1}{3}$). Note that we may not want to apply smoothing to the first row in our matrix which corresponds to starting from an empty token or start of string: this is because you'll effectively allow strictly positive probabilities for a sentence to start with any word in our vocabulary (including punctuation)! 
+
 \end{document}
 
