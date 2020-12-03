@@ -1507,5 +1507,181 @@ The first argument to the \texttt{min} operator corresponds to ``coming from the
 
 \paragraph{Levenshtein distance and backtrace} We've been using \href{https://en.wikipedia.org/wiki/Levenshtein_distance#Definition}{Levenshtein distance metric}. Finding the minimum edit distance doesn't always solve the whole problem. Sometimes, we need to know how we got there as well: we can do this by storing a backtrace which is simply a pointer in each cell letting you know where you came from to get there. So, you know the path taken across the table from the top-left corner to the bottom right corner (i.e. how we transformed our string); this tells us the edits that were made and is particularly useful in problems dealing with string alignment. We lastly mention that our algorithm laid out in the last section is an example of dynamic programming: we solve the smallest subproblem first and then reuse that result to solve the next bigger subproblem, saving that result, and continuing on. This is a well known technique in computer science.
 
+\section{Part of Speech Tagging}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\subsection{What is part of speech tagging?} Part of speech tagging refers to the category of words or the lexical terms in the language. E.g. in English, lexical terms include \texttt{noun, verb, adjective, adverb, pronoun, preposition}, and many others.
+
+\begin{equation*}
+\underset{\textrm{adverb}}{\textrm{Why}} \hspace{10pt}             \underset{\textrm{adverb}}{\textrm{not}} \hspace{10pt}
+\underset{\textrm{verb}}{\textrm{learn}} \hspace{10pt}
+\underset{\textrm{noun}}{\textrm{something}} \hspace{10pt}         
+\underset{\substack{\textrm{punctuation} \\ \textrm{mark}}}{\textrm{?}}
+\end{equation*}
+
+We're going to use a short representation called \emph{tags} to represent these categories. The process of assigning these tags to the words of a sentence is referred to as parts of speech tagging.
+
+\begin{table}[h]
+\begin{center}
+  \begin{tabular}{l | l | l}
+    \hline
+    \textbf{lexical term} & \textbf{tag} & \textbf{example} \\
+    \hline
+    noun & NN & something, nothing \\
+    verb & VB & learn, study \\
+    determiner & DT & the, a \\
+    w-adverb & WRB & why, where \\
+    $\ldots$ & & 
+  \end{tabular}
+\end{center}
+\end{table}
+
+Because parts of speech tags describe the characteristic structure of lexical terms in a sentence or text, we can use them to make assumptions about semantics. We can use them to identify named entities, e.g.
+\begin{verbatim}
+The Eiffel Tower is located in Paris.
+\end{verbatim}
+The terms ``Eiffel Tower'' and ``Paris'' are both named entities. Tags can also be used for co-reference resolution, i.e. if you have two sentences: ``the Eiffel Tower is located in Paris. \textbf{It} is 324 meters high.'' then we can use parts of speech tagging to infer that ``it'' refers in this context to the Eiffel tower. A last example is in speech recognition: we can use parts of speech tags to check if a sequence of words has a high probability or not.
+
+\subsection{Markov Chains} Let's start with a small example with what we want to accomplish, and then let's see how Markov Chains can help accomplish our task. Suppose we are given a \emph{sentence prefix}, ``why not learn...'', and we want to predict whether the following word is more likely to be a noun rather than another verb. If you examine the word ``learn'', note that it's a verb. Being familiar with the English language, we might guess that if you see a verb in a sentence, then the following word is more likely to be a noun rather than another verb. The core idea here is that the likelihood of the next word's parts of speech tag in a sentence tends to depend (only) on the parts of speech tag of the previous word. We can represent the likelihoods visually:
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[draw,circle,fill=blue!30] (verb) at (0, 0) {verb};
+      \node[draw,circle,fill=blue!30] (noun) at (3, 0) {noun};
+      \draw[->] (verb) edge[loop left] node {0.4} (verb);
+      \draw[->] (verb) edge[bend left] node[above] {0.6} (noun);
+    \end{tikzpicture}
+    \caption{The nodes indicate states, and the arrows indicate transitions where the corresponding floating points values describe transition probabilities.}
+  \end{center}
+\end{figure}
+
+\paragraph{Markov chains defined}
+A Markov Chain is a type of stochastic model that describes a sequence of possible events, with the property that to get the probability for each event, we need only the state of the previous event! The word stochastic means random. A stochastic model incorporates and models processes that have a random component to them. Markov chains can always be depicted graphically as a directed graph with nodes and edges. I.e. a Markov chain is a graph of states and transitions between these states. The key property of a Markov chain is the Markov property: the probability of the next event only depends on the current events.
+
+
+\paragraph{Intuition for Markov property}
+The Markov property is what allows us to keep our model simple by saying that all you need to determine the next state is the current state information; we don't need any other information from any of the previous states. Going back to an analogy: suppose we consider whether water is in a solid, liquid, or gaseous state. If we look at a cup of water that is sitting outside, the current state of the water is a liquid state. When modeling the probability that the water in the cup will transition into the gas state, we don't need to know the previous history of the water: whether it previously came from ice cubes or from rain clouds is irrelevant!
+
+\paragraph{Applying Markov chains to parts of speech tagging} Let's think about a sentence as a sequence of words with associated parts of speech tags. We can represent that sequence with a graph where the parts of speech tags are events that can occur depicted by the states of our model graph; the edges of the graph will have weights or transition probabilities associated with them which define the probability of going from one state to another.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node[draw,circle,fill=blue!30] (nn) at (0, 0) {NN};
+      \node[draw,circle,fill=blue!30] (vb) at (3, 0) {VB};
+      \node[draw,circle,fill=blue!30] (o) at (1.5, -3) {O};
+      \draw[->] (nn) edge[loop left] node {0.2} (nn);
+      \draw[->] (vb) edge[loop right] node {0.3} (vb);
+      \draw[->] (o) edge[loop below] node {0.5} (o);
+      \draw[->] (nn) edge[bend right] node[above] {0.2} (vb);
+      \draw[->,ultra thick] (vb) edge[bend right] node[above] {0.4} (nn);
+      \draw[->] (nn) edge[bend right] node[left] {0.6} (o);
+      \draw[->] (o) edge[bend right] node[left] {0.2} (nn);
+      \draw[->] (vb) edge[bend right] node[right] {0.3} (o);
+      \draw[->] (o) edge[bend right] node[right] {0.3} (vb);
+    \end{tikzpicture}
+    \caption{In this simple model, we have a state NN for nouns, VB for verbs, and all other states are captured by O. For the example sentence, ``Why not learn ...'', it happens that ``learn'' is a verb, categorized by state \texttt{VB} in our Markov chain depicted above. The probability that the next word is a noun is given by 0.4, denoted by the arrow (transition) from \texttt{VB} to \texttt{NN} (noun).}
+  \end{center}
+\end{figure}
+
+\paragraph{Transition probability matrix} An equivalent way to represent a Markov chain is through a transition probability matrix $P$, or through what amounts to effectively a simple table. If there are $n$ states in a model, then a transition matrix will be of dimension $n \times n$. Each \emph{row} in the matrix represents transition probabilities from one state to all other states.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{|l | c | c | c|}
+      \hline
+      & NN & VB & O \\
+      \hline
+      NN {\color{gray} (noun)} & 0.2 & 0.2 & 0.6 \\
+      \hline
+      VB {\color{gray} (verb)} & 0.4 & 0.3 & 0.3 \\
+      \hline
+      O {\color{gray} (other)} & 0.2 & 0.3 & 0.5 \\
+      \hline
+    \end{tabular}
+    \caption{Take a look at the first row: it denotes the transition probabilities \emph{from} state \texttt{NN} i.e. when the current word is a noun. The columns in that row correspond to the future next states, and the entries in the table correspond to the likelihoods of transitioning to the next state given the current state. Notice that the row-sums are unit-valued sicne they are probability distributions.}
+  \end{center}
+\end{table}
+
+Notice in the table above that it's of dimension $n \times n$. But this means we have to have a preceding word (and corresponding part of speech tag) in order to predict the next word. Unfortunately, with this set-up we cannot predict the first word in a document, since there is no preceding word! What we can do then is introduce an initial state $\pi$ and include these probabilities in the table in the form of an $(n+1) \times n$ table.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{|l | c | c | c|}
+      \hline
+      & NN & VB & O \\
+      \hline
+      $\pi$ {\color{gray} (initial)} & 0.4 & 0.1 & 0.5 \\
+      \hline
+      NN {\color{gray} (noun)} & 0.2 & 0.2 & 0.6 \\
+      \hline
+      VB {\color{gray} (verb)} & 0.4 & 0.3 & 0.3 \\
+      \hline
+      O {\color{gray} (other)} & 0.2 & 0.3 & 0.5 \\
+      \hline
+    \end{tabular}
+    \label{tbl: initialmarkovtable}
+    \caption{Here, we encode an initial state such that we can predict the first word (or corresponding part of speech) in a document.}
+  \end{center}
+\end{table}
+
+\paragraph{Markov chain recap} A Markov chain consists of a set of $n$ states $Q = \begin{bmatrix} q_1 & q_2 & \ldots & q_n \end{bmatrix}$, and we encode the transition probabilities in a transition matrix $A$
+\[
+  A = \begin{bmatrix}
+    a_{1,1} & \ldots & a_{1,N} \\
+    \vdots & \ddots & \vdots \\
+    a_{N+1,1} & \ldots & a_{N+1, N}
+  \end{bmatrix}
+\]
+
+Let's now introduce the hidden Markov model, which are used to decode hidden states of a word; in our context that would be the parts of speech of that word.
+
+\subsection{Hidden Markov Model}
+The name implies that states are hidden or not directly observable. Going back to the Markov model that has the states for the parts of speech (such as a noun, verb, or other), we can now think of these states as \emph{hidden} because these are not directly observable from our raw text data. This may seem confusing at first: to a human reading the sentence, we can infer what the parts of speech is, e.g. we can clearly tell that ``jump'' is a verb. From a machine's perspective, however, it only sees the text ``jump'' and doesn't know whether it is a verb or a noun. For a machine looking at the text data, it only observes the actual words: these words are observable because they can be seen directly by the machine. The Markov chain model and hidden Markov model have transition probabilities which can be represented by a matrix $A$ of dimension $n+1 \times n$, where $n$ is the number of \emph{hidden} states, e.g. table \ref{tbl: initialmarkovtable}. A hidden Markov model additionally has \emph{emission probabilities}: these describe the transition from the hidden states of our hidden Markov model.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node[draw,circle,fill=blue!30] (nn) at (0, 0) {NN};
+      \node[draw,circle,fill=blue!30] (vb) at (3, 0) {VB};
+      \node[draw,circle,fill=blue!30] (o) at (1.5, -3) {O};
+      \draw[->] (nn) edge[loop left] node {} (nn);
+      \draw[->] (vb) edge[loop above] node {} (vb);
+      \draw[->] (o) edge[loop below] node {} (o);
+      \draw[->] (nn) edge[bend right] node[above] {} (vb);
+      \draw[->] (vb) edge[bend right] node[above] {} (nn);
+      \draw[->] (nn) edge[bend right] node[left] {} (o);
+      \draw[->] (o) edge[bend right] node[left] {} (nn);
+      \draw[->] (vb) edge[bend right] node[right] {} (o);
+      \draw[->] (o) edge[bend right] node[right] {} (vb);
+      \node[draw,rectangle,fill=gray!30] (going) at (7, 1.5) {going};
+      \node[draw,rectangle,fill=gray!30] (to) at (7, 0.5) {to};
+      \node (dots) at (7, -0.5) {$\vdots$};
+      \node[draw,rectangle,fill=gray!30] (eat) at (7, -1.5) {eat};
+      \draw[->] (vb) -- node[above] {0.3} (going);
+      \draw[->] (vb) -- node[below] {0.1} (to);
+      \draw[->] (vb) -- node[below] {0.5} (eat);
+    \end{tikzpicture}
+    \caption{Here, we describe hidden states with a background shade of \color{blue!80}{blue} \color{black} and observable states with \color{gray!80}{gray}.\color{black} The interpretation here is that if the current parts of speech is a verb, then there is a 50\% chance that the next (observable) word will be ``eat''.}
+  \end{center}
+\end{figure}
+
+We can of course equivalently represent emission probabilities by a matrix, call it $B$, with dimension $n \times |V|$ where $n$ is the number of states and $|V|$ is the number of observable states.
+
+\begin{table}[h]
+\begin{center}
+  \begin{tabular}{| l | l | l | l | l |}
+    \hline
+    & \textbf{going} & \textbf{to} & \textbf{eat} & $\ldots$ \\
+    \hline
+    \textbf{NN} {\color{gray!80} noun} & 0.5 & 0.1 & 0.02 & \\
+    \textbf{VB} {\color{gray!80} verb} &  0.3 & 0.1 & 0.5 &  \\
+    \textbf{O}  {\color{gray!80} other} & 0.3 & 0.5 & 0.068 & \\
+    \hline
+  \end{tabular}
+  \caption{In this table, each row is designated for one of the hidden states. A column is designated for each of the observable states. Each row has the property that it's a probability distribution, i.e. $\sum_{j=1}^{|V|} B_{ij} = 1$. You may also at first be surprised that for a fixed observable state (word), it can have strictly positive probabilities for all hidden states (parts of speech); this is actually quite natural because the parts of speech can depend on the context of usage. E.g. in the sentences ``hey lays on his back'' and ``I'll be back'', the word ``back'' has a noun parts of speech in the former sentence and an adverb for the latter.}
+\end{center}
+\end{table}
+
+
+
 \end{document}
 
