@@ -1816,7 +1816,45 @@ Or similarly, $\Pr(\texttt{NN} | \texttt{O}) = \frac{C(\texttt{O}, \texttt{NN})}
   \Pr(t_i | t_{i-1}) = \frac{C(t_{i-1}, t_i) + \epsilon }{\sum_{j=1}^{n} C(t_{i-1}, t_j) + N*\epsilon}.
 \]
 
-The consequences of smoothing are (i) we no longer have zeros in our transition probability matrix, and (ii) cases where we had identically zero rows before now have a uniform prior over parts of speech which seems reasonable (e.g. in our example when smoothing is applied $\Pr(\texttt{VB}, \cdot) = \frac{1}{3}$). Note that we may not want to apply smoothing to the first row in our matrix which corresponds to starting from an empty token or start of string: this is because you'll effectively allow strictly positive probabilities for a sentence to start with any word in our vocabulary (including punctuation)! 
+The consequences of smoothing are (i) we no longer have zeros in our transition probability matrix, and (ii) cases where we had identically zero rows before now have a uniform prior over parts of speech which seems reasonable (e.g. in our example when smoothing is applied $\Pr(\texttt{VB}, \cdot) = \frac{1}{3}$). Note that we may not want to apply smoothing to the first row in our matrix which corresponds to starting from an empty token or start of string: this is because you'll effectively allow strictly positive probabilities for a sentence to start with any word in our vocabulary (including punctuation)!
+
+\paragraph{Populating the emission matrix}  We can now calculate emission probabilities for our hidden Markov model; they are calculated similarly as our transition probabilities.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node (a) at (-1,2) {$B = $};
+      \draw (0, 0) grid (4, 4);
+      \draw[fill=green!30] (0,2) rectangle (1, 3);
+      \draw[fill=purple!30] (0,1) rectangle (1, 2);
+      \draw[fill=blue!30] (0,0) rectangle (1, 1);
+      % Left column.
+      \node at (0.5, 2.5) {$\texttt{NN}$};
+      \node at (0.5, 1.5) {$\texttt{VB}$};
+      \node at (0.5, 0.5) {$\texttt{O}$};
+      % Top row
+      \node at (1.5, 3.5) {$\texttt{in}$};
+      \node at (2.5, 3.5) {$\texttt{a}$};
+      \node at (3.5, 3.5) {$\ldots$};
+      % Count formulae
+      \node at (1.5, 2.5) {\tiny $C(\texttt{NN}, \texttt{in})$};
+      \node at (1.5, 1.5) {\tiny $C(\texttt{VB}, \texttt{in})$};
+      \node at (1.5, 0.5) {\tiny $C(\texttt{O}, \texttt{in})$};
+      % Haiku
+      \draw (6, 1) rectangle (15, 4);
+      \node at (8.9, 3.5) {{\color{orange}<s>} {\color{blue}in a} {\color{green}station} {\color{blue}of the} {\color{green}metro}};
+      \node at (10.5, 2.5) {{\color{orange}<s>} \color{blue}{the} \color{green}{apparition} \color{blue}{of these} \color{green}{faces} \color{blue}{in the} \color{green}{crowd}:};
+      \node at (9.35, 1.5) {{\color{orange}<s>} \color{green}{petals} \color{blue}{on a wet, black} \color{green}{bough}};
+\end{tikzpicture}
+  \caption{In this matrix, instead of counting \emph{pairs} of tags, we'll count how often a word is tagged with a specific tag such as \texttt{noun}, \texttt{verb}, or \texttt{other}. For example, in our corpus the \texttt{noun} tag is associated zero times with word ``in'', so $C(\texttt{NN}, \texttt{in}) = 0$. The \texttt{O} tag is associated with the word ``in'' twice, so $C(\texttt{O}, \texttt{in}) = 2$.}
+\end{center}
+\end{figure}
+
+If we wish to apply smoothing:
+\[
+  \Pr(w_i | t_i) = \frac{C(t_i, w_i) + \epsilon}{\sum_{j=1}^V C(t_i, w_j) + N * \epsilon} = \frac{C(t_i, w_i) + \epsilon}{C(t_i) + N * \epsilon}
+\]
+where here $N$ is the number of \emph{tags} and $V$ is the size of our vocabulary.
 
 \end{document}
 
