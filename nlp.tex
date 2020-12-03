@@ -1377,11 +1377,11 @@ P(w) = \frac{C(w)}{|V|},
 \]
 where $C(w)$ is the number of times the word appears, and $V$ is the total size of the corpus. For autocorrect, we simply find the word candidate with the highest probability and choose that word as the replacement.
 
-\paragraph{Minimum edit distance} Let's consider a slightly different problem: you're given two strings (possibly entire documents), and you want to evaluate how similar they are. Given one string, the minimum edit distance is the lowest number of operations needed to transform one string into the other.\footnote{Applications in NLP include spelling correction, document similarity, and machine translation.} For calculating minimum edit distance, we'll use three edit operations: insert (add a letter), delete (remove a letter), and replace (change 1 letter to another).
+\subsection{Minimum edit distance} Let's consider a slightly different problem: you're given two strings (possibly entire documents), and you want to evaluate how similar they are. Given one string, the minimum edit distance is the lowest number of operations needed to transform one string into the other.\footnote{Applications in NLP include spelling correction, document similarity, and machine translation.} For calculating minimum edit distance, we'll use three edit operations: insert (add a letter), delete (remove a letter), and replace (change 1 letter to another).
 
 \begin{figure}[h]
   \begin{center}
-    \begin{tikzpicture}
+    \begin{tikzpicture}[scale=0.9]
       \node at (-2, 0.5) {Source:};
       \draw (0, 0) grid (4, 1);
       \node at (0.5, 0.5) {p};
@@ -1422,10 +1422,10 @@ Up until this point, we've treated all edit operations as having the same (unit-
 
 But what about much longer strings and large corpora of texts or even DNA strings? You can try and solve these problems by brute force: adding one added distance at a time and enumerating all posibilities until one string changes to another; recognize that this requires exponential work with respect to the input string length. A much faster way is to use dynamic programming.
 
-\paragraph{Minimum edit distance algorithm}
+\subsubsection{Minimum edit distance algorithm}
 We'll start by laying out the problem as follows.
 
-\begin{figure}[h]
+\begin{figure}[h!]
   \begin{center}
     \begin{tikzpicture}[scale=0.8]
       \draw (0, 0) grid (5, 5);
