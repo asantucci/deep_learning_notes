@@ -1856,5 +1856,67 @@ If we wish to apply smoothing:
 \]
 where here $N$ is the number of \emph{tags} and $V$ is the size of our vocabulary.
 
+\subsection{The Viterbi algorithm} So, we've calculated our transition and emission probabilities for the Markov Chain and hidden Markov model. Given the parts of speech tag in these probabilities, you can easily select the most likely next parts of speech tag (or the most probable word). We do so simply looking up the correct entry in the respective row of the transition (or emission) probability matrix. But what if you are given an entire sentence, such as ``why not learn something?'' and you want to compute the most likely parts of speech tags given the sentence and your model. The sequence can be computed using the Viterbi algorithm, which is a graph algorithm. Let's consider a toy model and the example sentence, ``I love to learn''.
+
+\begin{figure}[h!]
+  \begin{center}
+    \begin{tikzpicture}[scale=0.7]
+      % Parts of speech.
+      \node[draw,circle,fill=blue!30] (nn) at (-3, 0) {NN};
+      \node[draw,circle,fill=blue!30] (vb) at (3, 0) {VB};
+      \node[draw,circle,fill=blue!30] (o) at (0, -3) {O};
+      \node[draw,circle,fill=blue!30] (pi) at (0, 0) {$\pi$};
+      % Emission from verb.
+      \node[draw,rectangle,fill=gray!30] (love) at (7, 1.5) {love};
+      \node[draw,rectangle,fill=gray!30] (eat) at (7, 0) {eat};
+      \node[draw,rectangle,fill=gray!30] (learn) at (7, -1.5) {learn};
+      \draw[->] (vb) -- (going);
+      \draw[->] (vb) -- (to);
+      \draw[->] (vb) -- (eat);
+      % Emission from other.
+      \node[draw,rectangle,fill=gray!30] (i) at (-2, -5) {i};
+      \node[draw,rectangle,fill=gray!30] (to) at (0, -5) {to};
+      \node[draw,rectangle,fill=gray!30] (you) at (2, -5) {you};
+      \draw[->,orange!80!black,ultra thick] (o) -- node[left] {0.5} (i);
+      \draw[->] (o) -- (to);
+      \draw[->] (o) -- (you);
+      % Emission from noun.
+      \node[draw,rectangle,fill=gray!30] (love) at (-5, 1.5) {love};
+      \node[draw,rectangle,fill=gray!30] (pony) at (-5, 0) {pony};
+      \node[draw,rectangle,fill=gray!30] (sweets) at (-5, -1.5) {sweets};
+      \draw[->] (nn) -- (love);
+      \draw[->] (nn) -- (pony);
+      \draw[->] (nn) -- (sweets);
+      % Arrows.
+      \draw[->] (pi) -- (nn);
+      \draw[->] (pi) -- (vb);
+      \draw[->,green!80!black,ultra thick] (pi) -- node[left] {0.3} (o);
+      \draw[->] (nn) edge[loop above] node {} (nn);
+      \draw[->] (vb) edge[loop above] node {} (vb);
+      \draw[->] (o) edge[loop left] node {} (o);
+      \draw[->] (nn) edge[bend right] node[above] {} (vb);
+      \draw[->] (vb) edge[bend right] node[above] {} (nn);
+      \draw[->] (nn) edge[bend right] node[left] {} (o);
+      \draw[->] (o) edge[bend right] node[left] {} (nn);
+      \draw[->] (vb) edge[bend right] node[right] {} (o);
+      \draw[->] (o) edge[bend right] node[right] {} (vb);
+    \end{tikzpicture}
+    \caption{\small We're given the sequence \texttt{<s> I love to learn}, and we want to find the sequence of hidden states (i.e. parts of speech tags) that have the highest probability for this sequence.}
+  \end{center}
+\end{figure}
+
+\vspace{-10pt}
+\begin{itemize}
+  \item Realize that the word ``love'' can be emitted by both noun and verb states. We start from the initial states by selecting the next most probable hidden state which here is the \texttt{O} state as the word ``I'' can't be emitted from any other state in this toy-model. This involves the transition probability shown in {\color{green!80!black}{green}} and the emission probability in {\color{orange!80!black}{orange}}: the joint-probability for observing word ``I'' and with a transition through the \texttt{O} state is 0.15, which we can get by multiplying the two transition and emission probabilities together.
+  \item There are then two possibilities or ways to observe the word ``love'' in our model: either by traversing through the hidden states \texttt{NN} or the hidden states \texttt{VB}. Let's suppose that the transition probabilities are the same for going from hidden state \texttt{O} to either of these other two hidden states (e.g. probability is $\frac{1}{2}$); but, perhaps the emission probability for the word ``love'' is higher from hidden state \texttt{VB}, so we choose that path: if the emission probability is also $\frac{1}{2}$ then the joint probability of observing ``love'' with hidden state \texttt{VB} coming from \texttt{O} is $\frac{1}{4}$.
+  \item Next, we transition back to hidden state \texttt{O} and emit ``to'' (we must transition back to this hidden state because it is the only one with the emission ``to'') with with combined probability $0.2 \times 0.4 = 0.08$, for example.
+  \item Similarly, in the last step we return to the hidden state \texttt{VB} again as there is no other hidden state in the model that can emit observed state ``learn''. 
+\end{itemize}
+
+The combined probability of the sentence is the product of individual probabilities that we computed in the steps above. The Viterbi algorithm actually computes several such paths at the same time in order to find the most likely sequence of hidden states. It uses the matrix representation of the hidden Markov model. The algorithm can be split into three main steps: the initialization step, the forward pass, and the backward pass.
+Given transition and emission probability matrices, we first populate and use auxiliary matrices $C$ and $D$ where $C$ holds intermediate optimal probabilities and $D$ holds indices of visited states.
+As you're traversing the model graph to find the most likely sequence of   parts of speech tags for the given sequence of words $w_1, \ldots, w_k$.
+These two matrices $C$ and $D$ are both $n \times k$ where $n$ is the number of parts of speech tags and $k$ is the number of words in the given sequence.
+
 \end{document}
 
