@@ -1601,7 +1601,7 @@ The Markov property is what allows us to keep our model simple by saying that al
   \end{center}
 \end{table}
 
-Notice in the table above that it's of dimension $n \times n$. But this means we have to have a preceding word (and corresponding part of speech tag) in order to predict the next word. Unfortunately, with this set-up we cannot predict the first word in a document, since there is no preceding word! What we can do then is introduce an initial state $\pi$ and include these probabilities in the table in the form of an $(n+1) \times n$ table.
+Notice in the table above that it's of dimension $n \times n$. But this means we require a preceding word (and corresponding part of speech tag) in order to predict the next word. Unfortunately, with this set-up we cannot predict the first word in a document, since there is no preceding word! What we can do then is introduce an initial state $\pi$ and include these probabilities in the table in the form of an $(n+1) \times n$ table.
 
 \begin{table}[h]
   \begin{center}
@@ -1619,10 +1619,11 @@ Notice in the table above that it's of dimension $n \times n$. But this means we
       \hline
     \end{tabular}
     \label{tbl: initialmarkovtable}
-    \caption{Here, we encode an initial state such that we can predict the first word (or corresponding part of speech) in a document.}
+    \caption{We encode an initial state such that we can predict the first parts of speech in a document.}
   \end{center}
 \end{table}
 
+\vspace{-25pt}
 \paragraph{Markov chain recap} A Markov chain consists of a set of $n$ states $Q = \begin{bmatrix} q_1 & q_2 & \ldots & q_n \end{bmatrix}$, and we encode the transition probabilities in a transition matrix $A$
 \[
   A = \begin{bmatrix}
@@ -1634,12 +1635,13 @@ Notice in the table above that it's of dimension $n \times n$. But this means we
 
 Let's now introduce the hidden Markov model, which are used to decode hidden states of a word; in our context that would be the parts of speech of that word.
 
+\vspace{-10pt}
 \subsection{Hidden Markov Model}
 The name implies that states are hidden or not directly observable. Going back to the Markov model that has the states for the parts of speech (such as a noun, verb, or other), we can now think of these states as \emph{hidden} because these are not directly observable from our raw text data. This may seem confusing at first: to a human reading the sentence, we can infer what the parts of speech is, e.g. we can clearly tell that ``jump'' is a verb. From a machine's perspective, however, it only sees the text ``jump'' and doesn't know whether it is a verb or a noun. For a machine looking at the text data, it only observes the actual words: these words are observable because they can be seen directly by the machine. The Markov chain model and hidden Markov model have transition probabilities which can be represented by a matrix $A$ of dimension $n+1 \times n$, where $n$ is the number of \emph{hidden} states, e.g. table \ref{tbl: initialmarkovtable}. A hidden Markov model additionally has \emph{emission probabilities}: these describe the transition from the hidden states of our hidden Markov model.
 
-\begin{figure}[h]
+\begin{figure}[h!]
   \begin{center}
-    \begin{tikzpicture}
+    \begin{tikzpicture}[scale=0.8]
       \node[draw,circle,fill=blue!30] (nn) at (0, 0) {NN};
       \node[draw,circle,fill=blue!30] (vb) at (3, 0) {VB};
       \node[draw,circle,fill=blue!30] (o) at (1.5, -3) {O};
@@ -1660,13 +1662,13 @@ The name implies that states are hidden or not directly observable. Going back t
       \draw[->] (vb) -- node[below] {0.1} (to);
       \draw[->] (vb) -- node[below] {0.5} (eat);
     \end{tikzpicture}
-    \caption{Here, we describe hidden states with a background shade of \color{blue!80}{blue} \color{black} and observable states with \color{gray!80}{gray}.\color{black} The interpretation here is that if the current parts of speech is a verb, then there is a 50\% chance that the next (observable) word will be ``eat''.}
+    \caption{\small Here, we describe hidden states with a background shade of \color{blue!80}{blue} \color{black} and observable states with \color{gray!80}{gray}.\color{black} The interpretation here is that if the current parts of speech is a verb, then there is a 50\% chance that the next (observable) word will be ``eat''.}
   \end{center}
 \end{figure}
 
 We can of course equivalently represent emission probabilities by a matrix, call it $B$, with dimension $n \times |V|$ where $n$ is the number of states and $|V|$ is the number of observable states.
 
-\begin{table}[h]
+\begin{table}[h!]
 \begin{center}
   \begin{tabular}{| l | l | l | l | l |}
     \hline
@@ -1677,11 +1679,61 @@ We can of course equivalently represent emission probabilities by a matrix, call
     \textbf{O}  {\color{gray!80} other} & 0.3 & 0.5 & 0.068 & \\
     \hline
   \end{tabular}
-  \caption{In this table, each row is designated for one of the hidden states. A column is designated for each of the observable states. Each row has the property that it's a probability distribution, i.e. $\sum_{j=1}^{|V|} B_{ij} = 1$. You may also at first be surprised that for a fixed observable state (word), it can have strictly positive probabilities for all hidden states (parts of speech); this is actually quite natural because the parts of speech can depend on the context of usage. E.g. in the sentences ``hey lays on his back'' and ``I'll be back'', the word ``back'' has a noun parts of speech in the former sentence and an adverb for the latter.}
+  \caption{\small In this table, each row is designated for one of the hidden states. A column is designated for each of the observable states. Each row has the property that it's a probability distribution, i.e. $\sum_{j=1}^{|V|} B_{ij} = 1$. You may also at first be surprised that for a fixed observable state (word), it can have strictly positive probabilities for all hidden states (parts of speech); this is actually quite natural because the parts of speech can depend on the context of usage. E.g. in the sentences ``hey lays on his back'' and ``I'll be back'', the word ``back'' has a noun parts of speech in the former sentence and an adverb for the latter.}
 \end{center}
 \end{table}
 
+\vspace{-20pt}
+\paragraph{Calculating probabilities}
+Let's learn this first conceptually and then mathematically.
 
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}[scale=0.9]
+      \draw (-0.5, 0) rectangle (4.5, 4);
+      \node (corpus) at (0.25, 0.25) {\color{gray} corpus};
+      \node[draw,fill=blue!30] at (1, 3.5) {You};
+      \node[draw,fill=blue!30] at (1, 2.5) {The};
+      \node[draw,fill=blue!30] at (1, 1.5) {You};
+      \node[draw,fill=purple!30] at (2.5, 3.5) {eat};
+      \node[draw,fill=green!30] at (2.95, 2.5) {oatmeal};
+      \node[draw,fill=purple!30] at (2.5, 1.5) {eat};
+    \end{tikzpicture}
+    \label{fig: trainingcorpuspos}
+    \caption{We've depicted a small training corpus; parts of speech tags are denoted by background colors.}
+\end{center}  
+\end{figure}
+
+To calculate transition probabilities, we'll actually \emph{only} use the parts of speech tags from our training corpus. E.g. to calculate the probabilitiy of a blue speech tag transitioning to a purple one, we first have to count the occurrences of that tag combination in our corpus. In the example depicted above, there are exactly two instances of a blue followed by a purple parts of speech tag. Further, there are exactly three instances of blue parts of speech tags in our entire corpus. So, the conditional probability is $\frac{2}{3}$.
+
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[fill=blue!30] (0, 0) rectangle (2, 1);
+      \node at (2.5, 0.5) {+};
+      \draw[fill=purple!30] (3, 0) rectangle (4, 1);
+      \draw[fill=blue!30] (0, -2) rectangle (2, -1);
+      \node at (2.5, -1.5) {+};
+      \draw (3, -2) rectangle (4, -1);
+      \node at (3.5, -1.5) {?};
+      \node at (4.5, 0.5) {=};
+      \node at (5, 0.5) {2};
+      \node at (4.5, -1.5) {=};
+      \node at (5, -1.5) {3};
+    \end{tikzpicture}
+    \caption{In our elementary example, we're looking for the conditional probability of transitioning from a blue parts of speech tag to a purple one. There are exactly two of these in the training corpus that appears in figure \ref{fig: trainingcorpuspos}. There are a total of three instances where a blue parts of speech tag appears followed by something else, for our example corpus. Therefore, the transition probability is $\frac{2}{3}$.}
+  \end{center}
+\end{figure}
+
+To formally calculate transition probabilities, we do so in several steps:
+\begin{enumerate}
+\item Count occurrences of tag pairs in our training corpus: $C(t_{i-1}, t_i)$.
+\item Calculate probabilities using the counts
+  \[
+    \Pr(t_i | t_{i-1}) = \frac{C(t_{i-1}, t_i)}{\sum_{j=1}^{n} C(t_{i-1}, t_j)},
+  \]
+  where $n$ is the number of tags in our vocabulary.
+\end{enumerate}
 
 \end{document}
 
