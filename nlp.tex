@@ -1918,5 +1918,74 @@ Given transition and emission probability matrices, we first populate and use au
 As you're traversing the model graph to find the most likely sequence of   parts of speech tags for the given sequence of words $w_1, \ldots, w_k$.
 These two matrices $C$ and $D$ are both $n \times k$ where $n$ is the number of parts of speech tags and $k$ is the number of words in the given sequence.
 
+\subsubsection{Initialization} Let's see how to initialize a matrix that will tell you the parts of speech tag of every word. This matrix will tell you the probability that each word belongs to a certain parts of speech. In the initialization step, the first column of each of our matrices $C$ and $D$ are populated. The first column of $C$ represents the probability of the transitions from the start states in the graph to the first tag $t_i$ and word $w_1$.
+\begin{figure}[h!]
+  \begin{center}
+    \begin{tikzpicture}[scale=0.7]
+      % Parts of speech.
+      \node[draw,circle,fill=blue!30] (nn) at (-3, 0) {$t_2$};
+      \node[draw,circle,fill=blue!30] (vb) at (3, 0) {$t_1$};
+      \node[draw,circle,fill=blue!30] (o) at (0, -3) {$t_3$};
+      \node[draw,circle,fill=blue!30] (pi) at (0, 0) {$\pi$};
+      % Emission from verb.
+      \node[draw,rectangle,fill=gray!30] (love) at (7, 1.5) {$w_1$};
+      \node[draw,rectangle,fill=gray!30] (eat) at (7, 0) {$w_2$};
+      \node[draw,rectangle,fill=gray!30] (learn) at (7, -1.5) {$w_3$};
+      \draw[->,orange!80!black,ultra thick] (vb) -- (love);
+      \draw[->] (vb) -- (to);
+      \draw[->] (vb) -- (eat);
+      % Emission from other.
+      \node[draw,rectangle,fill=gray!30] (i) at (-2, -5) {$w_1$};
+      \node[draw,rectangle,fill=gray!30] (to) at (0, -5) {$w_2$};
+      \node[draw,rectangle,fill=gray!30] (you) at (2, -5) {$w_3$};
+      \draw[->,orange!80!black,ultra thick] (o) -- (i);
+      \draw[->] (o) -- (to);
+      \draw[->] (o) -- (you);
+      % Emission from noun.
+      \node[draw,rectangle,fill=gray!30] (love) at (-5, 1.5) {$w_1$};
+      \node[draw,rectangle,fill=gray!30] (pony) at (-5, 0) {$w_2$};
+      \node[draw,rectangle,fill=gray!30] (sweets) at (-5, -1.5) {$w_3$};
+      \draw[->,orange!80!black,ultra thick] (nn) -- (love);
+      \draw[->] (nn) -- (pony);
+      \draw[->] (nn) -- (sweets);
+      % Arrows.
+      \draw[->,green!80!black,ultra thick] (pi) -- (nn);
+      \draw[->,green!80!black,ultra thick] (pi) -- (vb);
+      \draw[->,green!80!black,ultra thick] (pi) -- (o);
+      \draw[->] (nn) edge[loop above] node {} (nn);
+      \draw[->] (vb) edge[loop above] node {} (vb);
+      \draw[->] (o) edge[loop left] node {} (o);
+      \draw[->] (nn) edge[bend right] node[above] {} (vb);
+      \draw[->] (vb) edge[bend right] node[above] {} (nn);
+      \draw[->] (nn) edge[bend right] node[left] {} (o);
+      \draw[->] (o) edge[bend right] node[left] {} (nn);
+      \draw[->] (vb) edge[bend right] node[right] {} (o);
+      \draw[->] (o) edge[bend right] node[right] {} (vb);
+      % C-matrix.
+      \node (C) at (9, 0) {$C = $};
+      \draw (10, -2) grid (15, 2);
+      % Top row of C-matrix.
+      \node at (11.5, 1.5) {$w_1$};
+      \node at (12.5, 1.5) {$w_2$};
+      \node at (13.5, 1.5) {$\ldots$};
+      \node at (14.5, 1.5) {$w_k$};
+      % First column of C-matrix.
+      \node at (10.5, 0.5) {$t_1$};
+      \node at (10.5,-0.5) {$\vdots$};
+      \node at (10.5,-1.5) {$t_N$};
+      % Couple of entries in C-matrix.
+      \node at (11.5,0.5) {$c_{1,1}$};
+      \node at (11.5,-1.5) {$c_{N,1}$};
+      % Formula
+      \node at (13.8, -3) {$c_{i, 1} = {\color{green!80!black}\pi_i} \times {\color{orange!80!black}b_{i, \texttt{cindex}(w_1)}} = a_{1,i} \times b_{i, \texttt{cindex}(w_1)}$};
+    \end{tikzpicture}
+    \caption{\small We're considering initialization of $C$'s first column, which describes the transition probability from the start state in the graph to the first tag $t_i$ and word $w_1$. So, it turns out that the first column entries $c_{i, 1}$ are given by the product of the transition probabilities of the initial states with the respective emission probabilities. Since transition probabilities are contained in the first row of our matrix $A$, we can look them up here, and then multiply with the emission probability found in matrix $B$. The function $\texttt{cindex}(\cdot)$ simply returns the column index in the matrix $B$ for the given word fed as input argument.}
+  \end{center}
+\end{figure}
+
+Above, we considered how to fill in the first column of matrix $C$. What about matrix $D$? Matrix $D$ stores the labels that represents the different states we're traversing when finding the most likely sequence of parts of speech tags for the given sequence of words $w_1, \ldots, w_k$. In the first column, we can simply set all entries to zero, i.e. $d_{i,1} = 0$ for all $i$, as there are no preceeding parts of speech tags we have traversed.
+
+
+
 \end{document}
 
