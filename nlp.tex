@@ -2110,5 +2110,20 @@ In order to implement sentence autocompletion, we'll take several steps:
 \item We then can choose the best language model using a perplexity metric.
 \end{enumerate}
 
+\paragraph{What is an $N$-gram?} An $N$-gram is simply a \emph{sequence} of words. Note that the order matters, and so it's \emph{not} as simple as a set of words. $N$-grams can also be characters or other elements, but for now let's focus on sequences of words. When we process a corpus, we'll treat punctuation like words, but all other special characters (such as codes), will be removed.
+Let's look at an example sentence:
+\begin{verbatim}
+I am happy because I'm learning
+\end{verbatim}
+Then, we define \emph{unigrams} for this corpus as the \emph{set} of all unique single words that appear in the text.
+\[
+  \texttt{Unigrams}: \, \{\color{blue} \textrm{I, am, happy, because, learning} \}
+\]
+Note that even though the word ``I'' appears in the corpus twice, it's once included once in the \emph{set} of unigrams. \emph{Bigrams} are defined as all sets of two words that appear contiguously (or side by side) in the corpus.
+\[
+  \texttt{Bigrams}: \, \{\color{blue} \textrm{I am {\color{black},} am happy{\color{black},} happy because{\color{black},} } \color{black} \ldots \}
+\]
+Notice again that the bigram ``I am'' can be found twice in the text but only is included once in the \emph{set} of bigrams. We emphasize that the words must appear contiguously (or next to each other) in the corpus. As an example, the sequence of words ``I happy'' is not a bigram that appears in the corpus above, and so it has been omitted from the set of bigrams even though each individual word appears in the corpus. We can continue on in this fashion: \emph{trigrams} represent unique \emph{triplets} of words that appear in the sequence together in the corpus.
+
 \end{document}
 
