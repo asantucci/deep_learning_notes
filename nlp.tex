@@ -49,6 +49,27 @@
 \definecolor{deepred}{rgb}{0.6,0,0}
 \definecolor{deepgreen}{rgb}{0,0.5,0}
 
+\def\foldedpaper#1{
+    \tikz[scale=#1,line width={#1*1pt}]{
+        \def\a{1.41} % relative height
+        \def\b{0.2}  % relative height/width of corner
+        \def\c{0.1}  % relative margin width (on either side)
+        \def\d{0.05} % vertical offset of lines
+        \def\N{6}    % number of lines
+        \draw         (0,0)
+                --  ++(-1,0)
+                --  ++(0,\a)
+                --  ++(1-\b,0)
+                --  ++(\b,-\b)
+                -- cycle;
+        \foreach \lnum in {1,...,\N}{
+            \pgfmathsetmacro\yline{\a-\d-\lnum*\a/(\N+1)}
+            \draw (-1+\c,\yline) -- (-\c,\yline);
+        }
+        \draw[fill=white] (0,\a-\b) -- ++(-\b,0) -- ++ (0,\b);
+    }
+}
+
 \usepackage{listings}
 
 % Default fixed font does not support bold face
@@ -2051,6 +2072,33 @@ we use
   \log (c_{i,j}) = \max_k \bigg [\log (c_{k, j-1}) + \log (a_{k,i})\bigg ] + \log( b_{i, \texttt{cindex}(w_j)})
 \]
 where numbers are summed instead of multiplied.
+
+\section{Autocomplete and Language Models}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\subsection{N-grams}
+\paragraph{Overview} Recall that a text corpus is typically a large database of text documents, e.g. all of the pages on Wikipedia, or all of the books from an author, or all tweets from one account. A \emph{language model} is a tool that calculates the probabilities of sentences (which is just a sequence of words). Language models estimate the probability of a subsequent word based on past words. Given the following sentence prefix, how would you fill in the next word?
+
+\begin{verbatim}
+Hellow, how are <...>
+\end{verbatim}
+
+We'd probably guess ``you''; building an $n$-gram language model can allow us to apply autocomplete to a sentence.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \foldedpaper{1}
+      \node at (-0.4, -0.5) {Text Corpus};
+      \draw[->] (1, 0.75) -- (2, 0.75);
+      \draw (3, 0) rectangle (5, 1.5);
+      \node at (4, 0.75) {$\substack{\textrm{Language} \\ \textrm{Model}}$};
+      \node at (6, 0.75) {+};
+      \node at (8.5, 0.75) {``Lynn is eating...''};
+      \draw[->,ultra thick, blue] (11, 1.25) -- (12, 1.25) node[right,black] {``chocolate''};
+      \draw[->,ultra thick, blue] (11, 0.75) -- (12, 0.75) node[right,black] {``eggs''};
+      \draw[->,ultra thick, blue] (11, 0.25) -- (12, 0.25) node[right,black] {``toast''};
+    \end{tikzpicture}
+  \end{center}
+\end{figure}
 
 \end{document}
 
