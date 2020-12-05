@@ -2093,12 +2093,22 @@ We'd probably guess ``you''; building an $n$-gram language model can allow us to
       \node at (4, 0.75) {$\substack{\textrm{Language} \\ \textrm{Model}}$};
       \node at (6, 0.75) {+};
       \node at (8.5, 0.75) {``Lynn is eating...''};
-      \draw[->,ultra thick, blue] (11, 1.25) -- (12, 1.25) node[right,black] {``chocolate''};
+      \draw[->,ultra thick, blue] (11, 1.25) -- (12, 1.25) node[right,black] {\textbf{``chocolate''}};
       \draw[->,ultra thick, blue] (11, 0.75) -- (12, 0.75) node[right,black] {``eggs''};
       \draw[->,ultra thick, blue] (11, 0.25) -- (12, 0.25) node[right,black] {``toast''};
     \end{tikzpicture}
   \end{center}
 \end{figure}
+
+Language models have many applications: e.g. in \emph{speech recognition} to convert the outputs to real words. As a particular example, an acoustic model may convert speech to text and it hears, ``eyes awe of an'', then the speech to text system can use a language model to know that it's more likely the sentence was ``I saw a van''. We can also use language models in \emph{spelling correction}, to identify words that should be replaced based on the sentence they're in; e.g. $\Pr(\textrm{entered the shop to buy}) > \Pr(\textrm{entered the ship to buy})$. Lastly, they can be useful in \emph{augmentative communication}, which are systems that take in a sequence of human hand gestures from a user and help them form words and sentences. E.g. people who are unable to physically talk or sign can instead use simple movements to select words from a menu; then, the system can speak for them, and word prediction using language models can suggest likely words from the menu.
+
+In order to implement sentence autocompletion, we'll take several steps:
+
+\begin{enumerate}
+\item Transform your raw text corpus into a language model which returns the   probability of the next word by using the previous words of a sentence.
+\item Adapt your language model to deal with words the model hasn't seen before during training; these words are called out of vocabulary words. Here, we apply \emph{smoothing} wherein we assume each out-of-vocabulary word or phrase has been seen at least once in the training corpus.
+\item We then can choose the best language model using a perplexity metric.
+\end{enumerate}
 
 \end{document}
 
