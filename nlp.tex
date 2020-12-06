@@ -2230,7 +2230,7 @@ John drinks
 \end{verbatim}
 Then we have a discrepancy in the simplification step above (i.e. it doesn't hold), since clearly
 \[
-  \sum_w C(\textrm{drinks} w) = 1 \neq C(\textrm{drinks}) = 2
+  \sum_w C(\textrm{drinks}\, w) = 1 \neq C(\textrm{drinks}) = 2
 \]
 
 To continue using the simplified formula, we need to add end of sentence tokens. But there's another issue at stake: what if we have a very small corpus, e.g.
@@ -2247,7 +2247,61 @@ There are only two unique words: \{yes, no\}. There are clearly $2^2 = 4$ possib
 <s> no no
 <s> no yes
 \end{verbatim}
+If we wanted to calculate $\Pr( \texttt{<s>} \, \textrm{yes} \, \textrm{yes})$, we could apply the Markov assumption and work with bigrams to say that it's equal to
+\[
+\Pr( \texttt{<s>} \, \textrm{yes} \, \textrm{yes}) = \Pr(\textrm{yes} | \texttt{<s>}) \times \Pr(\textrm{yes} | \textrm{yes}) = \frac{C(\texttt{<s>} \, \textrm{yes})}{\sum_w C(\texttt{<s>} \, w)} \times \frac{C(\textrm{yes yes})}{\sum_w C(\textrm{yes} \, w)} = \frac{2}{3} \times \frac{1}{2}.
+\]
+This is the probability of ``yes yes'' estimated from our corpus.
+We can do the same for all of the possible four combinations of bigrams:
+\begin{align*}
+  \Pr(\texttt{<s>} \textrm{yes} \, \textrm{yes}) = \frac{1}{3}, \hspace{15pt}
+  \Pr(\texttt{<s>} \textrm{yes} \, \textrm{no}) = \frac{1}{3}, \hspace{15pt}
+  \Pr(\texttt{<s>} \textrm{no} \,\textrm{no} ) = \frac{1}{3}, \hspace{15pt}
+  \Pr(\texttt{<s>} \textrm{no} \, \textrm{yes}) = 0
+\end{align*}
+Notice that $\sum_{2 \textrm{ word}} \Pr(\ldots) = 1$, i.e. we have a probability distribution. We could do the same calculations for all $2^3 = 8$ possible sentences of length three, using the two words in our vocabulary. It turns out that we yield another probability distribution, i.e.
+\[
+  \Pr(\texttt{<s>} \textrm{yes} \, \textrm{yes} \, \textrm{yes}) = \ldots = \Pr(\texttt{<s>} \textrm{yes} \, \textrm{yes} \, \textrm{no}) = \ldots = \Pr(\texttt{<s>} \textrm{no} \, \textrm{no} \, \textrm{no})
+\]
+and we again will find that $\sum_{3 \textrm{ word}} \Pr(\ldots) = 1$. But what we really want is for the sum of the probabilities of \emph{all} sentence lengths to be equal to one: in this way we can compare probabilities for sentences of different lengths. In other words, we want
+\[
+  \sum_{2 \textrm{ word}} \Pr(\ldots) + \sum_{3 \textrm{ word}} \Pr(\ldots) + \ldots = 1
+\]
 
+There's a surprisingly simple trick for this: we pre-process our training corpus to simply add in an end of sentence token which we will denote by $</s>$, after each sentence. So sentences get pre-processed:
+\begin{verbatim}
+the teacher drinks tea => <s> the teacher drinks tea </s>
+\end{verbatim}
+The probability of our sentence is now modeled by
+\[
+  \Pr(\textrm{the} | \texttt{<s>}) \Pr(\textrm{teacher} | \textrm{the}) \Pr(\textrm{drinks} | \textrm{teacher}) \Pr(\textrm{tea} | \textrm{drinks}) \Pr(\texttt{<s>} | tea).
+\]
+This new term captures the probability that our sentence will end after the word ``tea''. This also fixes the issue with probability of the sentences of certain length being equal to one. Does this also resolve our problem with the bigram probability formula?
+\begin{verbatim}
+<s> Lyn drinks chocolate </s>
+<s> John drinks </s>
+\end{verbatim}
+Now there are two bigrams starting with the word ``drinks'', i.e. $\sum_w C(\textrm{drinks} \, w) = 2$ (which in this example are ``drinks chocolate'' and ``drinks \texttt{</s>}''). Also realize that now this is consistent with $C(\textrm{drinks}) = 2$, so we can continue using our simplified formula for the bigram probability calculation.
 
+What about for $N$-grams in general? It turns out that adding simply one end-of-sentence marker per sentence is enough. To see why, suppose we are processing trigrams and we have the example sentence
+\begin{verbatim}
+the teacher drinks tea => <s> <s> the teacher drinks tea </s>
+\end{verbatim}
+We've used two start-of-sentence tokens because we're going to be working with trigrams.
+
+Let's segway and quickly look at a bigram example. Suppose our corpus looks like
+\begin{verbatim}
+<s> Lyn drinks chocolate </s>
+<s> John drinks tea </s>
+<s> Lyn eats chocolate </s>
+\end{verbatim}
+Then from this we can easily calculate conditional probabilities for a sample of bigrams:
+\[
+  \Pr(\textrm{John} | \texttt{<s>}) = \frac{1}{3}, \hspace{10pt}
+  \Pr(\texttt{</s>} | \textrm{tea}) = \frac{1}{1}, \hspace{10pt}
+  \Pr(\textrm{chocolate} | \textrm{eats}) = \frac{1}{2}, \hspace{10pt}
+  \Pr(\textrm{Lyn} | \texttt{<s>}) = \frac{2}{3}, \hspace{10pt}
+\]
 \end{document}
+Now, let's calculate the probability of the sentence ``Lynn drinks chocolate'', this is given by $\frac{2}{3} \cdot \frac{1}{2} \cdot \frac{1}{2} \cdot \frac{2}{2} = \frac{1}{6} < \frac{1}{3}$, i.e. the probability returned by the model is lower than $\frac{1}{3}$ which is the fraction of sentences which match in the training corpus. This also applies to other sentences in the corpus; this is how the model generalizes!
 
