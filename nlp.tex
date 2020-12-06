@@ -2520,8 +2520,53 @@ If we were given a new sentence, say ``Adam drinks chocolate'', then we would al
 
 \paragraph{Effect of \texttt{<UNK>} on perplexity?} One thing to be mindful of when using \texttt{<UNK>}s is the effect on measures of perplexity. It turns out that the more \texttt{<UNK>}s we use, the lower the perplexity tends to be; it'll look like our language model is getting better and better, but our model might be prone to spitting out a sequence of \texttt{<UNK>}s with high probability instead of a meaningful sentence. Due to this limitation, we recommend using \texttt{<UNK>}s sparingly. Lastly, and for the aforementioned reasons, it's important to only compare models using perplexity when they have the same vocabulary $V$.
 
-\subsection{Rare Words}
+\subsection{Rare Words and \emph{Smoothing}} When we train an $n$-gram model on a limited corpus, some of the probabilities for rare words may be skewed; we can remedy this using a technique known as \emph{smoothing}. We'll first see an example of how an $n$-gram missing from the corpus can affect the estimation of the $n$-gram probability. Then, we'll cover popular smoothing techniques. And finally, we'll touch on other methods such backoff and interpolation.
 
+\paragraph{Missing $n$-grams} We have resolved the issue of completely unknown words. But there is still missing information from our language model: i.e. how can we manage the probability of an $n$-gram made up of words appearing in the corpus, but where the $n$-gram itself is not present? Recall our example corpus:
+\begin{verbatim}
+<s> Lyn drinks chocolate </s>
+<s> John drinks tea </s>
+<s> Lyn eats chocolate </s>
+\end{verbatim}
+Notice that each of the words $\{\textrm{John, eats}\}$ are present in the corpus, but that the bigram ``John eats'' is not. The count of the bigram ``John eats'' is zero, and correspondingly the probability returned by a naive model would be zero as well. I.e. the numerator and denominator terms on the right hand side of the following expression
+\[
+  \Pr(w_n | w_{n-N+1}^{n-1}) = \frac{C(w_{n-N+1}^{n-1}, w_n)}{C(w_{n-N+1}^{n-1})}
+\]
+can be zero; everything that doesn't occur in the training corpus is considered impossible.
+\subsubsection{Techniques for Smoothing} This is a technique that can help with the aforementioned problem of missing $n$-grams when constructing $n$-gram language models. Recall that we've used smoothing in constructing the transition probabilities for parts of speech tagging. We'll use the same idea for $n$-gram probabilities.
+
+\paragraph{Add one smoothing}
+Let's focus on a technique known as ``add-one smoothing'' otherwise known as \emph{Laplacian smoothing}, which mathematically changes our probability calculations to
+\[
+  \Pr(w_n | w_{n-N+1}^{n-1}) = \frac{C(w_{n-1}, w_n) + 1}{\sum_{w \in V} \left[C(w_{n-1}, w) + 1\right]} = \frac{C(w_{n-1}, w_n) + 1}{C(w_{n-1}) + |V|}.
+\]
+This change can be interpreted as simply adding one occurrence to each bigram; this means that bigrams that were missing from the corpus will now have a strictly nonzero probability. In the denominator, we are adding one for each possible bigram, starting with the word $w_{n-1}$: this corresponds to adding one to each cell in the row indexed by the word $w_{n-1}$ in the counts matrix. We repeat this for as many times as there are words in the vocabulary. Because the one in the sum doesn't depend on index $w$, we can take it out of the sum and replace with $|V|$. This technique really \emph{only works} when the real counts are large enough to outweigh the ``plus one'' term however: otherwise, the probabilities of missing words would be too high. That said, add-one-smoothing helps quite a lot because now there are no bigrams with identically probability.
+
+\paragraph{Add $k$ smoothing} If you have a larger corpus, you can instead add $k > 1$. This technique makes the probabilities \emph{even smoother}. The formula is similar:
+\[
+  \Pr(w_n | w_{n-N+1}^{n-1}) = \frac{C(w_{n-1}, w_n) + k}{\sum_{w \in V} \left[C(w_{n-1}, w) + k\right]} = \frac{C(w_{n-1}, w_n) + 1}{C(w_{n-1}) + k \times |V|}.
+\]
+Other more advanced smoothing methods include \href{https://en.wikipedia.org/wiki/Kneser%E2%80%93Ney_smoothing}{Kneser-Ney} or   \href{https://en.wikipedia.org/wiki/Good%E2%80%93Turing_frequency_estimation}{Good-Turing}.
+
+\paragraph{Backoff} There's another technique to dealing with $n$-grams that do not occur in the training corpus, and that is to use information about $(n-1)$-grams, $(n-2)$-grams, and so on. With the backoff approach, if $n$-gram information is missing, you use $(n-1)$-gram, but if that's also missing you resort to using $(n-2)$-gram, and so on until you find a non-zero probability. Using the lower level $n$-grams, i.e. $(n-1)$-gram, $(n-2)$-gram, all the way down to a unigram, distorts the probability distribution. Especially for smaller corpora, some probability needs to be discounted from the higher level $n$-gram in order to use it for lower-level $n$-grams. \href{https://en.wikipedia.org/wiki/Katz%27s_back-off_model}{Katz backoff} method uses this technique when counting. For large sized, web-scale corpora, a method known as \href{https://www.aclweb.org/anthology/D07-1090.pdf}{``stupid-backoff''} has also been shown to be effective: in this approach, no discounting is applied. If a higher order $n$-gram probability is missing, lower order $n$-grams are used, just multiplied by some constant (a constant of about $\frac{4}{10}$ was shown to work well empirically). Let's apply Backoff to an example
+\begin{verbatim}
+<s> Lyn drinks chocolate </s>
+<s> John drinks tea </s>
+<s> Lyn eats chocolate </s>
+\end{verbatim}
+In this example, the probability of the trigram ``John drinks chocolate'' can't be directly estimated from the corpus. So, the probability of the bigram ``drinks chocolate'', multiplied by some constant (say $c = \frac{4}{10}$), would be used instead.
+\[
+  \Pr(\textrm{chocolate} | \textrm{John drinks}) \approx c \times \Pr(\textrm{chocolate} | \textrm{drinks}).
+\]
+\paragraph{Interpolation} Another alternative to backoff is to use a linear interpolation of all orders of $n$-gram. This means that you would always combine the weighted probability of the $n$-gram, $(n-1)$-gram, all the way down to unigrams. E.g. when calculating the probability of the trigram
+\[
+\Pr(\textrm{chocolate} | \textrm{John drinks}) = \lambda_1 \Pr(\textrm{chocolate} | \textrm{John drinks}) + \lambda_2 \Pr(\textrm{chocolate} | \textrm{drinks}) + \lambda_3 \Pr(\textrm{chocolate}),
+\]
+where $\lambda_1 > \lambda_2 > \lambda_3$ and $\sum_i \lambda_i = 1$. More generally,
+\[
+  \hat \Pr(w_n | w_{n-2} \, w_{n-1}) = \lambda_1 \Pr(w_n | w_{n-2} \, w_{n-1}) + \lambda_2 \Pr(w_{n} | w_{n-1}) + \lambda_3 \Pr(w_n) \hspace{25pt} \textrm{ where} \hspace{25pt} \sum_i \lambda_i = 1.
+\]
+The lambdas are \emph{learned} from the validation parts of the corpus: you get them by maximizing the probability of sentences in the validation set. To do this, you use a fixed language model trained from the training parts of the corpus to calculate $n$-gram probabilities and then optimize the $\lambda$s. The interpolation can be apply to general $n$-grams by applying more $\lambda$s.
 \end{document}
 
 
