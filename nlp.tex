@@ -2151,5 +2151,52 @@ $C(w_1^2 w_3) = C(w_1 w_2 w_3) = C(w_1^3)$.
 \]
 where of course $C(w_1^{N-1} w_N) = C(w_1^N)$.
 
+\paragraph{Modeling the probability of an entire sentence using $N$-grams}
+How can we calculate the probability of a sentence, e.g. $\Pr(\textrm{the teacher drinks tea}) = $? Let's recall the definition of conditional probability alongside the chain rule, i.e.
+\[
+  \Pr(B|A) = \frac{\Pr(A,B)}{\Pr(A)} \implies \Pr(A,B) = \Pr(A) \Pr(B|A).
+\]
+
+Generalizing to longer sequences,
+\[
+  \Pr(A,B,C,D) = \Pr(A) \Pr(B|A) \Pr(C|A,B) \Pr(D | A, B, C).
+\]
+The product of each successive word is the product of the successive probabilities of all words that came before it in the sequence. We can now apply the chain rule to answering our original question:
+\[
+\Pr(\textrm{the teacher drinks tea} ) = \Pr(\textrm{the}) \Pr(\textrm{teacher} | \textrm{the}) \Pr(\textrm{drinks} | \textrm{the teacher}) \Pr(\textrm{tea} | \textrm{the teacher drinks}). 
+\]
+
+What if the sentence is not in the corpus? The corpus almost never contains the exact sentence we're interested in or even its longer subsequences! E.g.
+\[
+  \Pr(\textrm{tea} | \textrm{the teacher drinks}) = \underbrace{\frac{C(\textrm{the teacher drinks tea})}{C(\textrm{the teacher drinks})}}_{\textrm{both numerator and denominator terms likely zero}}.
+\]
+
+The formula for the probability of the entire sentence can't give a probability estimate in this situation. As the sentence gets longer, the likelihood that more and more words will occur next to each other in this exact order becomes smaller and smaller. E.g. the likelihood that ``the teacher drinks'' appears in the corpus is smaller than the probability of the word ``drinks''.
+
+\paragraph{Applying Markov assumption to model sentences using bigrams} What if instead of looking for all the words before ``tea'', you just consider the previous word which is ``drinks'' in this case, i.e. we assume that
+\[
+  \Pr(\textrm{tea} | \textrm{the teacher drinks}) \approx \Pr(\textrm{tea} | \textrm{drinks}).
+\]
+Then, our sentence probability calculate simplifies to
+\[
+\Pr(\textrm{the teacher drinks tea} ) \approx \Pr(\textrm{the}) \Pr(\textrm{teacher} | \textrm{the}) \Pr(\textrm{drinks} | \textrm{teacher}) \Pr(\textrm{tea} | \textrm{drinks}).
+\]
+In arguing that the approximation holds, we've effectively argued toward the Markov assumption where the probability of the subsequent word depends \emph{only} on the previous word. Then, what we're saying is that the entire sentence can be modeled using a product of conditional probabilities
+\[
+  \Pr(w_1^n) \approx \prod_{i=1}^n \Pr(w_i | w_{i-1}).
+\]
+
+We could also make this more flexible and instead assert that only the last $N$ words matter, i.e. the Markov assumption here would be that the probability of a word depends only on its recent predecessors up through length $N$. For bigrams, we can approximate the probability
+\[
+  \Pr(w_n | w_1^{n-1}) \approx \Pr(w_n | w_{n-1})
+\]
+whereas with $N$-grams we have
+\[
+  \Pr(w_n | w_1^{n-1}) \approx \Pr(w_n | w_{n-N+1}^{n-1})  .
+\]
+
+\paragraph{Starting and ending sentences}
+
+
 \end{document}
 
