@@ -2196,6 +2196,57 @@ whereas with $N$-grams we have
 \]
 
 \paragraph{Starting and ending sentences}
+In working with conditional probabilities that operate on a sliding window of two or more words, it's natural to wonder what happens at the beginning or end of a sentence? We'll use two new symbols to denote start and end markers for sentences, and we'll modify our input sentences using these symbols when processing bigrams or $n$-grams.
+\begin{itemize}
+\item Start of sentence symbol \texttt{<s>}
+\item End of sentence symbol \texttt{</s>}
+\end{itemize}
+
+Let's revisit our previous sentence, ``the teacher drinks tea''. We've previously asserted that
+\[
+\Pr(\textrm{the teacher drinks tea} ) \approx \Pr(\textrm{the}) \Pr(\textrm{teacher} | \textrm{the}) \Pr(\textrm{drinks} | \textrm{teacher}) \Pr(\textrm{tea} | \textrm{drinks}).
+\]
+For the first word ``the'', we don't have context of the previous word, so you can't calculate a bigram probability, which we'll need to make predictions. We'll add in a special term so that each sentence of our corpus can be split into bigrams that we may calculate probabilities for.
+\[
+\Pr(\textrm{\texttt{<s>} the teacher drinks tea} ) \approx \Pr(\textrm{the} | \texttt{<s>}) \Pr(\textrm{teacher} | \textrm{the}) \Pr(\textrm{drinks} | \textrm{teacher}) \Pr(\textrm{tea} | \textrm{drinks}).
+\]
+Similar principles apply to $N$-grams. Instead of trying to calculate the sentence probability using a unigram probability for the first word, a bigram probability for the second word, and trigram probabilities for remaining words, as in:
+\[
+\Pr(\textrm{the teacher drinks tea} ) \approx \Pr(\textrm{the}) \Pr(\textrm{teacher} | \textrm{the}) \Pr(\textrm{drinks} | \textrm{the teacher}) \Pr(\textrm{tea} | \textrm{teacher drinks}).  
+\]
+We can instead convert our sentence to be ``\texttt{<s><s>} the teacher rinks tea''. So now, the sentence probability becomes the product of trigram probabilities:
+\[
+  \Pr(w_1^n) \approx \Pr(w_1 | <s> <s>) \Pr(w_2 | <s> w_1) \ldots \Pr(w_n | w_{n-2} w_{n-1}).
+\]
+
+For an $N$-gram model, we simply add $N-1$ start tokens \texttt{<s>}. What about end of sentences? Recall that
+\[
+  \Pr(y|x) = \frac{C(x y)}{\sum_w C(x w)} = \frac{C(x y)}{C(x)}
+\]
+where in the last step we simplified the denominator in a way that hinges on $x$ always being followed by another word; i.e. when word $x$ is the last word in th sentence, this simplification step does not hold. To see this, suppose we have a Corpus
+\begin{verbatim}
+Lyn drinks chocolate
+John drinks
+\end{verbatim}
+Then we have a discrepancy in the simplification step above (i.e. it doesn't hold), since clearly
+\[
+  \sum_w C(\textrm{drinks} w) = 1 \neq C(\textrm{drinks}) = 2
+\]
+
+To continue using the simplified formula, we need to add end of sentence tokens. But there's another issue at stake: what if we have a very small corpus, e.g.
+\begin{verbatim}
+<s> yes no
+<s> yes yes
+<s> no no
+\end{verbatim}
+
+There are only two unique words: \{yes, no\}. There are clearly $2^2 = 4$ possible sentences of length two, i.e
+\begin{verbatim}
+<s> yes yes
+<s> yes no
+<s> no no
+<s> no yes
+\end{verbatim}
 
 
 \end{document}
