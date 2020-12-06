@@ -2544,7 +2544,7 @@ This change can be interpreted as simply adding one occurrence to each bigram; t
 
 \paragraph{Add $k$ smoothing} If you have a larger corpus, you can instead add $k > 1$. This technique makes the probabilities \emph{even smoother}. The formula is similar:
 \[
-  \Pr(w_n | w_{n-N+1}^{n-1}) = \frac{C(w_{n-1}, w_n) + k}{\sum_{w \in V} \left[C(w_{n-1}, w) + k\right]} = \frac{C(w_{n-1}, w_n) + 1}{C(w_{n-1}) + k \times |V|}.
+  \Pr(w_n | w_{n-N+1}^{n-1}) = \frac{C(w_{n-1}, w_n) + k}{\sum_{w \in V} \left[C(w_{n-1}, w) + k\right]} = \frac{C(w_{n-1}, w_n) + k}{C(w_{n-1}) + k \times |V|}.
 \]
 Other more advanced smoothing methods include \href{https://en.wikipedia.org/wiki/Kneser%E2%80%93Ney_smoothing}{Kneser-Ney} or   \href{https://en.wikipedia.org/wiki/Good%E2%80%93Turing_frequency_estimation}{Good-Turing}.
 
