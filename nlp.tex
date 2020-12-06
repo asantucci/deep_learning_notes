@@ -2567,6 +2567,45 @@ where $\lambda_1 > \lambda_2 > \lambda_3$ and $\sum_i \lambda_i = 1$. More gener
   \hat \Pr(w_n | w_{n-2} \, w_{n-1}) = \lambda_1 \Pr(w_n | w_{n-2} \, w_{n-1}) + \lambda_2 \Pr(w_{n} | w_{n-1}) + \lambda_3 \Pr(w_n) \hspace{25pt} \textrm{ where} \hspace{25pt} \sum_i \lambda_i = 1.
 \]
 The lambdas are \emph{learned} from the validation parts of the corpus: you get them by maximizing the probability of sentences in the validation set. To do this, you use a fixed language model trained from the training parts of the corpus to calculate $n$-gram probabilities and then optimize the $\lambda$s. The interpolation can be apply to general $n$-grams by applying more $\lambda$s.
+
+\section{Word Embeddings with Neural Networks}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+Word vectors, also known as word embeddings, are the cornerstone of NLP. Recall that we've previously used word embeddings to find semantic analogies between words, and also to calculate distances between words and similarities between words.
+Separately, it's possible to perform sentiment analysis by combining word embeddings with a classifier, or to classify customer reviews (or comments) from user feedback surveys. Advanced uses of word embeddings include machine translation systems, information extraction, and question-answering.
+Our key learning objectives in this section are:
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}[
+      mycirc/.style={circle,fill=blue!20, minimum size=0.2cm}
+    ]
+    % Oil related
+    \node[mycirc,label=right:{\tiny petroleum}] at (-0.95, -0.5) {};
+    \node[mycirc,label=right:{\tiny oil}] at (-0.75, 0) {};
+    \node[mycirc,label=right:{\tiny gas}] at (-0.4, 0.3) {};
+    % Geographies
+    \node[mycirc,label=left:{\tiny city}] at (1.75, 0.5) {};
+    \node[mycirc,label=right:{\tiny country}] at (2, -0) {};
+    \node[mycirc,label=right:{\tiny town}] at (2.7, 0.7) {};
+    \node[mycirc,label=right:{\tiny village}] at (3, 1.25) {};
+    % % Emotions
+    \node[mycirc,label=right:{\tiny happy}] at (3, -0.6) {};
+    \node[mycirc,label=right:{\tiny joyful}] at (3.25, -1) {};
+    \node[mycirc,label=left:{\tiny sad}] at (2.7, -1.15) {};
+  \end{tikzpicture}
+  \caption{As an example, word embeddings help capture semantic relationships. When we project the word embeddings into a lower dimensional space, we can often times see clusters of words that represent related concepts.} 
+  \end{center}
+\end{figure}
+
+\begin{itemize}
+  \item Identify the key concepts of word representations: we will represent     words numerically such that we may use them in mathematical models.
+\item Generate word embeddings: we'll see how we can \emph{learn} word   embeddings from data with some commonly used methods.
+\item Prepare text for machine learning: transform a corpus of text into   training sets for a machine learning model.
+\item Implement the continuous bag-of-words model, which is one of the many ways word embedding can be created.
+\end{itemize}
+
+\subsection{Word Representations}
+
+
 \end{document}
 
 
