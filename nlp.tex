@@ -23,6 +23,7 @@
 \usepackage[normalem]{ulem}
 \usepackage{pgfplots}  
 \usepackage{pifont}
+\usepackage{colortbl}
 \usetikzlibrary{positioning}
 \usetikzlibrary{calc}
 \usetikzlibrary{fit}
@@ -2302,6 +2303,46 @@ Then from this we can easily calculate conditional probabilities for a sample of
   \Pr(\textrm{chocolate} | \textrm{eats}) = \frac{1}{2}, \hspace{10pt}
   \Pr(\textrm{Lyn} | \texttt{<s>}) = \frac{2}{3}, \hspace{10pt}
 \]
-\end{document}
 Now, let's calculate the probability of the sentence ``Lynn drinks chocolate'', this is given by $\frac{2}{3} \cdot \frac{1}{2} \cdot \frac{1}{2} \cdot \frac{2}{2} = \frac{1}{6} < \frac{1}{3}$, i.e. the probability returned by the model is lower than $\frac{1}{3}$ which is the fraction of sentences which match in the training corpus. This also applies to other sentences in the corpus; this is how the model generalizes!
+
+\subsubsection{The $N$-gram language model}
+Here's the general outline:
+\begin{itemize}
+\item Process the corpus into a Counts matrix; this captures the number of   occurrences of relative $n$-grams.
+\item Transform the count matrix into a probability matrix that contains   information about the conditional probability of the $n$-grams.
+\item Relate the probability matrix to the language model.
+\item Generative language model: we can then use the $n$-gram language model to generate new sentences from scratch.
+\end{itemize}
+
+We'll also learn how to deal with technical numerical issues that arise from multiplying a lot of small numbers when calculate the sentence probability.
+
+\paragraph{Counts matrix} Starting with the counts matrix, let's transform into conditional probabilities. The formula for this is given by:
+\[
+  \Pr(w_n | w_{n-N+1}^{n-1}) = \frac{C(w_{n-N+1}^{n-1}, w_n)}{C(w_{n-N+1}^{n-1})}.
+\]
+
+The numerator of this formula is captured by the Counts matrix for all $n$-grams appearing in the corpus. All unique corpus $(N-1)$-grams make up the rows, and all unique words of the corpus make up the columns.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{|c|c c c c c|}
+      \hline
+      & \texttt{<s>} & \texttt{</s>} & I & study & learn \\
+      \hline
+      \texttt{<s>} & 0 & 0 & 1 & 0 & 0 \\
+      \texttt{</s>} & 0 & 0 & 0 & 0 & 0 \\
+      I & 0 & 0 & 0 & 1 & 1 \\
+      study & 0 & 0 & {\cellcolor{orange!80} 1} & 0 & 0 \\
+      learn & 0 & 1 & 0 & 0 & 0 \\
+      \hline
+    \end{tabular}
+    \caption{Suppose the corpus is: ``<s> I study I learn </s>''. The rows of       the table above represent the first word of the bigram and the columns represent
+      the second word of the bigram. For the bigram ``study I'', it appears once in the corpus. We can calculate hte count matrix in a single pass through the corpus using a sliding window composed of $n=2$ words to represent the bigram: for each bigram you find, increment the value in the count matrix by one.}
+  \end{center}
+\end{table}
+
+\paragraph{Probability matrix}
+
+\end{document}
+
 
