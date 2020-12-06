@@ -2481,6 +2481,47 @@ where in this context $w_i$ denotes the $i$-th word in the test set.
 \]
 In a good model with perplexity between $[20,60]$, the log-perplexity would range from $[4.3, 5.9]$.
 
+\subsection{Unknown Words}
+Sometimes, we'll encounter words that we did not see during training, i.e. unknown or \emph{out-of-vocabulary} words; we can add a special new word \texttt{UNK} to our probability calculations from our training corpus to accommodate this. We can also consider which words should be considered known by our vocabulary. Let's look at this in further detail.
+
+\paragraph{What is an out of vocabulary word?} A vocabulary is a set of unique words supported by a language model. There are certain tasks such as question answering where you will encounter and generate only words from a fixed set of words: i.e. a chatbot can only answer limited sets of questions. The fixed set of words is what's formally called a \emph{closed vocabulary}. But in other use cases, you have to deal with words you haven't seen before which results in what's called an \emph{open vocabulary}. E.g. you might see a name of a new city in your training data. The unknown words are called out of vocabulary words (or OOV for short).
+
+\paragraph{Adding a new special word \texttt{UNK}} One way to deal with the unknown words is to replace them by a special word \texttt{<UNK>}. This literally means replacing each instance of an unknown word with \texttt{<UNK>} in your data.
+\begin{enumerate}
+\item Create a vocabulary $V$.
+\item Replace any word that is in the training corpus but \emph{not} in     vocabulary by \texttt{<UNK>}.
+\item Count the probabilities with \texttt{<UNK>} as with any other word.
+\item Now, we may apply the $n$-gram language model probability calculations in the same way as before, just with the addition of \texttt{<UNK>}.
+\end{enumerate}
+E.g. suppose we've been given the following training corpus:
+\begin{verbatim}
+<s> Lyn drinks chocolate </s>
+<s> John drinks tea </s>
+<s> Lyn eats chocolate </s>
+\end{verbatim}
+We have decided to only include words in our vocabulary that appear at least twice in our training corpus. The post-processed corpus will then look like
+\begin{verbatim}
+<s> Lyn drinks chocolate </s>
+<s> <UNK> drinks <UNK> </s>
+<s> Lyn <UNK> chocolate </s>
+\end{verbatim}
+Our vocabular includes words with frequency (in our training corpus) greater than or equal to two, i.e. $V = \{\textrm{Lyn, drinks, chocolate}\}$.
+If we were given a new sentence, say ``Adam drinks chocolate'', then we would also replace any out-of-vocabulary words with \texttt{<UNK>}, i.e.
+\begin{verbatim}
+<s> Adam drinks chocolate </s>  -->  <s> <UNK> drinks chocolate </s>
+\end{verbatim}
+
+\paragraph{How to create a vocabulary $V$} We can create a vocabulary from a training corpus based on different criteria.
+
+\begin{itemize}
+\item Minimum word frequency $f$ (usually a small number): i.e. only include words in the vocabulary $V$ that appear at least $f$ times in our training corpus. Replace all words that appear fewer than $f$ times with \texttt{<UNK>}. This ensures that the words that ``we care about a lot'', i.e. the ones which repeat a lot in our training corpus, are certainly present in our vocabulary.
+\item Alternatively, we could decide what the maximum size of our vocabulary should be, i.e. fix $|V|$, and then include words with highest frequency until we fill the vocabulary.
+\end{itemize}
+
+\paragraph{Effect of \texttt{<UNK>} on perplexity?} One thing to be mindful of when using \texttt{<UNK>}s is the effect on measures of perplexity. It turns out that the more \texttt{<UNK>}s we use, the lower the perplexity tends to be; it'll look like our language model is getting better and better, but our model might be prone to spitting out a sequence of \texttt{<UNK>}s with high probability instead of a meaningful sentence. Due to this limitation, we recommend using \texttt{<UNK>}s sparingly. Lastly, and for the aforementioned reasons, it's important to only compare models using perplexity when they have the same vocabulary $V$.
+
+\subsection{Rare Words}
+
 \end{document}
 
 
