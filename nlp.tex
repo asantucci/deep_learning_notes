@@ -2317,9 +2317,10 @@ Here's the general outline:
 We'll also learn how to deal with technical numerical issues that arise from multiplying a lot of small numbers when calculate the sentence probability.
 
 \paragraph{Counts matrix} Starting with the counts matrix, let's transform into conditional probabilities. The formula for this is given by:
-\[
+\begin{equation}
+  \label{eq: ngramcountstoprobability}
   \Pr(w_n | w_{n-N+1}^{n-1}) = \frac{C(w_{n-N+1}^{n-1}, w_n)}{C(w_{n-N+1}^{n-1})}.
-\]
+\end{equation}
 
 The numerator of this formula is captured by the Counts matrix for all $n$-grams appearing in the corpus. All unique corpus $(N-1)$-grams make up the rows, and all unique words of the corpus make up the columns.
 
@@ -2341,7 +2342,65 @@ The numerator of this formula is captured by the Counts matrix for all $n$-grams
   \end{center}
 \end{table}
 
-\paragraph{Probability matrix}
+\paragraph{Probability matrix} Now that we've used the counts matrix to provide the numerator for the $n$-gram probability formula, it's time to get the denominator in equation \ref{eq: ngramcountstoprobability}: this is as simple as normalizing each row by its row-sum. I.e.
+\[
+  \texttt{sum}(\textrm{row}) = \sum_{w \in V} C(w_{n-N+1}^{n-1}, w) = C(w_{n-N+1}^{n-1}).
+\]
+The row sum is equivalent to the counts of the $(n-1)$-gram prefixes from the formula denominator: this will always be true since the $(n-1)$-gram prefix is always followed by some word. If the prefix was at the end of the sentence, it is now followed by the end of sentence token. Let's create a probability matrix from an example; the corpus is again ``<s> I study I learn </s>''.
+
+\begin{minipage}{0.5\textwidth}
+  % \begin{multicols}{2}
+    \begin{tabular}{|c|c c c c c|c|}
+      \hline
+      & \texttt{<s>} & \texttt{</s>} & I & study & learn & sum \\
+      \hline
+      \texttt{<s>} & 0 & 0 & 1 & 0 & 0 & 1 \\
+      \texttt{</s>} & 0 & 0 & 0 & 0 & 0 & 0  \\
+      I & 0 & 0 & 0 & 1 & 1 & 2 \\
+      study & 0 & 0 &  1 & 0 & 0 & 1 \\
+      learn & 0 & 1 & 0 & 0 & 0 & 1 \\
+      \hline
+    \end{tabular}
+  \end{minipage}
+  $\overset{\substack{\textrm{Rescale by} \\ \textrm{row sums}}}{\longrightarrow}$
+  \begin{minipage}{0.5\textwidth}
+    \begin{tabular}{|c|c c c c c|}
+      \hline
+      & \texttt{<s>} & \texttt{</s>} & I & study & learn \\
+      \hline
+      \texttt{<s>} & 0 & 0 & 1 & 0 & 0 \\
+      \texttt{</s>} & 0 & 0 & 0 & 0 & 0 \\
+      I & 0 & 0 & 0 & $\frac{1}{2}$ & $\frac{1}{2}$ \\
+      study & 0 & 0 & 1 & 0 & 0 \\
+      learn & 0 & 1 & 0 & 0 & 0 \\
+      \hline
+    \end{tabular}
+\end{minipage}
+
+\paragraph{Language model} The next step is to connect the probability matrix with our definition of the language model; the language model is now a simple script that uses the probability matrix to estimate the probability of a given sentence. It estimates the probability by splitting the sentence into $n$-grams and then finding their probability in the probability matrix. Alternatively, the language model can predict the next element of a sequence by extracting the last $(n-1)$-gram from the end of a sequence; after that, the language model finds the corresponding row in the probability matrix and returns the word with highest probability. E.g. let's find the probability of the sentence ``I learn'', using the calculated probabilities from the previous section:
+\begin{equation*}
+  \Pr(\texttt{<s>} \textrm{ I learn } \texttt{</s>}) = \Pr(\textrm{I} | \texttt{<s>}) \Pr(\textrm{learn} | \textrm{I}) \Pr(\texttt{</s>} | \textrm{learn}) = 1 \times \frac{1}{2} \times 1 = \frac{1}{2}.
+\end{equation*}
+
+\paragraph{Log probability} The sentence probability calculation requires multiplication of many small, positive numbers less than unit value:
+\[
+  \Pr(w_1^n) \approx \prod_{i=1}^{n} \Pr(w_i | w_{i-1}).
+\]
+This puts us as risk of running into numerical underflow. We use the fact that $\log (ab) = \log a + \log b$ to avoid this problem and proceed by calculating a log probability instead.
+
+\paragraph{Generative language model} One interesting application of a language model is text generation from scratch or using just a small hint. Suppose our corpus is given by:
+\begin{verbatim}
+<s> Lyn drinks chocolate </s>
+<s> John drinks tea </s>
+<s> Lyn eats chocolate </s>
+\end{verbatim}
+E.g. the algorithm might choose ``\texttt{<s>} Lynn'' to start. Next, it will select a bigram that starts with ``Lynn'', perhaps ``Lynn drinks''. Then it chooses a bigram starting with ``drinks'', say ``drinks tea''. Finally, perhaps the model predicts an end of sentence at that point. Notice that our model will always predict end of sentence after predicting ``tea''. How does such an algorithm work?
+\begin{itemize}
+\item Randomly select among all bigrams starting with the sentence symbol   \texttt{<s>} based on bigram probability; i.e. bigrams with higher values in the probability matrix are more likely to be chosen.
+\item Choose a new bigram at random from the bigrams beginning with the   previously chosen word, and add this bigram to your sentence.
+\item Continue until the end of sentence token \texttt{</s>} is chosen; this happens when we randomly choose a bigram that starts with the previously chosen word and ends with the token \texttt{</s>}.
+\end{itemize}
+
 
 \end{document}
 
