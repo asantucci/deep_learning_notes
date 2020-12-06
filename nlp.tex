@@ -2124,6 +2124,32 @@ Note that even though the word ``I'' appears in the corpus twice, it's once incl
   \texttt{Bigrams}: \, \{\color{blue} \textrm{I am {\color{black},} am happy{\color{black},} happy because{\color{black},} } \color{black} \ldots \}
 \]
 Notice again that the bigram ``I am'' can be found twice in the text but only is included once in the \emph{set} of bigrams. We emphasize that the words must appear contiguously (or next to each other) in the corpus. As an example, the sequence of words ``I happy'' is not a bigram that appears in the corpus above, and so it has been omitted from the set of bigrams even though each individual word appears in the corpus. We can continue on in this fashion: \emph{trigrams} represent unique \emph{triplets} of words that appear in the sequence together in the corpus.
+\[
+  \texttt{Trigrams}: \, \{\color{blue} \textrm{I am happy}{\color{black},} \textrm{ am happy because}{\color{black},} \color{black} \ldots \}
+\]
+Let's define some sequence notation. If we have a corpus of text that consists of 400 words, the sequence of words can be denoted by $w_1, w_2, w_3, \ldots, w_{500}$. The corpus length is denoted by the variable $m$. We will use the notation $w_i^j$ to refer to the sequence of words $w_i, w_{i+1}, \ldots, w_{j-1}, w_j$.
+
+\paragraph{Unigram probability} In our example corpus ``I am happy because I am learning'', the size of the corpus is 7. So, for example, $\Pr(\textrm{I}) = \frac{2}{7}$ since the word ``I'' appears twice in the corpus. Similarly, $\Pr(\textrm{happy}) = \frac{1}{7}$. In general,
+\[
+  \Pr(w) = \frac{C(w)}{m},
+\]
+where $C(w)$ denotes the frequency of word $w$ in the corpus.
+\paragraph{Bigram probability} In the same example, ``I am happy because I am learning'', what is $\Pr(\textrm{am} | \textrm{I})$? This is given by $\Pr(\textrm{am} | \textrm{I}) = \frac{C(\textrm{I am})}{C(\textrm{I})} = \frac{2}{2} = 1$; i.e. we take the count of the bigrams observed in the corpus divided by the count of the unigram we are conditioning on. In this example, the bigram ``I am'' appears twice, and so does the unigram ``I''; whence we arrive at our calculation. Similarly, $\Pr(\textrm{learning} | \textrm{am}) = \frac{C(\textrm{am learning})}{C(\textrm{am})} = \frac{1}{2}$. The generalized expression is given by:
+\[
+  \Pr(y|x) = \frac{C(x y)}{\sum_w C(x w)} = \frac{C(x y)}{C(x)},
+\]
+where we remark that the last equality only follows if $x$ is always followed by some other word!
+\paragraph{Trigram probability} Let's consider the same example, ``I am happy because I am learning''. $\Pr(\textrm{happy} | \textrm{I am}) = \frac{C(\textrm{I am happy})}{C(\textrm{I am})} = \frac{1}{2}$. In general,
+\[
+  \Pr(w_3 | w_1^2) = \frac{C(w_1^2 w_3)}{C(w_1^2)},
+\]
+where we could re-write the numerator several different ways:
+$C(w_1^2 w_3) = C(w_1 w_2 w_3) = C(w_1^3)$.
+\paragraph{N-gram probability} Let's generalize further:
+\[
+  \Pr(w_N | w_1^{N-1}) = \frac{C(w_1^{N-1} w_N)}{C(w_1^{N-1})}
+\]
+where of course $C(w_1^{N-1} w_N) = C(w_1^N)$.
 
 \end{document}
 
