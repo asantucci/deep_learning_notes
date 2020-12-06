@@ -2606,9 +2606,49 @@ Our key learning objectives in this section are:
 \subsection{Word Representations} Let's now learn how to create a matrix to represent all of the words in our vocabulary. Each vector in the matrix will correspond to one of the words.
 
 \paragraph{Naively: represent words as integers}
-The simplest way to represent words as numbers is, for a given vocabulary, to assign a unique integer ID to each word. E.g. based on a vocabulary of 1,000 basic English words, we might assign the number one to word ``a'', the number two to ``able'', and so on until we assign something like one-thousand to ``zebra''. While this schema might seem simple, the problem is that the order of words, alphabetical in this example, doesn't make much sense from a semantic perspective. For example, there's really no good intuitive reason why ``happy'' should be assigned a greater number than ``hand'' for instance, or a smaller one than ``zebra''.
+The simplest way to represent words as numbers is, for a given vocabulary, to assign a unique integer ID to each word.
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{c c}
+      \hline
+      Word & Number \\
+      \hline
+      a & 1 \\
+      able & 2 \\
+      about & 3 \\
+      $\ldots$ & $\ldots$ \\
+      hand & 615 \\
+      $\ldots$ & $\ldots$ \\      
+      happy & 621 \\
+      $\ldots$ & $\ldots$ \\
+      zebra & 1000 \\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{table}
+E.g. based on a vocabulary of 1,000 basic English words, we might assign the number one to word ``a'', the number two to ``able'', and so on until we assign something like one-thousand to ``zebra''. While this schema might seem simple, the problem is that the order of words, alphabetical in this example, doesn't make much sense from a semantic perspective. For example, there's really no good intuitive reason why ``happy'' should be assigned a greater number than ``hand'' for instance, or a smaller one than ``zebra''.
 
 \paragraph{One-hot vectors} Instead, let's try using a numerical column vector to represent a word of the vocabulary. If again we have a vocabulary of 1,000 words, each vector would contain 1,000 elements and each row would be labeled with one of the words. We can now use a one-hot encoding: place a one in the row that has the same label and a zero everywhere else. For example, the word ``happy'' would be represented as a column vector where there is a unit-value in the row corresponding to ``happy'' and zeros for all other rows in the vocabulary.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{c l}
+      ``happy'' & \\
+      0 & a \\
+      0 & able \\
+      0 & about \\
+      $\vdots$ & $\vdots$ \\
+      0 & hand \\
+      $\vdots$ & $\vdots$ \\      
+      1 & happy \\
+      $\vdots$ & $\vdots$ \\
+      0 & zebra \\
+    \end{tabular}
+    \caption{The above column-vector is a one-hot representation of the word ``happy''. It has as many row-entries as there are elements in our vocabulary.}
+  \end{center}
+\end{table}
+
+\paragraph{Pros and cons of one-hot vectors}
 Note that one-hot vectors have the advantage over using integers beacuse one-hot vectors do not imply any relationship between two words (other than they are either equal or not), e.g. each vector simply says the word is either ``happy'' or it's not, or the word is either ``zebra'' or it's not. There are, however, two major limitations for using one-hot vectors in NLP: (i) barring the smallest of vocabularies, these word vectors are going to be huge, which means processing/working with them on a compute will take lots of space and time, and (ii) their representation again doesn't carry the words semantic meaning. For instance, \emph{all} words that are not the same have the same distance between them, e.g. the word ``happy'' is just as similar to the word ``paper'' as it is to the word ``excited'' (but intuitively, we would think that ``happy'' and ``excited'' are closer in distance, of course).
 
 \paragraph{Mapping between integer representation to one-hot vectors} Realize that we can easily map back and forth between one-hot vectors and the integer representation for a word. We do this simply by mapping the words in the rows to their corresponding row number. In this way, e.g. ``happy'' may be word 621 would be represented as a column vector with a 1 in row 621, and it can also be represented as the integer-ID 621. 
