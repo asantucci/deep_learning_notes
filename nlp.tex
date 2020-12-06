@@ -2651,7 +2651,64 @@ E.g. based on a vocabulary of 1,000 basic English words, we might assign the num
 \paragraph{Pros and cons of one-hot vectors}
 Note that one-hot vectors have the advantage over using integers beacuse one-hot vectors do not imply any relationship between two words (other than they are either equal or not), e.g. each vector simply says the word is either ``happy'' or it's not, or the word is either ``zebra'' or it's not. There are, however, two major limitations for using one-hot vectors in NLP: (i) barring the smallest of vocabularies, these word vectors are going to be huge, which means processing/working with them on a compute will take lots of space and time, and (ii) their representation again doesn't carry the words semantic meaning. For instance, \emph{all} words that are not the same have the same distance between them, e.g. the word ``happy'' is just as similar to the word ``paper'' as it is to the word ``excited'' (but intuitively, we would think that ``happy'' and ``excited'' are closer in distance, of course).
 
-\paragraph{Mapping between integer representation to one-hot vectors} Realize that we can easily map back and forth between one-hot vectors and the integer representation for a word. We do this simply by mapping the words in the rows to their corresponding row number. In this way, e.g. ``happy'' may be word 621 would be represented as a column vector with a 1 in row 621, and it can also be represented as the integer-ID 621. 
+\paragraph{Mapping between integer representation to one-hot vectors} Realize that we can easily map back and forth between one-hot vectors and the integer representation for a word. We do this simply by mapping the words in the rows to their corresponding row number. In this way, e.g. ``happy'' may be word 621 would be represented as a column vector with a 1 in row 621, and it can also be represented as the integer-ID 621.
+
+\subsection{Word Embeddings} Although there are basic ways to represent words as numbers, these representations fail to carry meaning. Let's now move to embeddings, which are vectors that do indeed carry meaning. Let's first get an intuition for how word vectors can carry the meaning of words, starting in 1D.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}[scale=2,
+      mycirc/.style={circle,fill=blue!20, scale=0.1mm}
+    ]
+    \draw[<->] (-3, 0) -- (3, 0);
+    \foreach \x in {-2, -1, 0, 1, 2} {
+      \draw (\x, -0.1) -- (\x, 0.1) node[below=0.5cm] {\x};
+    }
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{rage} \\ (-2.52)}$}}] at (-2.52, 0) {};
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{anger} \\ (-2.08)}$}}] at (-2.08, 0) {};
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{spider} \\ (-1.53)}$}}] at (-1.53, 0) {};
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{boring} \\ (-0.91)}$}}] at (-0.91, 0) {};
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{paper} \\ (0.03)}$}}] at (0.03, 0) {};
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{kitten} \\ (1.09)}$}}] at (1.09, 0) {};
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{happy} \\ (1.75)}$}}] at (1.75, 0) {};
+    \node[mycirc,label=above:{\tiny {$\substack{\textrm{excited} \\ (2.31)}$}}]     at (2.31, 0) {};
+    \draw[<->,color=blue!20] (0.03, -0.5) -- (1.725, -0.5);
+    \draw[<->,color=blue!20] (1.775, -0.5) -- (2.31, -0.5);
+\end{tikzpicture}
+\caption{Consider a horizontal number line, where words to the left of the origin are considered negative in some way and words on the right are considered positive in some way. Words that are much more negative are further to the left, and words that are much more positive are further to the right. You could store their positions as scalars (or vectors of length 1). Notice that you can use any decimal value instead of binary values $\{0, 1\}$, which means that we can now say that ``happy'' and ``excited'' are more similar to each other compared with the word ``paper'': their distance is smaller.}
+\end{center}
+\end{figure}
+
+Let's now consider how adding a second dimension can help capture more meaning of words.
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}[
+      mycirc/.style={circle,fill=blue!20, scale=0.1mm}
+    ]
+    \draw[<->,ultra thick] (-3,0)--(3,0) node[right]{positive};
+    \node at (-3.8, 0) {negative};
+    \draw[<->,ultra thick] (0,-1.25)--(0,1.5) node[above]{concrete};
+    \node at (0, -1.35) {abstract};
+    \node[mycirc,label=above:{\tiny spider}] at (-1.5, 0.5) {};
+    \node[mycirc,label=below:{\tiny snake}] at (-1.5, 0.5) {};
+    % lower left quadrant.
+    \node[mycirc,label=above:{\tiny rage}] at (-2.7, -0.5) {};
+    \node[mycirc,label=above:{\tiny anger}] at (-2.1, -0.6) {};
+    \node[mycirc,label=above:{\tiny boring}] at (-0.8, -0.65) {};
+    % lower right quadrant.
+    \node[mycirc,label=right:{\tiny thought}] at (0.1, -0.9) {};
+    \node[mycirc,label=above:{\tiny happy}] at (1.8, -0.65) {};
+    \node[mycirc,label=above:{\tiny excited}] at (2.7, -0.5) {};
+    % upper right quadrant.
+    \node[mycirc,label=right:{\tiny paper}] at (0.1, 0.8) {};
+    \node[mycirc,label=below:{\tiny puppy}] at (1, 0.65) {};
+    \node[mycirc,label=right:{\tiny kitten}] at (1.2, 0.65) {};    
+  \end{tikzpicture}
+  \caption{We have now extended our word representation into two dimensions: the vertical number line represents how concrete (or abstract) the object is; words that are higher on the number line are more concrete and words that are lower on the number line are more abstract. Notice that words that are both more concrete and positve like ``puppy'' and ``kitten'' are close together. We can store the two numbers that represent the position on the cartesian plane as a vector of length two. So, what we've done here is to represent the vocabulary of words with a small vector of length two. We've gained a little bit of meaning while also giving up some precision: the vector is less precise than one-hot vectors in that it's possible for two words to be located on the same point in this 2D plot, such as the words ``snake'' and ``spider''.}
+\end{center}
+\end{figure}
+
+Word embeddings represent words in a vector form that both has relatively low dimension (e.g. hundreds to thousands), which makes it practical for calculations, and carries the semantic meaning between words, which makes it possible to determine how semantically close a pair of words really are. In a general purpose vocabulary, we might expect the vector representation for ``forest'' to be similar to ``tree'', but for both of those to be very different for the vector ``tickets''. Using word vectors, we can also fill in analogies: e.g. ``Paris is to France as Rome is to?''. Encoding the meaning of words is also the first step toward encoding the meaning of entire sentences, and this is the foundation for more complex NLP use cases (such as question-answering and translation).
 
 \end{document}
 
