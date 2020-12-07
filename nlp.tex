@@ -2772,7 +2772,62 @@ There's also Global Vectors (or GloVe) by Stanford, which involves factorizing t
 \paragraph{Advanced, context specific, word embedding methods}
 Deep learning methods can also be used to refine the representation of words according to their contexts. In the previous models, a given word always has the same embedding. IN these more advanced models, words have different embeddings depending on their surrounding context. This adds support for \emph{polysemy} or words with similar meanings: e.g. the word ``plant'' can either refer to an organism (such as a flower) a factory, or which can even be an adverb. A few examples of more advanced models that generate word embeddings are BERT (or bidirectional encoder representation from transformers by Google), ELMO (embeddings from language models), or GPT-2 (generative pre-training 2 by OpenAI). If you want to use these advanced methods, you can find off the shel pre-trained models on the internet, and then fine tune these models using your own corpus to generate high-quality, domain specific word embeddings.
 
-\subsubsection{Continuous bag-of-words model}
+\subsubsection{Continuous bag-of-words model} Recall that to create word embeddings, we need a corpus and a machine learning model that performs a learning task. One byproduct of the task is a set of word embeddings. You also need a way to transform the corpus into a representation that is suited to the machine learning model. In the case of the continuous bag-of-words model, the objective of the task is to predict a missing word based on the surrounding words. The rationale is that if two unique words are both frequently surrounded by similar sets of words when used in various sentences, then those two words tend to be related in their meaning; put differently, they are related semantically.
+\begin{verbatim}
+The little <???> is barking
+\end{verbatim}
+In the above sentence, something is barking. With a large enough corpus, the model will learn to predict that the missing word is related to dogs, such as the word dog itself or puppy, hound, terrier, and so on. So, the model will end up learning the meaning of the word based on the context.
+
+\paragraph{Using the corpus to create training data for the prediction task} Let's say that the corpus is the sentence
+\begin{verbatim}
+I am happy because I am learning
+\end{verbatim}
+We will ignore punctuation for now. For a given word in the corpus, e.g. ``happy'', which we will call the \emph{center} word, we define the \emph{context words} as the four surrounding words (the two words before, and the two words after). We will denote $C = 2$ as the half-size of the context, and it is a hyperparameter of the model.
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[fill=blue!20] (-2.75, -0.5) rectangle (2.3, 0.5);
+      \node (window) at (2.3, -1.25) {window};
+      \draw[->, ultra thick, blue!20] (2.3, -0.5) -- (window);
+      \node[draw,fill=purple!50] (c1) at (-2,0) {I am};
+      \node[draw,fill=orange!80] (center) at (-0.5,0) {happy};
+      \node[draw,fill=purple!50] (c2) at (1.25,0) {because I};
+      \node at (3.5, 0) {am learning};
+      \node[below=5mm of center] (context) {$\substack{\textrm{context words} \\ C = 2 \\ \textrm{context half-size}}$};
+      \draw[->, ultra thick, purple!50] (c1) -- (context);
+      \draw[->, ultra thick, purple!50] (c2) -- (context);
+      \node[above=5mm of center] (centerwordlabel) {center word};
+      \draw[->, ultra thick, orange!80] (center) -- (centerwordlabel);
+    \end{tikzpicture}
+    \caption{In this example, the context words for the center word ``happy'' are ``I am'' and ``because I''. We define the \emph{window} as the count of the center word plus the context words; so, in this example the size of the window is equal to five.}
+  \end{center}
+\end{figure}
+
+To train our model, we'll need a set of examples. Each example will be made of context words and the center word to be predicted. In the first example, the window is ``I am happy because I'', and the model will take the context words ``I am because I'', and should predict the center word ``happy''. We now slide the window by one word: the next training example that you have is ``am happy beause I am'', where the input to the model is the context words ``am happy I am'' and we want to predict the target center word ``because''. We continue to slide the window by one word again, and the model will take the window ``happy because I  am learning'', and we should predict ``I''.  This is described in detail in \href{https://arxiv.org/abs/1301.3781}{Efficient estimation of Word   Representations in Vector Space}. The model architecture is given by a shallow neural network:
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node at (-3, 3) {INPUT};
+      \node (wtm2) at (-4.5, 2) {$w(t-2)$};
+      \draw (-3.5, 1.5) rectangle (-2.5, 2.5);
+      \node (wtm1) at (-4.5, 0.75) {$w(t-1)$};
+      \draw (-3.5, 0.25) rectangle (-2.5, 1.25);
+      \node (wtp1) at (-4.5, -2) {$w(t+1)$};
+      \draw (-3.5, -2.5) rectangle (-2.5, -1.5);
+      \node (wtp2) at (-4.5, -3.25) {$w(t+2)$};
+      \draw (-3.5, -3.75) rectangle (-2.5, -2.75);
+      \node at ( 0, 3) {PROJECTION};
+      \draw (-0.5, -1.5) rectangle (+0.5, 0.25) node[above left] {SUM};
+      \draw[->, ultra thick] (-2.5, 1.5) -- (-0.5, -0.25);
+      \draw[->, ultra thick] (-2.5,0.25) -- (-0.5, -0.5);
+      \draw[->, ultra thick] (-2.5,-1.5) -- (-0.5,-0.75);
+      \draw[->, ultra thick] (-2.5,-2.75) -- (-0.5,-1);
+      \node at (+3, 3) {OUTPUT};
+      \draw (+2.5, -1.5) rectangle (+3.5, 0.25) node[below right] {$w(t)$};
+      \draw[->, ultra thick] (0.5, -0.6) -- (2.5, -0.6);
+    \end{tikzpicture}
+  \end{center}
+\end{figure}
 
 \end{document}
 
