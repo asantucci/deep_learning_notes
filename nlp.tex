@@ -2653,7 +2653,10 @@ Note that one-hot vectors have the advantage over using integers beacuse one-hot
 
 \paragraph{Mapping between integer representation to one-hot vectors} Realize that we can easily map back and forth between one-hot vectors and the integer representation for a word. We do this simply by mapping the words in the rows to their corresponding row number. In this way, e.g. ``happy'' may be word 621 would be represented as a column vector with a 1 in row 621, and it can also be represented as the integer-ID 621.
 
-\subsection{Word Embeddings} Although there are basic ways to represent words as numbers, these representations fail to carry meaning. Let's now move to embeddings, which are vectors that do indeed carry meaning. Let's first get an intuition for how word vectors can carry the meaning of words, starting in 1D.
+\subsection{Word Embeddings} Although there are basic ways to represent words as numbers, these representations fail to carry meaning. Let's now move to embeddings, which are vectors that do indeed carry meaning.
+
+\paragraph{Intuition for how a (scalar) vector representation can capture semantic meaning}
+Let's first get an intuition for how word vectors can carry the meaning of words, starting in 1D.
 
 \begin{figure}[h]
   \begin{center}
@@ -2679,8 +2682,10 @@ Note that one-hot vectors have the advantage over using integers beacuse one-hot
 \end{center}
 \end{figure}
 
+\paragraph{Extending our intution to more than 1 dimension}
 Let's now consider how adding a second dimension can help capture more meaning of words.
-\begin{figure}
+
+\begin{figure}[h!]
   \begin{center}
     \begin{tikzpicture}[
       mycirc/.style={circle,fill=blue!20, scale=0.1mm}
@@ -2710,6 +2715,53 @@ Let's now consider how adding a second dimension can help capture more meaning o
 
 Word embeddings represent words in a vector form that both has relatively low dimension (e.g. hundreds to thousands), which makes it practical for calculations, and carries the semantic meaning between words, which makes it possible to determine how semantically close a pair of words really are. In a general purpose vocabulary, we might expect the vector representation for ``forest'' to be similar to ``tree'', but for both of those to be very different for the vector ``tickets''. Using word vectors, we can also fill in analogies: e.g. ``Paris is to France as Rome is to?''. Encoding the meaning of words is also the first step toward encoding the meaning of entire sentences, and this is the foundation for more complex NLP use cases (such as question-answering and translation).
 
+\subsubsection{How to Create Word Embeddings} To create word embeddings we need two things: a corpus of text and an embedding method.
+
+\paragraph{Choice of corpus}
+The corpus contains the words you want to embed organized in the same way they would be used in the context of interest. For example, if you want to generate embeddings based on Shakespeare, then your corpus would be the full and original text of Shakespeare
+and \emph{not} study notes, slide presentations, or keywords from Shakespeare, for example. The context of a word refers towards other words or a combination of other words said to occur around that particular word; the context is important as this is what will give meaning to  each word embedding. I.e. a simple vocabulary list of Shakespeare's most common words would \emph{not} be enough to create an embedding. A corpus could be either a general purpose set of documents such as Wikipedia articles, \emph{or} it could be more specialized such as an industry or enterprise specific corpuse to capture the nuances of the context (e.g. for NLP use cases on legal topics, you could use contracts and law books as the corpus).
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      % Corpus.
+      \node (corpus) at (-3, 1) {\textbf{Corpus}};
+      \node (general) at (-4.5, 0) {$\substack{\textrm{General-purpose} \\           \textrm{e.g. Wikipedia}}$};
+      \node (specialized) at (-1.5, 0) {$\substack{\textrm{Specialized} \\                               \textrm{e.g. contracts,} \\ \textrm{law books}}$};
+\draw[->] (corpus) -- (general);
+\draw[->] (corpus) -- (specialized);
+      \node (context) at (-3, -1) {\color{green!80} Words in context};
+      \draw (-6, -1.25) rectangle (0, 1.25);
+% Embedding method.
+\node (embeddingmethod) at (5.75, 1) {\textbf{Embedding method}};
+\node (mlmodel) at (6.25, 0.25) {Machine learning model};
+\node (learningtask) at (5.75, -0.5) {Learning task};
+\node (selfsupervised) at (9.5, -0.5) {$\substack{\textrm{Self-supervised} \\ =     \textrm{ unsupervised} \\ + \textrm{ supervised}}$};
+\node[below=2mm of learningtask] {``I think [???] I am''};
+\node[below=15mm of mlmodel] {\color{green!80} Meaning};
+\draw (2, -2.25) rectangle (11, 1.25);
+      % Transformation polygon.
+      \draw[fill=gray!25] (0.25, -1) -- (0.25, 1) -- (3.5, 1) -- (4, 0) -- (3.5,             -1) -- cycle;
+\node (transformation) at (1.75, 0.75) {\textbf{Transformation}};
+\node[below=2mm of transformation] (words) {words};
+\node[below=2mm of words] (representation) {integers, vectors};
+\draw[->,ultra thick] (words) -- (representation);
+% Hyperparameters.
+\node[above=8mm of embeddingmethod] {\textbf{Hyperparameters}};
+\node[above=3mm of embeddingmethod] {Word embedding size, ...};
+\draw (3.25, 1.5) rectangle (8.25, 3.5);
+\draw[-] (5.75, 1.5) -- (5.75, 1.25);
+    \end{tikzpicture}
+  \end{center}
+\end{figure}
+
+\paragraph{Embedding methods as a self-supervised task} The embedding method creates the word embeddings from the corpus. There are many types of possible methods, but we will focus on modern methods based on machine learning models which are set to learn the word embeddings. In particular, the ML method performs a learning task and the main byproducts of this task are the word embeddings. For instance, the task could be to learn to predict a word based on the surrounding words in a sentence of the corpus, as in the case of the continuous bag-of-words approach. The specifics of the task will ultimately define the meaning of the individual words. We say that the task is \emph{self-supervised}: it is both unspervised in the sense that the input data, the corpus, is unlabeled, but it's also supervised in the sense that the data itself provides the necessary context which would ordinarily make up the labels. So, the corpus is a self-contained data set that contains both the training data and the data that enables supervision of the task.
+
+\paragraph{Dimension of embeddings}
+Word embeddings can be tuned with hyperparameters, one of which is the \emph{dimension} of the word embedding. In practice, the size of an embedding is a few hundred to a few thousand dimensions: using more dimensions captures more nuanced meanings but is more computationally expensive both at training time and later down the line when using the word embedding vectors, which leads to diminishing returns.
+
+
 \end{document}
+
 
 
