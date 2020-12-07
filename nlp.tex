@@ -2918,6 +2918,64 @@ So, if we repeat this process for our vocabular, we come up with the following i
   \end{center}
 \end{table}
 
+\paragraph{Architecture of the CBOW model} The continuous bag of words model is based on a shallow, dense neural network with an input layer, a single hidden layer, and an output layer. The input to the model is a vector of context words, which we'll call $X$, and the output is the vector of the predicted center word $\hat y$.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}[scale=0.9]
+      % Context words vector (i.e. raw input)
+      \draw (-2, 1) rectangle (-1, 3);
+      \node at (-1.5, 3.25) {$\substack{\textrm{Context words} \\           \textrm{vector}}$};
+      \node at (-2.5, 2) {$x = $};
+      \node at (-2.4, 1.2) {$|V|$};
+      \draw[->, ultra thick] (-1, 2) -- (-0.5, 2);
+      % Input layer.
+      \draw (0, 0.25) rectangle (0.5, 4) node[above] {Input layer};
+      \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+      \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+      \node at (0.25, 2.7) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (0.25, 2) {};
+      \node at (0.25, 1.5) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (0.25, 3.3) {};
+      \node[draw,circle,scale=0.75] at (0.25, 3.7) {};
+      % First weights matrix and bias layer.
+      \node at (1.5, 3) {$\substack{W_1 \\ \textrm{weights}}$};
+      \node at (1.5, 1.5) {$\substack{b_1 \\ \textrm{biases}}$};
+      \node at (1.5, 0) {ReLU};
+      % Hidden layer.
+      \draw (3, 0.25) rectangle (3.5, 4) node[above] {Hidden layer};
+      \node[draw,circle,scale=0.75] at (3.25, 0.5) {};
+      \node[draw,circle,scale=0.75] at (3.25, 0.9) {};
+      \node at (3.25, 2.7) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (3.25, 2) {};
+      \node at (3.25, 1.5) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (3.25, 3.3) {};
+      \node[draw,circle,scale=0.75] at (3.25, 3.7) {};
+      \node at (2.75, 0.5) {$N$};
+      % Second weights matrix and bias layer.
+      \node at (4.75, 3) {$\substack{W_2 \\ \textrm{weights}}$};
+      \node at (4.75, 1.5) {$\substack{b_2 \\ \textrm{biases}}$};
+      \node at (4.75, 0) {softmax};
+      % Output layer.
+      \draw (6, 0.25) rectangle (6.5, 4) node[above] {Hidden layer};
+      \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
+      \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
+      \node at (6.25, 2.7) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (6.25, 2) {};
+      \node at (6.25, 1.5) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (6.25, 3.3) {};
+      \node[draw,circle,scale=0.75] at (6.25, 3.7) {};
+      % Center word vector
+      \draw[->, ultra thick] (6.5, 2) -- (6.8, 2);
+      \draw (7, 1) rectangle (7.5, 3);
+      \node at (7.25, 3.25) {$\substack{\textrm{Center word} \\                     \textrm{vector}}$};
+\node at (7.85, 1.2) {$|V|$};
+\node at (7.85, 2) {$= \hat y$};
+\end{tikzpicture}
+\caption{\small In this neural network, the size of the input and output vectors is the size of the vocabulary, $|V|$. If you recall from the previous section on word embedding process, the size or dimension of the word embeddings is a hyperparameter we select. This hidden layer is related to our embedding, and its size is a hyperparameter $N$; in practice $N$ is in the range of hundreds to thousands. We're going to use a regular feed-forward neural network, i.e. a dense neural network with fully connected layers. Our algorithm will learn weights matrices $W_i$ and bias terms $b_i$ as we train it. For the input-to-hidden layer, we'll use a Rectified Linear Unit activation function, whereas for the output layer we'll use a softmax.}
+  \end{center}
+\end{figure}
+
 \end{document}
 
 
