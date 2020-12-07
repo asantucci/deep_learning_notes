@@ -80,7 +80,7 @@
 \newcommand\pythonstyle{\lstset{
 language=Python,
 basicstyle=\ttm,
-otherkeywords={self,for,range,in,True},             % Add keywords here
+otherkeywords={self,for,range,in,True,yield},             % Add keywords here
 keywordstyle=\ttb\color{deepgreen},
 emph={MyClass,__init__},          % Custom highlighting
 emphstyle=\ttb\color{deepred},    % Custom highlighting style
@@ -2861,6 +2861,23 @@ This short tweet contains an emoji, punctuation, and a number.
            or emoji.get_emoji_regexp().search(ch)
          ]
 \end{python}
+
+\paragraph{Sliding window of words in Python} Suppose we've cleaned and tokenized the corpus and we now have an array of tokens or words. Let's now consider how to extract the center words and their context words, which will serve as examples to train the continuous bag of words model.
+
+\begin{python}
+def get_windows(words, C = 2):
+  """ Words is a list of tokens."""  
+  i = C
+  while i < len(words) - C:
+    center_word = words[i];
+    context_words = words[(i-C):i] + words[(i+1):(i+C+1)]
+    yield context_words, center_word
+    i += 1
+\end{python}
+
+Notice this is a \emph{generator} function; with a \emph{yield} we can pause execution of the function until the next time it is invoked.
+
+\paragraph{Transforming words into vectors}
 
 \end{document}
 
