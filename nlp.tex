@@ -2628,7 +2628,9 @@ The simplest way to represent words as numbers is, for a given vocabulary, to as
 \end{table}
 E.g. based on a vocabulary of 1,000 basic English words, we might assign the number one to word ``a'', the number two to ``able'', and so on until we assign something like one-thousand to ``zebra''. While this schema might seem simple, the problem is that the order of words, alphabetical in this example, doesn't make much sense from a semantic perspective. For example, there's really no good intuitive reason why ``happy'' should be assigned a greater number than ``hand'' for instance, or a smaller one than ``zebra''.
 
-\paragraph{One-hot vectors} Instead, let's try using a numerical column vector to represent a word of the vocabulary. If again we have a vocabulary of 1,000 words, each vector would contain 1,000 elements and each row would be labeled with one of the words. We can now use a one-hot encoding: place a one in the row that has the same label and a zero everywhere else. For example, the word ``happy'' would be represented as a column vector where there is a unit-value in the row corresponding to ``happy'' and zeros for all other rows in the vocabulary.
+\paragraph{One-hot vectors}
+\label{par: onehotvectors}
+Instead, let's try using a numerical column vector to represent a word of the vocabulary. If again we have a vocabulary of 1,000 words, each vector would contain 1,000 elements and each row would be labeled with one of the words. We can now use a one-hot encoding: place a one in the row that has the same label and a zero everywhere else. For example, the word ``happy'' would be represented as a column vector where there is a unit-value in the row corresponding to ``happy'' and zeros for all other rows in the vocabulary.
 
 \begin{table}[h]
   \begin{center}
@@ -2877,7 +2879,44 @@ def get_windows(words, C = 2):
 
 Notice this is a \emph{generator} function; with a \emph{yield} we can pause execution of the function until the next time it is invoked.
 
-\paragraph{Transforming words into vectors}
+\paragraph{Transforming words into vectors} At this point, we've cleaned and tokenized our corpus and extracted the context words and center word from a window that slides across our prepared corpus. We're now ready to transform the center words and context words into a mathematical form that's going to be consumed by the continuous bag of words model. Let's start with the center word: for the sample corpus
+\begin{verbatim}
+I am happy because I'm learning
+\end{verbatim}
+we first create a vocabulary, which is the set of unique words in the corpus $V = \{\textrm{am, because, happy, I, learning}\}$. We can now encode each word as a column one-hot vector, just like in section \ref{par: onehotvectors}. In this way, the vector for ``am'' will have a unit value in the row corresponding to ``am'' and a zero everywhere else, for example.
+For the context words, we'll create a \emph{single} vector that represents the average of individual one-hot vectors. E.g.
+
+\begin{equation*}
+  \frac{1}{4} \times 
+  \begin{bmatrix}
+    & \textrm{I} & & \textrm{am} & & \textrm{because} & & \textrm{I} & \\
+    \textrm{am} & {\color{blue!50} 0} & & {\color{blue!50}1} & & {\color{blue!50}0} & & {\color{blue!50}0} & \\
+    \textrm{because} & {\color{blue!50}0} & & {\color{blue!50}0} & & {\color{blue!50}1} & & {\color{blue!50}0} & \\
+    \textrm{happy} & {\color{blue!50}0} & + & {\color{blue!50}0} & + & {\color{blue!50}0} & + & {\color{blue!50}0} \\
+    \textrm{I} & {\color{blue!50}1} & & {\color{blue!50}0} & & {\color{blue!50}0} & & {\color{blue!50}1} & \\
+    \textrm{learning} & {\color{blue!50}0} & & {\color{blue!50}0} & & {\color{blue!50}0} & & {\color{blue!50}0} &
+\end{bmatrix}
+= \begin{bmatrix} \textrm{I am because I} \\
+  0.25 \\
+  0.25 \\
+  0 \\
+  0.5 \\
+  0
+\end{bmatrix}
+\end{equation*}
+So, if we repeat this process for our vocabular, we come up with the following inputs for our ML algorithm.
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{c c c c}
+      \hline
+      Context words & Context words vector & Center word & Center word vector \\
+      \hline
+      I am because I & $\begin{bmatrix} 0.25; 0.25; 0; 0.5; 0 \end{bmatrix}$ &                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          happy & $\begin{bmatrix} 0; 0; 1; 0; 0 \end{bmatrix}$ \\
+      am happy I am & $\begin{bmatrix} 0.5; 0; 0.25; 0.25; 0 \end{bmatrix}$ &                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        because & $\begin{bmatrix} 0; 1; 0; 0; 0 \end{bmatrix}$ \\
+      happy because am learning & $\begin{bmatrix} 0.25; 0.25; 0.25; 0, 0.25 \end{bmatrix}$ &                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  I & $\begin{bmatrix} 0; 0; 0; 1; 0 \end{bmatrix}$ \\
+    \end{tabular}
+  \end{center}
+\end{table}
 
 \end{document}
 
