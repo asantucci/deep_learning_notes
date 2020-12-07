@@ -2760,6 +2760,19 @@ and \emph{not} study notes, slide presentations, or keywords from Shakespeare, f
 \paragraph{Dimension of embeddings}
 Word embeddings can be tuned with hyperparameters, one of which is the \emph{dimension} of the word embedding. In practice, the size of an embedding is a few hundred to a few thousand dimensions: using more dimensions captures more nuanced meanings but is more computationally expensive both at training time and later down the line when using the word embedding vectors, which leads to diminishing returns.
 
+\subsubsection{Word embedding methods} There are many ways to generate word embeddings, e.g. \texttt{word2vec} by Google, which initially popularized the use of ML to generate word embeddings. The algorithm uses a shallow neural netwok to learn embeddings: it proposes two model architectures
+
+\begin{itemize}
+\item Continuous bag of words: a simple but efficient approach. The objective is   to learn to predict a missing word given surrounding words.
+\item Continuous skip-gram, also known as skip-gram with negative sampling: does the reverse of the continuous bag of words method by learning to predict the word surroundings given an input word.
+\end{itemize}
+
+There's also Global Vectors (or GloVe) by Stanford, which involves factorizing the logarithm of the corpus's word co-occurrence matrix, which is similar to the counter matrix we've used before. Then there's fastText by Facebook, which is based on the skip-gram model and takes into account the structure of words by representing words as an $n$-gram of characters: this enables the model to support previously unseen words, by inferring their embedding from the sequence of characters they are made of and the corresponding sequences that it was initially trained on. E.g. it can create similar embeddings for the words ``kitty'' and ``kitten'' even if it had never seen the word ``kitty'' before: this is because the two words are made up of a similar sequence of characters. Another benefit of fastText is that word embedding vectors can be averaged together to make vector representations of phrases and sentences.
+
+\paragraph{Advanced, context specific, word embedding methods}
+Deep learning methods can also be used to refine the representation of words according to their contexts. In the previous models, a given word always has the same embedding. IN these more advanced models, words have different embeddings depending on their surrounding context. This adds support for \emph{polysemy} or words with similar meanings: e.g. the word ``plant'' can either refer to an organism (such as a flower) a factory, or which can even be an adverb. A few examples of more advanced models that generate word embeddings are BERT (or bidirectional encoder representation from transformers by Google), ELMO (embeddings from language models), or GPT-2 (generative pre-training 2 by OpenAI). If you want to use these advanced methods, you can find off the shel pre-trained models on the internet, and then fine tune these models using your own corpus to generate high-quality, domain specific word embeddings.
+
+\subsubsection{Continuous bag-of-words model}
 
 \end{document}
 
