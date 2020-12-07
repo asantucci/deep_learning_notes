@@ -2957,7 +2957,7 @@ So, if we repeat this process for our vocabular, we come up with the following i
       \node at (4.75, 1.5) {$\substack{b_2 \\ \textrm{biases}}$};
       \node at (4.75, 0) {softmax};
       % Output layer.
-      \draw (6, 0.25) rectangle (6.5, 4) node[above] {Hidden layer};
+      \draw (6, 0.25) rectangle (6.5, 4) node[above] {Output layer};
       \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
       \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
       \node at (6.25, 2.7) {$\vdots$};
@@ -2975,6 +2975,91 @@ So, if we repeat this process for our vocabular, we come up with the following i
 \caption{\small In this neural network, the size of the input and output vectors is the size of the vocabulary, $|V|$. If you recall from the previous section on word embedding process, the size or dimension of the word embeddings is a hyperparameter we select. This hidden layer is related to our embedding, and its size is a hyperparameter $N$; in practice $N$ is in the range of hundreds to thousands. We're going to use a regular feed-forward neural network, i.e. a dense neural network with fully connected layers. Our algorithm will learn weights matrices $W_i$ and bias terms $b_i$ as we train it. For the input-to-hidden layer, we'll use a Rectified Linear Unit activation function, whereas for the output layer we'll use a softmax.}
   \end{center}
 \end{figure}
+
+\paragraph{Dimensions of the CBOW model architecture}
+Let's be clear on the dimensions of our vectors and matrices in our neural network diagram.
+
+\begin{itemize}
+\item Our input layer is of dimension $|V| \times 1$.
+\item To get the values in the hidden layer, we first calculate $z_1 = W_1 x + b_1$. Then, we compute the activation $h = \texttt{ReLU}(z_1)$. In terms of dimensions, $W_1$ is $N \times |V|$, where $N$ is the size of the word embeddings. $b_1$ is of dimension $N \times 1$. The hidden layer is therefore of dimension $N \times 1$, since $z_1$ is an $N \times 1$ column vector and \texttt{ReLU} is applied element-wise.
+\item To get the values of the output layer, we need to calculate (i) the weighted sum from the hidden layer plus the bias term $z_2 = W_2 h + b_2$, and then apply the activation function $\hat y = \texttt{softmax}(z_2)$. Notice that $W_2$ is of dimension $|V| \times N$, and $b_2$ is of length $|V|$. When we compute $z_2$, it's a vector of length $|V|$, and when we pass it through the softmax we get back a vector of length $|V|$.
+\end{itemize}
+
+\paragraph{Vectorized implementation} What if instead of passing a single training example through our neural network, we wanted to pass through several examples at a time. This makes the learning process quicker and is known as \emph{batch processing}. Say you want to feed $m$ input context word vectors into the neural network during each iteration; $m$ is called the batch size and is a hyperparameter for the model that we define at training time. We can prepare a data matrix $X$ where the $m$ column vectors of length $|V|$ represent words: we get a data matrix of dimension $|V| \times m$.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}[scale=0.9]
+      % Context words matrix (i.e. raw input)
+      \draw (-4, 1) rectangle (-1, 3);
+      \node at (-2.5, 3.5) {$\substack{\textrm{Context words} \\           \textrm{vectors} \\ \rightarrow \textrm{matrix}}$};
+      \node at (-4.5, 2) {$X = $};
+      \draw (-3.5, 2.35) -- (-3.5, 2.75);
+      \node at (-3.5, 2) {$x^{(1)}$};
+      \draw (-3.5, 1.85) -- (-3.5, 1.5);
+      \node at (-2.5, 2) {$\ldots$};
+      \draw (-1.5, 2.35) -- (-1.5, 2.75);
+      \node at (-1.5, 2) {$x^{(m)}$};
+      \draw (-1.5, 1.85) -- (-1.5, 1.5);
+      \node at (-5, 1.2) {$|V| \times m$};
+      \draw[->, ultra thick] (-1, 2) -- (-0.5, 2);
+      % Input layer.
+      \draw (0, 0.25) rectangle (0.5, 4) node[above] {Input layer};
+      \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+      \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+      \node at (0.25, 2.7) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (0.25, 2) {};
+      \node at (0.25, 1.5) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (0.25, 3.3) {};
+      \node[draw,circle,scale=0.75] at (0.25, 3.7) {};
+      \node at (0.25, -0.25) {$\substack{X \\ |V| \times m}$};
+      % First weights matrix and bias layer.
+      \node at (1.5, 3) {$\substack{W_1 \\ \textrm{weights}}$};
+      \node at (1.5, 1.5) {$\substack{b_1 \\ \textrm{biases}}$};
+      \node at (1.5, 0) {ReLU};
+      % Hidden layer.
+      \draw (3, 0.25) rectangle (3.5, 4) node[above] {Hidden layer};
+      \node[draw,circle,scale=0.75] at (3.25, 0.5) {};
+      \node[draw,circle,scale=0.75] at (3.25, 0.9) {};
+      \node at (3.25, 2.7) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (3.25, 2) {};
+      \node at (3.25, 1.5) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (3.25, 3.3) {};
+      \node[draw,circle,scale=0.75] at (3.25, 3.7) {};
+      \node at (2.75, 0.5) {$N$};
+      \node at (3.25, -0.25) {$\substack{H \\ N \times m}$};
+      % Second weights matrix and bias layer.
+      \node at (4.75, 3) {$\substack{W_2 \\ \textrm{weights}}$};
+      \node at (4.75, 1.5) {$\substack{b_2 \\ \textrm{biases}}$};
+      \node at (4.75, 0) {softmax};
+      % Output layer.
+      \draw (6, 0.25) rectangle (6.5, 4) node[above] {Output layer};
+      \node[draw,circle,scale=0.75] at (6.25, 0.5) {};
+      \node[draw,circle,scale=0.75] at (6.25, 0.9) {};
+      \node at (6.25, 2.7) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (6.25, 2) {};
+      \node at (6.25, 1.5) {$\vdots$};
+      \node[draw,circle,scale=0.75] at (6.25, 3.3) {};
+      \node[draw,circle,scale=0.75] at (6.25, 3.7) {};
+      \node at (6.25, -0.25) {$\substack{\hat Y \\ |V| \times m}$};
+      % Center word matrix
+      \draw[->, ultra thick] (6.5, 2) -- (6.8, 2);
+      \draw (7, 1) rectangle (10, 3);
+      \node at (8.5, 3.5) {$\substack{\textrm{Predicted} \\ \textrm{center word} \\                     \textrm{matrix}}$};
+      \draw (7.5, 2.35) -- (7.5, 2.75);
+      \node at (7.5, 2) {$\hat y^{(1)}$};
+      \draw (7.5, 1.85) -- (7.5, 1.5);
+      \node at (8.5, 2) {$\ldots$};
+      \draw (9.5, 2.35) -- (9.5, 2.75);
+      \node at (9.5, 2) {$\hat y^{(m)}$};
+      \draw (9.5, 1.85) -- (9.5, 1.5);
+      \node at (11, 1.2) {$|V| \times m$};
+      \node at (10.5, 2) {$= \hat y$};
+\end{tikzpicture}
+\caption{\small When batch processing data, our input becomes a matrix $X$ where the columns are the representations for context words; the input matrix is of dimension $|V| \times m$, since we have $m$ examples and we're using a one-hot encoding for our initial word representation. We then calculate $Z_1 = W_1 X + B_1$ where now $B_1$ is an $N \times m$ matrix of $m$ \emph{identical} $b_1$ bias vectors, each of length $N$; note that we can perform \emph{broadcasting} in Python to add a vector to a matrix and the desired result is achieved. We continue with calculating elementwise $H = \texttt{ReLU}(Z_1)$. Next, we compute $\hat Y$, via $Z_2 = W_2 H + B$ followed by $\hat Y = \texttt{softmax}(Z_2)$. We finally see that $\hat Y$ is of dimension $|V| \times m$: i.e. we have $m$ column vectors, where each one corresponds to a predicted center word. Essentially, the first column of the input matrix is transformed into the first column of the output matrix, and similarly for the remaining $m-1$ input vectors.}
+  \end{center}
+\end{figure}
+
 
 \end{document}
 
