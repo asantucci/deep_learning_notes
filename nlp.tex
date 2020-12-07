@@ -3222,6 +3222,249 @@ We can also perform intrinsic evaluation by using clustering to group similar wo
 
 \subsubsection{Extrinsic Evaluation} To evaluate word embeddings with extrinsic evaluation, we use the word embeddings to perform an external task: this is typically a real world task that you initially needed the embeddings for. Then, we use the performance metric of this task as a proxy for the quality of the embeddings. Examples of useful word level tasks included named entity recognition or parts of speech tagging. A named entity is something that can be referred to by a proper name. E.g. in the sence ``Andrew works at deeplearning.ai'', the word Andrew is a named entity and is categorized as a person. The word deeplearning.ai is another named entity, and is categorized as an organization. A useful task may be to train a model that can help you identify and categorize named entities in a sentence. You could then evaluate this classifier on the test set with some selected evaluation metric, such as accuracy or F1 score. The classifier's performance on the evaluation metric represents the combined performance of both the embeddings and the classification task. Extrinsic evaluation methods are the ultimate test to ensure that the word embeddings are actually useful. However, their main drawbacks are that (i) the evaluation will naturally be more time-consuming than an intrinsic evaluation method and (ii) if the performance is poor, then the performance metrics provides no infromation as to \emph{which} parts of the end-to-end process is resposnible (i.e. is it the word embeddings themselves or the external task used to test them?).
 
+\section{Neural Networks for Sentiment Analysis}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+This section is about creating neural networks using multiple layers, which is going to simplify the task of sentiment analysis considerably. A neural network is a computational structure that can approximate any function and learn to recognize patterns.
+\begin{figure}[h]   \centering
+  \label{fig: fourlayernet}
+  \begin{tikzpicture}[scale=0.25]
+    \node (x0) at (-2, 2) {$x_0$};
+    \node [below = .5 cm of x0] (x1) {$x_1$};
+    \node [below = .5 cm of x1] (x2) {$x_2$};
+    \node [below = .5 cm of x2] (inputvdots) {$\vdots$};
+    \node [below = .5 cm of inputvdots] (xn) {$x_n$};
+    \node [draw,circle,right = 1cm of x1,fill=blue!20] (n11) {};
+    \node [draw,circle,below = .5 cm of n11,fill=blue!20] (n12) {};
+    \node [draw,circle,below = .5cm of n12,fill=blue!20] (n13) {};
+    \node [draw,circle,below = .5cm of n13,fill=blue!20] (n14) {};
+    \node [draw,circle,below = .5cm of n14,fill=blue!20] (n15) {};
+    \node [draw,circle,right = 1 cm of n11,fill=blue!20] (n21) {};
+    \node [draw,circle,below = .5 cm of n21,fill=blue!20] (n22) {};
+    \node [draw,circle,below = .5cm of n22,fill=blue!20] (n23) {};
+    \node [draw,circle,below = .5cm of n23,fill=blue!20] (n24) {};
+    \node [draw,circle,below = .5cm of n24,fill=blue!20] (n25) {};
+    \node [draw,circle,right = 1cm of n22,fill=green!20] (n31) {};
+    \node [draw,circle,below = .5cm of n31,fill=green!20] (n32) {};
+    \node [draw,circle,below = .5cm of n32,fill=green!20] (n33) {};
+    \node at (1, -20) {$W^{[1]}$};
+    \node at (7, -20) {$W^{[2]}$};
+    \node at (13, -20) {$W^{[3]}$};
+    % \node [draw,circle,right = 1cm of n32] (outputneuron) {};
+    % \node [right = 1cm of outputneuron] (yhat) {$\hat y$};
+    \draw[->] (x0) to (n11);
+    \draw[->] (x0) to (n12);
+    \draw[->] (x0) to (n13);
+    \draw[->] (x0) to (n14);
+    \draw[->] (x0) to (n15);
+    \draw[->] (x1) to (n11);
+    \draw[->] (x1) to (n12);
+    \draw[->] (x1) to (n13);
+    \draw[->] (x1) to (n14);
+    \draw[->] (x1) to (n15);
+    \draw[->] (x2) to (n11);
+    \draw[->] (x2) to (n12);
+    \draw[->] (x2) to (n13);
+    \draw[->] (x2) to (n14);
+    \draw[->] (x2) to (n15);
+    \draw[->] (xn) to (n11);
+    \draw[->] (xn) to (n12);
+    \draw[->] (xn) to (n13);
+    \draw[->] (xn) to (n14);
+    \draw[->] (xn) to (n15);
+    \draw[->] (n11) to (n21);
+    \draw[->] (n11) to (n22);
+    \draw[->] (n11) to (n23);
+    \draw[->] (n11) to (n24);
+    \draw[->] (n11) to (n25);
+    \draw[->] (n12) to (n21);
+    \draw[->] (n12) to (n22);
+    \draw[->] (n12) to (n23);
+    \draw[->] (n12) to (n24);
+    \draw[->] (n12) to (n25);
+    \draw[->] (n13) to (n21);
+    \draw[->] (n13) to (n22);
+    \draw[->] (n13) to (n23);
+    \draw[->] (n13) to (n24);
+    \draw[->] (n13) to (n25);
+    \draw[->] (n14) to (n21);
+    \draw[->] (n14) to (n22);
+    \draw[->] (n14) to (n23);
+    \draw[->] (n14) to (n24);
+    \draw[->] (n14) to (n25);
+    \draw[->] (n15) to (n21);
+    \draw[->] (n15) to (n22);
+    \draw[->] (n15) to (n23);
+    \draw[->] (n15) to (n24);
+    \draw[->] (n15) to (n25);
+    \draw[->] (n21) to (n31);
+    \draw[->] (n21) to (n32);
+    \draw[->] (n21) to (n33);
+    \draw[->] (n22) to (n31);
+    \draw[->] (n22) to (n32);
+    \draw[->] (n22) to (n33);
+    \draw[->] (n23) to (n31);
+    \draw[->] (n23) to (n32);
+    \draw[->] (n23) to (n33);
+    \draw[->] (n24) to (n31);
+    \draw[->] (n24) to (n32);
+    \draw[->] (n24) to (n33);
+    \draw[->] (n25) to (n31);
+    \draw[->] (n25) to (n32);
+    \draw[->] (n25) to (n33);
+    % \draw[->] (n31) to (outputneuron);
+    % \draw[->] (n32) to (outputneuron);
+    % \draw[->] (n33) to (outputneuron);
+    % \draw[->] (outputneuron) to (yhat);
+  \end{tikzpicture}
+  \caption{Four-layer, fully connected neural network with a three-dimensional output.} \end{figure}
+
+How does a neural network operate mathematically? We denote the $i$-th activation layer by $a^{[i]}$. First define $a^{[0]} = X$, i.e. define the input data to be the ``first'' activation layer. To get the values for each layer's activation $a^{[i]}$, you must first compute
+\[
+  z^{[i]} = W^{[i]} a^{[i-1]}
+\]
+which depends on both the weights matrix from that layer and the activations from the previous layer. Finally, we obtain the activations for the $i$-th layer by applying an activation function $g$, to the values of $z$:
+\[
+  a^{[i]} = g^{[i]}(z^{[i]}).
+\]
+Inherently, this computation moves ``forward'' through the computational graph, which is why the process is known as forward propagation. One particular neural network we could implement could revisit our problem of sentiment analysis, it will look like:
+
+\begin{figure}[h]   \centering
+  \label{fig: neuralnetforsentimentanalysis}
+  \begin{tikzpicture}[scale=0.25]
+    \node (x1) at (-2, 1) {$x_1$};
+    \node [below = .5 cm of x1] (x2) {$x_2$};
+    \node [below = .5 cm of x2] (inputvdots) {$\vdots$};
+    \node [below = .5 cm of inputvdots] (xn) {$x_n$};
+    \node [draw,circle,right = 1cm of x1,fill=blue!20] (n11) {};
+    \node [draw,circle,below = .5 cm of n11,fill=blue!20] (n12) {};
+    \node [draw,circle,below = .5cm of n12,fill=blue!20] (n13) {};
+    \node [draw,circle,below = .5cm of n13,fill=blue!20] (n14) {};
+    \node [draw,circle,below = .5cm of n14,fill=blue!20] (n15) {};
+    \node [draw,circle,right = 1 cm of n11,fill=blue!20] (n21) {};
+    \node [draw,circle,below = .5 cm of n21,fill=blue!20] (n22) {};
+    \node [draw,circle,below = .5cm of n22,fill=blue!20] (n23) {};
+    \node [draw,circle,below = .5cm of n23,fill=blue!20] (n24) {};
+    \node [draw,circle,below = .5cm of n24,fill=blue!20] (n25) {};
+    \node [draw,circle,right = 1cm of n22,fill=green!20] (n31) {};
+    \node [draw,circle,below = .5cm of n31,fill=green!20] (n32) {};
+    \node at (1, -20) {$W^{[1]}$};
+    \node at (7, -20) {$W^{[2]}$};
+    \node at (13, -20) {$W^{[3]}$};
+    % \node [draw,circle,right = 1cm of n32] (outputneuron) {};
+    % \node [right = 1cm of outputneuron] (yhat) {$\hat y$};
+    \draw[->] (x1) to (n11);
+    \draw[->] (x1) to (n12);
+    \draw[->] (x1) to (n13);
+    \draw[->] (x1) to (n14);
+    \draw[->] (x1) to (n15);
+    \draw[->] (x2) to (n11);
+    \draw[->] (x2) to (n12);
+    \draw[->] (x2) to (n13);
+    \draw[->] (x2) to (n14);
+    \draw[->] (x2) to (n15);
+    \draw[->] (xn) to (n11);
+    \draw[->] (xn) to (n12);
+    \draw[->] (xn) to (n13);
+    \draw[->] (xn) to (n14);
+    \draw[->] (xn) to (n15);
+    \draw[->] (n11) to (n21);
+    \draw[->] (n11) to (n22);
+    \draw[->] (n11) to (n23);
+    \draw[->] (n11) to (n24);
+    \draw[->] (n11) to (n25);
+    \draw[->] (n12) to (n21);
+    \draw[->] (n12) to (n22);
+    \draw[->] (n12) to (n23);
+    \draw[->] (n12) to (n24);
+    \draw[->] (n12) to (n25);
+    \draw[->] (n13) to (n21);
+    \draw[->] (n13) to (n22);
+    \draw[->] (n13) to (n23);
+    \draw[->] (n13) to (n24);
+    \draw[->] (n13) to (n25);
+    \draw[->] (n14) to (n21);
+    \draw[->] (n14) to (n22);
+    \draw[->] (n14) to (n23);
+    \draw[->] (n14) to (n24);
+    \draw[->] (n14) to (n25);
+    \draw[->] (n15) to (n21);
+    \draw[->] (n15) to (n22);
+    \draw[->] (n15) to (n23);
+    \draw[->] (n15) to (n24);
+    \draw[->] (n15) to (n25);
+    \draw[->] (n21) to (n31);
+    \draw[->] (n21) to (n32);
+    \draw[->] (n22) to (n31);
+    \draw[->] (n22) to (n32);
+    \draw[->] (n23) to (n31);
+    \draw[->] (n23) to (n32);
+    \draw[->] (n24) to (n31);
+    \draw[->] (n24) to (n32);
+    \draw[->] (n25) to (n31);
+    \draw[->] (n25) to (n32);
+    % \draw[->] (n31) to (outputneuron);
+    % \draw[->] (n32) to (outputneuron);
+    % \draw[->] (n33) to (outputneuron);
+    % \draw[->] (outputneuron) to (yhat);
+    \draw[fill=white] (3, -15) rectangle (5, 3);
+    \node[rotate=90] at (4, -8.5) {Embedding};
+    \draw[->,dashed,ultra thick] (n31) -- ++(5, 0) node[right] {Positive (1)};
+    \draw[->,dashed,ultra thick] (n32) -- ++(5, 0) node[right] {Negative (0)};
+  \end{tikzpicture}
+  \caption{In this neural network, we use it to predict positive vs. negative sentiment for an input text of length $n$. There will be an embedding layer that will transform your representation into one that is optimal for the task at hand. Finally, it will have a hidden layer with a \texttt{ReLU} activation function and then an output layer with the softmax activation function that yields probabilities for whether a tweet has positive or negative sentiment. Such a neural network can allow us to predict the sentiment well even if the tweet is complicated, e.g. ``This movie was almost good''; we would not have been able to classify this correctly with a more simple method like Naive Bayes because they miss important information in the context.}
+\end{figure}
+
+\paragraph{Initial representation} We'll start by listing all of the unique words from the corpus: this is our vocabulary. Then, we'll assign an integer index to each word.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{c c}
+      \hline
+      Word & Number \\
+      \hline
+      a & 1 \\
+      able & 2 \\
+      about & 3 \\
+      $\ldots$ & $\ldots$ \\
+      hand & 615 \\
+      $\ldots$ & $\ldots$ \\      
+      happy & 621 \\
+      $\ldots$ & $\ldots$ \\
+      zebra & 1000 \\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{table}
+
+Then, for each word in your tweet, add the index from your vocabulary to construct a vector by replacing each word with its corresponding integer index. After you have all of the vector representations for your tweets, you'll need to find the one with maximal size, and fill (or pad) every smaller vector with zeros to match that size. I.e. we ensure that all our tweet representations have the same size even if our tweets don't.
+
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[draw] (tweet) at (0, 0) {Tweet: ``This movie was almost good''};
+      \node[below=5mm of tweet] (initrep) {[\color{purple!80}700 680 720 20 55 \color{black}]};
+      \node[below=5mm of initrep] (padding) {[\color{purple!80} 700 680 720 20         55 \color{orange!80} 0 0 0 0 0 0 0 \color{black}]};
+\draw[->,ultra thick] (tweet) -- (initrep);
+\draw[->,ultra thick] (initrep) -- (padding);
+\end{tikzpicture}
+\caption{We first take a raw tweet and replace each word with its corresponding index-ID from the vocabulary to get an initial representation. We then {\color{orange!80}pad} the vector with zeros according to our longest vector representation.}
+  \end{center}
+\end{figure}
+
+\subsection{Neural Networks in Trax}
+Trax is built on top of Tensor Flow, which allows us to create a deep neural network in a sequential fashion. Suppose we have a network similar to what's depicted in figure \ref{fig: fourlayernet}, where this time the (two) intermediate hidden layers use sigmoid activation functions and the output layer will use a softmax activation. In Trax, you'll need to specify the model architecture; this is easily done:
+\begin{python}
+from trax import layers as tl
+Model = tl.Serial(
+  tl.Dense(5),
+  tl.Sigmoid(),
+  tl.Dense(5),
+  tl.Sigmoid(),
+  tl.Dense(3),
+  tl.Softmax()
+)
+\end{python}
+Observe that specifying the architecture in this way mimicks the order in which the computations are carried out in the neural network. When using Trax, it's possible to take advantage of parallel (or GPU/TPU) compute resources. The framework also records algebraic computations for gradient evaluation, which can be useful in diagnosing models. Trax is one of the latest frameworks available.
+
 \end{document}
 
 
