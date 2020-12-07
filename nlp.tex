@@ -86,7 +86,7 @@ emph={MyClass,__init__},          % Custom highlighting
 emphstyle=\ttb\color{deepred},    % Custom highlighting style
 stringstyle=\color{deepgreen},
 frame=tb,                         % Any extra options here
-showstringspaces=false            % 
+showstringspaces=false            %
 }}
 
 
@@ -2828,6 +2828,39 @@ To train our model, we'll need a set of examples. Each example will be made of c
     \end{tikzpicture}
   \end{center}
 \end{figure}
+
+\subsection{Cleaning and Tokenization} Let's go into more details on a fundamental technique for cleaning text data, in particular we'll discuss practical advice on how to clean a corpus and split it into words, or more accurately, tokens, through a process known as \emph{tokenization}.
+\begin{enumerate}
+\item Consider the words in our corpus as case insensitive, i.e. treat ``The'' identically no matter its casing/capitalization. This can be achieved by converting the entire corpus to either all lowercase or all uppercase.
+\item Handle punctuation, which can be done in a variety of ways and which is suitable depends on the context. For example, we might choose to represent all interrupting punctuation marks (such as full stops, commas, and question marks) as a single special word of the vocabulary. You could choose to ignore non-interrupting punctuation marks such as quotation marks. You could also collapse multi-sign marks, such as triple question marks, into a single mark and so on.
+\item You may want to handle numbers. E.g. if numbers don't carry an important meaning in your use case, you could drop all of the numbers. However, numbers may have significant meaning that is relevant to your use case. Examples include 3.14 (an approximation to $\pi$), 90210 (the name of a television show and the area code for Beverly Hills, CA). Therefore, one could argue towards keeping these numbers in the corpus as is. If your corpus has many unique numbers, e.g. many area codes, you may find that it makes more sense to replace all the numbers with a special token, such as \texttt{<NUMBER>}. This allows the model to know that the important thing is that it's a number, instead of trying to distinguish between numbers themselves.
+\item Handle special characters, e.g. mathematical symbols, currency symbols, section and paragraph signs, and line markup signs etc. It's sometimes safe to drop these entirely.
+\item Lastly, especially if working on a modern corpus of user inputs (e.g. tweets or user reviews), you should handle special words such as emojis and hashtags. Depending on if and how you want your model to confer meaning to them, you could, for example, consider that each emoji or hashtag be treated as an individual word.
+\end{enumerate}
+
+Consider as an example
+``Who $\heartsuit$ "word embeddings" in 2020? I do!!!''.
+This short tweet contains an emoji, punctuation, and a number.
+
+\begin{python}
+  # pip install nltk
+  # pip install emoji
+  import nltk
+  from nltk.tokenize import word_tokenize
+  import emoji
+
+  nltk.download('punkt') # Download pre-trained Punkt tokenizer for English.
+
+  # Use a regex to collapse all interrupting punctuation signs and replace them   with a full-stop.
+  # Question mark and exclamation points replaced with single full-stop.
+  data = re.sub(r'[,!?;-]+', '.', corpus)
+  data = nltk.word_tokenize(data) # tokenize strings to words.
+  data = [ ch.lower() for ch in data
+           if ch.isalpha()
+           or ch == '.'
+           or emoji.get_emoji_regexp().search(ch)
+         ]
+\end{python}
 
 \end{document}
 
