@@ -3097,6 +3097,10 @@ Mathematically,
 The exponential transforms all inputs to positive real numbers, and the denominator normalizes the value to lie in the unit interval.
 
 \paragraph{Cost function for softmax} In order to predict one of the $|V|$ possible words, we need to minimize a certain cost function.
+The formula for cross-entropy loss is given by
+\[
+  J = -\sum_{k=1}^{|V|} y_k \log \hat y_k.
+\]
 
 \begin{figure}[h]
   \begin{center}
@@ -3125,11 +3129,6 @@ The exponential transforms all inputs to positive real numbers, and the denomina
     \end{tikzpicture}
   \end{center}
 \end{figure}
-
-The formula for cross-entropy loss is given by
-\[
-  J = -\sum_{k=1}^{|V|} y_k \log \hat y_k.
-\]
 
 Let's look at a quick example, the corpus ``I am happy because I am learning'' with context ``I am because I'' and target word ``happy'' (window is ``I am happy because I'').
 
@@ -3164,7 +3163,64 @@ More generally, $J = - \log \hat y_{\texttt{actual word}}$.
 \end{figure}
 
 \subsubsection{Training a CBOW model}
-\paragraph{Forward propagation} asdf
+We've learned to use the cross-entropy loss function to measure the error made by a neural network of a continuous bag of words model when making a single prediction.
+\begin{itemize}
+\item We will first propagate the examples forward into the network.
+\item We'll then calculate the cost, which is an extension of the loss which extends over a \emph{batch} (or multiple) examples.
+\item Finally, we'll use back-propagation and gradient-descent to optimize the parameters of the network and improve its predictive performance.
+\end{itemize}
+
+\paragraph{Forward propagation} 
+With forward propagation, we take our input values and pass them forward through the neural network from input to output through each successive layer, an dwe calculate the values of the layers as we do so. Starting with a batch of examples represented by $X$, we first propagate $X$ forward to get $\hat Y$, where $X, \hat Y$ are $|V| \times m$. What are the formulae? \emph{Loss} for a \emph{single example} is given by $J = -\sum_{k=1}^{|V|} y_k \log \hat y_k$. When working with \emph{batches of examples}, we'll calculate the \emph{cost}, i.e. the mean of cross-entropy losses for each of the $m$ examples. Formally, we can index over $i$ from $1$ to $m$, where $i$ denotes the observation number, and $j$ will range from $1$ to $|V|$ over our vocabulary:
+\[
+  J_{\texttt{batch}} = \frac{-1}{m} \sum_{i=1}^{m} \sum_{j=1}^{|V|} y_j^{(i)} \log \hat y_j^{(i)} = \frac{-1}{m} \sum_{i=1}^{m} J^{(i)},
+\]
+where $J^{(i)}$ is the loss for observation $i$.
+
+\paragraph{Backward propagation and gradient descent} How do we find the weights for our linear layer and our word embeddings? We have to minimize our cost, but how do we do this? We can use back propagation, which involves calculating the partial derivatives of the cost function with respect to the weights and biases, i.e.
+\[
+  \frac{\partial J_{\texttt{batch}}}{\partial W_1}, \hspace{15pt}
+  \frac{\partial J_{\texttt{batch}}}{\partial W_2}, \hspace{15pt}   
+  \frac{\partial J_{\texttt{batch}}}{\partial b_1}, \hspace{15pt} 
+  \frac{\partial     J_{\texttt{batch}}}{\partial b_2}.
+\]
+Recall that $J_{\texttt{batch}}$ is a function of the weights and biases, i.e. $J_{\texttt{batch}} = f(W_1, W_2, b_1, b_2)$. The \emph{back} in back-propagation comes from the way the formulae for the derivatives are obtained, using the chain rule for derivatives. At a rough level of detail, applying the chain rule involves starting from the output layer and working your way through the layers using the derivatives that you have calculated previously.\footnote{Backpropagation is a great example of dynamic programming.}
+\begin{align*}
+  \frac{\partial J_{\texttt{batch}}}{\partial W_1} &= \frac{1}{m} \texttt{ReLU}\left(W_2^T\left(\hat Y - Y\right) \right)X^T \\
+  \frac{\partial J_{\texttt{batch}}}{\partial W_2} &= \frac{1}{m} \left(\hat Y -Y \right) H^T \\
+  \frac{\partial J_{\texttt{batch}}}{\partial b_1} &= \frac{1}{m} \texttt{ReLU}\left(W_2^T\left(\hat Y - Y \right) \right) \mathbbm 1_m^T \\
+  \frac{\partial     J_{\texttt{batch}}}{\partial b_2} &= \frac{1}{m} \left(\hat Y - Y \right) \mathbbm 1_m^T,
+\end{align*}
+where here $\mathbbm 1_m^T = \begin{bmatrix}1 & 1 & \ldots & 1 \end{bmatrix}$ of length $m$. Realize that for a matrix $A$, $A \mathbbm 1_m^T$ denotes the row-sums of $A$. In Python, we do this with something like
+\begin{python}
+np.sum(A, axis = 1, keepdims = True)
+\end{python}
+
+The second technique we need is gradient descent, which adjusts the weights and biases of the neural network using the gradient to minimize the cost. We have a hyperparameter $\alpha$ which is the learning rate, some small strictly positive value usually less than one: a smaller $\alpha$ leads to more gradual updates to our weights matrices, whereas a larger number allows for a faster update of the weights.
+
+\begin{align*}
+  W_1 \gets W_1 - \alpha \frac{\partial J_{\texttt{batch}}}{\partial W_1}  ,\hspace{25pt}
+  W_2 \gets 2_1 - \alpha \frac{\partial J_{\texttt{batch}}}{\partial W_2} ,\hspace{15pt}
+  b_1 \gets b_1 - \alpha \frac{\partial J_{\texttt{batch}}}{\partial b_1} ,\hspace{25pt}
+  b_2 \gets b_2 - \alpha \frac{\partial J_{\texttt{batch}}}{\partial b_2}
+\end{align*}
+
+\paragraph{Extracting word embedding vectors} After training our continuous bag of words model, we have to extract the word embeddings. Remember: these are byproducts of our learning algorithm not direct outputs. Also recall that word vectors carry the meaning of the vocabulary based on the context words in the corpus. There are three alternative word embeddings that we can extract from our model, actually.
+\begin{enumerate}
+\item Consider each column of $W_1$ as the column embedding vector of a word in the vocabulary. Recall that $W_1$ has $|V|$ number of columns, i.e. one for each word in the vocabulary. This means that we have an embedding for each word in our vocabulary. The mapping between columns of $W_1$ and words uses the same order as the input rows; in other words, if our corpus is ``I am happy because I am learning'' if the five rows of the input vector correspond to
+$\begin{bmatrix}\textrm{am} & \textrm{because} & \textrm{happy} & \textrm{I} & \textrm{learning} \end{bmatrix}$, then in $W_1$ the first column vector will be the embedding for ``am'', and the second column vector will be the embedding for ``because'', etc.
+\item We could also use each row of $W_2$ as the word embedding row vector for the corresponding word. Matrix $W_2$ has $|V|$ rows, one for each word in the vocabulary. Again, the order is the same as the input vector or matrix. E.g. with our example corpus and inputs, the first row would be the word embedding row vector for ``am'', the second for ``because'', and so on.
+\item The third and final option is to take the average of the two previous representations: so, if you want the word embedding column vectors, you would average the corresponding embeddings from $W_1$ and the transpose of $W_2$ to obtain a new matrix $W_3$ of dimension $N \times |V|$. You can then extract the word embeddings from each column of $W_3$ just like we did previously.
+\end{enumerate}
+
+\subsection{Evaluating Word Embeddings}
+There are two evaluation metrics: intrinsic and extrinsic evaluation. Which one to use depends on the task you're optimizing for.
+
+\subsubsection{Intrinsic Evaluation} This method assesses how well the word embeddings inherently capture the semantic or syntactic relationships between the words. Semantics often refers to the meaning of words, whereas syntax refers to the grammar. You could do this by testing the word embeddings on analogies! You could test semantic analogies, as in: find the missing word in ``France is to Paris as Italy is to \uline{\hspace{10pt}}''. You could also evaluate the embeddings on syntactic analogies, such as plurals, tenses, and comparatives. An example is: ``seen is to saw as been is to?''. One consideration you should be aware of for this approach, is that there could be several correct possible answers. As in, ``wolf is to pack as bee is to \uline{\hspace{10pt}}'', where the collective noun and missing word could, for instance, be swarm \emph{or} colony. As an example from the original Word2Vec research publication, when a continuous skip-gram model was used, the analogies obtained were not perfect: e.g. the embeddings completely failed to capture relationships between chemical elements and their symbols. The symbol for copper is \texttt{Cu}, the symbol for zinc is \texttt{Zn}, the symbol for gold is \texttt{Au}, and the symbol for Uranium is \texttt{U}, but the Word2Vec embedding outputs the word plutonium instead of \texttt{U} in the last case (getting the others correct).
+
+We can also perform intrinsic evaluation by using clustering to group similar word embedding vectors, and determining if the clusters capture related words. This could be automated using a human made reference, such as a thesarus. Simply plotting or visualizing the word embedding vectors qualifies as a basic intrinsic evaluation of the vectors that relies on human judgement to assess the quality of the embeddings.
+
+\subsubsection{Extrinsic Evaluation} To evaluate word embeddings with extrinsic evaluation, we use the word embeddings to perform an external task: this is typically a real world task that you initially needed the embeddings for. Then, we use the performance metric of this task as a proxy for the quality of the embeddings. Examples of useful word level tasks included named entity recognition or parts of speech tagging. A named entity is something that can be referred to by a proper name. E.g. in the sence ``Andrew works at deeplearning.ai'', the word Andrew is a named entity and is categorized as a person. The word deeplearning.ai is another named entity, and is categorized as an organization. A useful task may be to train a model that can help you identify and categorize named entities in a sentence. You could then evaluate this classifier on the test set with some selected evaluation metric, such as accuracy or F1 score. The classifier's performance on the evaluation metric represents the combined performance of both the embeddings and the classification task. Extrinsic evaluation methods are the ultimate test to ensure that the word embeddings are actually useful. However, their main drawbacks are that (i) the evaluation will naturally be more time-consuming than an intrinsic evaluation method and (ii) if the performance is poor, then the performance metrics provides no infromation as to \emph{which} parts of the end-to-end process is resposnible (i.e. is it the word embeddings themselves or the external task used to test them?).
 
 \end{document}
 
