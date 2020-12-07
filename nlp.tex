@@ -3096,6 +3096,75 @@ Mathematically,
 \]
 The exponential transforms all inputs to positive real numbers, and the denominator normalizes the value to lie in the unit interval.
 
+\paragraph{Cost function for softmax} In order to predict one of the $|V|$ possible words, we need to minimize a certain cost function.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      % Input.
+      \node[draw,fill=purple!20] (input) at (-4, 0) {Input};
+      \node[above=2mm of input] {$\substack{\textrm{Context} \\ \textrm{words}           \\ \textrm{vector}}$};
+      \draw[->, ultra thick] (input) -- (-1.3, 0);
+      % CBOW
+      \node (mlmodel) at (0, 0) {$\substack{\textrm{Machine learning} \\                     \textrm{model}}$};
+      \node[above=2mm of mlmodel] {CBOW};
+      \node[draw,fill=green!20] (params) at (0, -1)       {$\substack{\textrm{Parameters} \\ W_1, b_1, W_2, b_2}$};
+      \draw (-1.25 , -1.5) rectangle (1.25, 0.5);
+      % Predictions and Truth.
+      \node[draw,fill=orange!20,right=8mm of mlmodel] (prediction) {Prediction};
+      \node[above=2mm of prediction] {$\substack{\hat y \\ \textrm{Predicted} \\ \textrm{center word} \\ \textrm{vector}}$};
+      \node[draw,fill=purple!20,right=3mm of prediction] (truth) {Truth};
+      \node[above=2mm of truth] {$\substack{y \\ \textrm{Actual} \\           \textrm{center word} \\ \textrm{vector}}$};
+      \path[draw,decorate,decoration={brace,amplitude=10pt,mirror}] (1.9, -0.5)       -- (5.9, -0.5);
+      \node[draw,fill=green!20] (loss) at (3.85, -1.3) {loss};
+      \node[right=2mm of loss] {error};
+      \node[below=2mm of loss] {cross-entropy loss};
+      % Relationship
+      \draw[->] (1, -1) -- (loss) node[midway,above,rotate=-5] {minimize};
+      \draw[->] (3.4, -1.5) -- (params) node[midway,below,rotate=-5] {adjust};
+    \end{tikzpicture}
+  \end{center}
+\end{figure}
+
+The formula for cross-entropy loss is given by
+\[
+  J = -\sum_{k=1}^{|V|} y_k \log \hat y_k.
+\]
+
+Let's look at a quick example, the corpus ``I am happy because I am learning'' with context ``I am because I'' and target word ``happy'' (window is ``I am happy because I'').
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{c | l c c c}
+      $y$ & & $\hat y$ & $\log \hat y$ & $y \odot \log \hat y$ \\
+      \hline
+      0 & am & 0.083 & -2.49 & 0 \\
+      0 & because & 0.03 & -3.49 & 0 \\
+      \textbf{1} & \textbf{happy} & \textbf{0.611} & -0.49 & -0.49 \\
+      0 & I & 0.225 & -1.49 & 0 \\
+      0 & learning & 0.05 & -2.49 & 0
+    \end{tabular}
+    \caption{In this case, we predicted the correct target word and so the loss was $J = 0.49$.}
+  \end{center}
+\end{table}
+
+More generally, $J = - \log \hat y_{\texttt{actual word}}$.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}[scale=1]
+      \draw[->] (0,0) -- (2.5,0) node[right] {$\hat y_{\texttt{actual word}}$};   
+      \draw[->] (0,0) -- (0,3) node[above] {$\texttt{cross-entropy loss}(x)$};
+      \draw[domain=0.1:2,smooth,variable=\x,blue] plot ({\x},-{ln(\x)}+0.75);
+      \node at (2.5, 0.75) {\color{green!80!black} $\substack{\textrm{correct} \\ \textrm{predictions} \\ \textrm{reward}}$};
+      \node at (1.2, 2) {\color{purple!80} $\substack{\textrm{incorrect} \\ \textrm{predictions} \\ \textrm{penalty}}$};
+    \end{tikzpicture}
+    \caption{As you can see, in our simplified cost function, the model is penalizing incorrect predictions by incurring a high cost, and giving correct predictions a reward by incurring a lower cost.}
+  \end{center}
+\end{figure}
+
+\subsubsection{Training a CBOW model}
+\paragraph{Forward propagation} asdf
 
 \end{document}
 
