@@ -3470,6 +3470,49 @@ Observe that specifying the architecture in this way mimicks the order in which 
 \item \href{https://github.com/google/trax}{Trax source code}.
 \end{itemize}
 
+\paragraph{Trax layers} A \emph{serial} model is cmoposed of a series of layers, which is the basic class in Trax. We now forray into how classes work and their methods. In Python, a class is a way to define common properties and methods for similar objects; i.e. classes define common variables and behavior for the object associated with them. E.g., let's say that we have different colors, so we create a \texttt{color} class. Perhaps our class has common data attributes such as \texttt{r, g, b} for every item defined the class, and some methods associated with it.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node[draw] (colorclass) at (0,0) {Color Class};
+      \node[draw, above right = 1mm and 12mm of colorclass, color = gray!50] (params) {Parameters (r, g, b)};
+      \node[draw, below right = 1mm and 12mm of colorclass, color = gray!50] (methods)      {Methods};
+      \draw[->] (colorclass) -- ++(2, 0) -| ++(0,0.75) |- (params); 
+      \draw[->] (colorclass) -- ++(2, 0) -| ++(0,-0.7) |- (methods);
+      \node[draw, below left = 12mm and 8mm of colorclass,color=orange!80]       (orange) {Orange};
+\node[draw, below = 12mm of colorclass, color=blue!80] (blue) {Blue};
+\node[draw, below right = 12mm and 8mm of colorclass, color=purple!50] (magenta) {Magenta};
+\draw[->] (colorclass) -- (blue);
+\draw[->] (colorclass) -- ++(0,-1) -| (orange);
+\draw[->] (colorclass) -- ++(0,-1) -| (magenta);
+\node[draw,dashed,color=orange!80,below=5mm of orange] {\color{black} $\substack{r = 230 \\ g = 145 \\ b = 56}$};
+\node[draw,dashed,color=blue!80,below=5mm of blue] {\color{black} $\substack{r = 61 \\ g = 133 \\ b = 198}$};
+\node[draw,dashed,color=orange!80,below=5mm of magenta] {\color{black} $\substack{r = 166 \\ g = 77 \\ b = 121}$};
+\end{tikzpicture}
+\caption{Each of the instances from your class in this case are the colors orange, blue, and magenta. They each possess a specific set of RGB values.}
+  \end{center}
+\end{figure}
+
+How do we define a class in Python?
+\begin{python}
+class MyClass(Object):
+  def __init__(self, y):
+    self.y = y
+  def my_method(self, x):
+    return x + self.y
+  def __cal__(self, x):
+    return self.my_method(x)  
+\end{python}
+The name of our class is \texttt{MyClass} and it inherits from a base Python \texttt{Object}. The \texttt{\_\_init\_\_()} method is called when you initialize any instance of the class and assign values to its data attributes. We can also define custom methods to do whatever we'd like, e.g. we define \texttt{my\_method} to add whatever value is stored in the $y$ attribute to the input argument $x$. Lastly, the \texttt{\_\_call\_\_()} method is used when you call an already initialized instance.
+
+\paragraph{Subclasses} We can define subclasses, or classes who derive/inherit from a parent class. E.g.
+\begin{python}
+class SubClass(MyClass):
+  def my_method(self, x):
+    return x + self.y**2
+\end{python}
+Any method that is defined in a subclass will override corresponding methods in the parent class. So, if you redfine \texttt{my\_method}, the \texttt{\_\_init()\_\_} and \texttt{\_\_call\_\_} methods are inherited from \texttt{MyClass} but the \texttt{my\_method} sub-routine is replaced.
 \end{document}
 
 
