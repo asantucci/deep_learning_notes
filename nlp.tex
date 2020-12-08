@@ -3315,6 +3315,7 @@ This section is about creating neural networks using multiple layers, which is g
     % \draw[->] (n33) to (outputneuron);
     % \draw[->] (outputneuron) to (yhat);
   \end{tikzpicture}
+  \label{fig: fullyconnectedfourlayerneuralnetwork}
   \caption{Four-layer, fully connected neural network with a three-dimensional output.} \end{figure}
 
 How does a neural network operate mathematically? We denote the $i$-th activation layer by $a^{[i]}$. First define $a^{[0]} = X$, i.e. define the input data to be the ``first'' activation layer. To get the values for each layer's activation $a^{[i]}$, you must first compute
@@ -3513,6 +3514,20 @@ class SubClass(MyClass):
     return x + self.y**2
 \end{python}
 Any method that is defined in a subclass will override corresponding methods in the parent class. So, if you redfine \texttt{my\_method}, the \texttt{\_\_init()\_\_} and \texttt{\_\_call\_\_} methods are inherited from \texttt{MyClass} but the \texttt{my\_method} sub-routine is replaced.
+
+\paragraph{Dense and \texttt{ReLU} layers}
+Basically,
+\begin{align*}
+  \texttt{Dense Layer} &\longrightarrow z^{[i]} = W^{[i]} a^{[i-1]} \\
+  \texttt{ReLU Layer} &\longrightarrow g(z^{[i]}) = \max(0, z^{[i]}),
+\end{align*}
+where $W^{[i]}$ denotes trainable parameters.
+
+\paragraph{Serial layers} Dense and ReLU layers perform single steps as part of forward computation. We can define a serial neural network as a composition of layers that operates in a sequence. Imagine a basic neural network as in figure \ref{fig: fullyconnectedfourlayerneuralnetwork}: there are some dense and some activation layers, and the sequential arrangement of these calculations can be done in Trax. The new serial layer is composed of the dense and activation layers, and we can think of our entire neural network as being held in this one layer.
+
+\paragraph{Other layers}
+asdf
+
 \end{document}
 
 
