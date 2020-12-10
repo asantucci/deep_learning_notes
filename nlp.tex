@@ -11,7 +11,8 @@
 \usepackage{xparse} 
 \usepackage{bm}
 \usepackage{bbm} 
-\usepackage{color,soul} 
+\usepackage{color,soul}
+\usepackage{fontawesome}
 \usepackage{framed}
 \usepackage[margin=0.5in]{geometry}
 \usepackage{gensymb}
@@ -3526,7 +3527,85 @@ where $W^{[i]}$ denotes trainable parameters.
 \paragraph{Serial layers} Dense and ReLU layers perform single steps as part of forward computation. We can define a serial neural network as a composition of layers that operates in a sequence. Imagine a basic neural network as in figure \ref{fig: fullyconnectedfourlayerneuralnetwork}: there are some dense and some activation layers, and the sequential arrangement of these calculations can be done in Trax. The new serial layer is composed of the dense and activation layers, and we can think of our entire neural network as being held in this one layer.
 
 \paragraph{Other layers}
-asdf
+We've previously worked with a few different ways to represent text data. WHen using neural networs for NLP tasks, \emph{embedding layers} are often included in the model. To this end, we also are then required to introduce a \emph{mean layer}. In NLP, we typically have a set of unique words called the vocabulary $V$. An embedding layer takes an index assigned to each word in the vocabulary and maps it to a representation of the word with a prespecified dimension.
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{c c c c}
+      \hline
+      Vocabulary & Index & & \\
+      \hline
+      I & 1 & 0.020 & 0.006 \\
+      am & 2 & -0.003 & 0.010 \\ 
+      happy & 3 & 0.009 & 0.010 \\
+      because & 4 & -0.011 & -0.018 \\
+      learning & 5 & -0.040 & -0.047 \\
+      NLP & 6 & -0.009 & 0.050 \\
+      sad & 7 & -0.044 & 0.001 \\
+      not & 8 & 0.011 & -0.022 \\
+      \hline
+    \end{tabular}
+    \caption{In this example, the embedding size is two. The embeddings are actually trainable weights in a model, i.e. we want to learn a matrix of dimension $|V| \times \texttt{embedding\_size}$.}
+  \end{center}
+\end{table}
+
+There's also a \emph{mean layer}, which simply means taking elementwise mean across a set of embeddings. This mean-layer does not have any trainable parameters, because it simply computes a mean.
+
+\paragraph{Training} Deep learning frameworks facilitate the automatic computation of gradients; this is much simpler than back-propagating by hand. Suppose
+\[
+f(x) = 3x^2 + x \implies \frac{\partial f(x)}{\partial x} = 6x + 1.
+\]
+The gradient is just a derivative when we're dealing with a scalar valued function. In Trax:
+\begin{python}
+def f(x):
+  return 3*x**2 + x
+
+grad_f = trax.math.grad(f)
+\end{python}
+The function \texttt{grad} returns a \emph{function} that evaluates the gradient of $f$ at a point. Using the \texttt{grad()} function to train a model is painless:
+\begin{python}
+y = model(x)
+grads = grad(y.forward)(y.weights, x)
+\end{python}
+That is, we first apply the gradient function with the forward method of our model as a single parameter. Then, we evaluate the gradient with our weights and inputs. After obtaining the gradients for a model, we simply iterate until convergence is reached.
+\begin{python}
+# While convergence not yet reached:
+weights -= alpha*grads  
+\end{python}
+This means that we're basically performing forward and backward propagation in a single line.
+
+\section{Recurrent Neural Networks for Language Modeling}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+Although we've previously learned how to use $N$-gram language models to compute the probability of a sequence of words, we'll learn now how the aforementioned method requires a lot of computational storage requirements, and how to perform the task more efficiently.
+
+\begin{figure}[h]
+  \begin{center}
+    \begin{tikzpicture}[scale=3/4]
+      \node[minimum width = 5cm, text width = 4.8cm, anchor = west] (e1) at (0,2) {I saw the game of soccer};
+      \node[minimum width = 5cm, text width = 4.8cm, anchor = west] (e2) at (0,1) {I saw the soccer         game};
+      \node[minimum width = 5cm, text width = 4.8cm, anchor = west] (e3) at (0,0) {I saw the soccer         match};
+      \node[minimum width = 5cm, text width = 4.8cm, anchor = west] (e4) at (0,-1) {Saw I the game of soccer};
+      \draw [decorate,decoration={brace,amplitude=10pt,mirror},xshift=-4pt,yshift=0pt]
+(0, 2) -- (0, -1);
+\draw[->, ultra thick] (-2,0.5) -- (-1, 0.5);
+      \node[minimum width = 5cm, text width = 4.8cm, anchor = east] (french) at                   (-2,0.5) {J'ai vu le match de foot};
+      \node[below=2mm of french] {\faSoccerBallO};
+    \end{tikzpicture}
+    \caption{Suppose we have a French-English translation task, where we've procured several candidate translations. If we wanted an accurate translation, we could compute the probabilities of each sentence using a model like an $N$-gram, and select the sentence with highest probability. In this case that would be ``I saw the soccer game''.}
+  \end{center}
+\end{figure}
+
+Recall that in order to build an $N$-gram language model, we have to compute conditional probabilities, which for bigrams are of the form $\Pr(w_2 | w_1) = \frac{C(w_1 w_2)}{C(w_1)}$, and at the end, to get the probability of a sentence, we multiply out the conditional probabilities of each word in the sentence using its previous $(N-1)$ words; e.g. $\Pr(w_1, w_2, w_3) = \Pr(w_1) \times \Pr(w_2 | w_1) \times \Pr(w_3 | w_2)$. For an $N$-gram model we use conditional probabilities based on the previous $N-1$ words, and the notion generalizes. There are downsides to this approach:
+
+\begin{itemize}
+  \item Realize that in order to capture dependencies between distant words, we require a large $N$ in our $N$-gram model in order to model the conditional probabilities of very long sentences.
+\item Even in the case of a large corpora, your model would need a lot of space and RAM to store all possible combinations in a transition probabilities table.
+\end{itemize}
+
+Recurrent neural networks and gated recurrent units are two models that are much more efficient than $N$-grams for NLP tasks like machine translation.
+
+\section{LSTMs and Named Entity Recognition}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+\section{Siamese Networks}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
+
 
 \end{document}
 
