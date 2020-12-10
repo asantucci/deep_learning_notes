@@ -3659,6 +3659,58 @@ Part of the ``magic'' of RNNs comes from the fact that every word in the sequenc
 \item \textbf{Many to Many:} involve multiple inputs and multiple outputs, e.g. machine translation. The architecture is known as encoder-decoder. The first part of the neural network is called an encoder because it simple encodes a sequence of words into a single representation that captures the overall meaning of the sentence; it doesn't return any output $\hat y$ until the decoder stage.
 \end{itemize}
 
+\paragraph{Math in simple RNNs} Let's look at a vanilla RNN and basic recurrent units, with a many-to-many architecture.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$} node[below left] {\color{purple} $W_{aa}$};
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    \draw[->] (0.25, 2.25) -- (0.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y^{\langle 1         \rangle}$};
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}     node[below left] {\color{purple} $W_{aa}$};
+    \node at (2.25, -1) {$X^{\langle 2 \rangle}$};
+    \draw[->] (2.25, -0.5) -- (2.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    \draw[->] (2.25, 2.25) -- (2.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y^{\langle 2         \rangle}$};
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (5, 1);
+    \node at (5.25, -1) {$X^{\langle T_x \rangle}$};
+    \draw[->] (5.25, -0.5) -- (5.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (5, 0.25) rectangle (5.5, 2);
+    \node[draw,circle,scale=0.75] at (5.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (5.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.7) {};
+    \draw[->] (5.25, 2.25) -- (5.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y^{\langle T_y         \rangle}$};    
+  \end{tikzpicture}
+  \caption{\footnotesize At each time-step, we take in an input $X^{T_i}$, a hidden state $h$, and we make a prediction $\hat y^{T_i}$. Additionally, we propagate a new hidden state to the next time step. The hidden state at each time step is computed with an activation function $g$ with arguments equalt to the product between a parameter matrix $W_{aa}$ and the previous hidden state $a^{\langle T_{i-1} \rangle}$.}
+\end{figure}
+
+The complete equation for our many-to-many architecture looks like:
+\[
+  a^{\langle t\rangle} = g\left(W_{aa} a^{\langle t-1 \rangle} \oplus W_{ax} x^{\langle t \rangle} + b_a\right)
+\]
+where $\oplus$ denotes element-wise addition. After computing the hidden state at time $t$, we can feed \emph{it} through an activation function to compute the output
+\[
+  \hat y^{\langle t \rangle} = g\left(W_{ya} a^{\langle t \rangle} + b_y \right).
+\]
+
+
+
 \section{LSTMs and Named Entity Recognition}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
 \section{Siamese Networks}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
 
