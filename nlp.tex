@@ -3603,6 +3603,62 @@ Recall that in order to build an $N$-gram language model, we have to compute con
 
 Recurrent neural networks and gated recurrent units are two models that are much more efficient than $N$-grams for NLP tasks like machine translation.
 
+\subsection{Recurrent Neural Networks} Recurrent Neural Networks (or RNNs) allow us to capture some dependencies that we could not have otherwise captured with traditional $N$-gram language models. Let's look at an example:
+\begin{verbatim}
+Nour was supposed to study with me. I called her, but she did not _______.
+\end{verbatim}
+
+If we used a traditional language model, such as a trigram, to try and complete this sentence, you would compare different word probabilities and select the word with the highest chance of following the words ``did not''. For a typical corpus, a trigram model might select ``have'' as the successor word, but in this context that choice doesn't make any sense!\footnote{Other candidate words for a reasonable trigram model would still not make sense and include words from a set like, \{want, respond, choose, have, ask, attempt, answer, know\}.} As a better alternative, RNNs aren't limited to looking at just the previous $N$ words; instead, they \emph{propagate information} from the beginning of a sentence to the end. I.e. RNNs implicitly look at \emph{every} previous word rather than the last $N-1$, and so we might end up corrrectly predicting ``answer'' in our example above. If we wanted an $N$-gram model capable of capturing this relationship, we'd have to have account for seven word long sentences which becomes impractical.
+
+\paragraph{How does an RNN work?} To see how an RNN works, let's look at just the second sentence from our previous example, ``I called her but she did not \uline{\hspace{15pt}}''.
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \draw[->] (-1, 1) -- (-0.25, 1) node[above left] {$a^{\langle 0         \rangle}$} node[below left] {\color{purple} $W_{aa}$};
+    %% First input in the sequence.
+    \node at (0.25, -1) {$X^{\langle 1 \rangle}$};
+    \draw[->] (0.25, -0.5) -- (0.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (0, 0.25) rectangle (0.5, 2);
+    \node[draw,circle,scale=0.75] at (0.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (0.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (0.25, 1.7) {};
+    %% Second element in the input sequence.
+    \draw[->] (0.75, 1) -- (1.75, 1) node[above left] {$a^{\langle 1 \rangle}$}     node[below left] {\color{purple} $W_{aa}$};
+    \node at (2.25, -1) {$X^{\langle 2 \rangle}$};
+    \draw[->] (2.25, -0.5) -- (2.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (2, 0.25) rectangle (2.5, 2);
+    \node[draw,circle,scale=0.75] at (2.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (2.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (2.25, 1.7) {};
+    %% Moving on past second layer.
+    \draw[->] (2.75, 1) -- (3.25, 1);
+    \node at (4, 1) {$\ldots$};
+    \draw[->] (4.5, 1) -- (5, 1);
+    \node at (5.25, -1) {$X^{\langle T_x \rangle}$};
+    \draw[->] (5.25, -0.5) -- (5.25, 0) node[below right] {\color{orange} $W_{ax}$};
+    \draw (5, 0.25) rectangle (5.5, 2);
+    \node[draw,circle,scale=0.75] at (5.25, 0.5) {};
+    \node[draw,circle,scale=0.75] at (5.25, 0.9) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.3) {};
+    \node[draw,circle,scale=0.75] at (5.25, 1.7) {};
+    \draw[->] (5.25, 2.25) -- (5.25, 2.75) node[below right] {\color{blue!50} $W_{ya}$} node[above] {$\hat y$};    
+  \end{tikzpicture}
+  \caption{\footnotesize When a recurrent neural network makes a prediction for the second element in the input sequence $X^{\langle 2 \rangle}$, it also gets to input some information from what was computed from time step one. In general, the activation from the previous step is carried forward. To kick things off, we'll also have some made up activation at time step zero, e.g. we might choose to initialize $a^{\langle 0 \rangle}$ with a vector of all zeros. For each input element in the sequence, we use shared weight parameters $W_{ax}$, and to govern how we pass forward activations we used shared weight parameters $W_{aa}$. Lastly, there is a set of weights $W_{ya}$ that govern how to map from hidden neurons to an output prediction, which in our above example would be the last word of the sentence.}
+\end{figure}
+
+Part of the ``magic'' of RNNs comes from the fact that every word in the sequence is multiplied by the wame weights matrix $W_{ax}$, and information is propagated from beginning to end via a different set of shared weights matrices $W_{aa}$; these weights are learnable parameters, alongside weights $W_{ya}$. Realize that the number of parameters for an RNN remains fixed regardless of the input sequence length.
+
+\paragraph{Applications of RNNs} There are many types of architectures for RNNs which can be grouped according to their inputs and outputs.
+
+\begin{itemize}
+  \item \textbf{One to One:} input is a set of low or non-correlated features $x$ and output is a single value $y$. This isn't much different from a conventional neural network.
+\item \textbf{One to Many:} e.g. the input is a single image and you'd like the output to be a caption describing that image. We take in a single image and we output multiple words.
+\item \textbf{Many to One:} e.g. sentiment analysis. You may have an input   sequence for which you'd like a single output.
+\item \textbf{Many to Many:} involve multiple inputs and multiple outputs, e.g. machine translation. The architecture is known as encoder-decoder. The first part of the neural network is called an encoder because it simple encodes a sequence of words into a single representation that captures the overall meaning of the sentence; it doesn't return any output $\hat y$ until the decoder stage.
+\end{itemize}
+
 \section{LSTMs and Named Entity Recognition}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
 \section{Siamese Networks}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
 
