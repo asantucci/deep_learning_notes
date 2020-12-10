@@ -3709,7 +3709,32 @@ where $\oplus$ denotes element-wise addition. After computing the hidden state a
   \hat y^{\langle t \rangle} = g\left(W_{ya} a^{\langle t \rangle} + b_y \right).
 \]
 
+\begin{figure}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[fill=blue!20] (-3.25, -1.75) rectangle (2.5, 1.5);
+      % Stack on non-linearities leading to output(s).
+      \node[draw,fill=white] (nonlinearityabove) at (1, 1) {\texttt{sigmoid}};
+      \node[draw,fill=white,below=7mm of nonlinearityabove] (nonlinearitybelow)       {\texttt{sigmoid}};
+      \draw[->] (nonlinearitybelow) -- (nonlinearityabove) node[midway, right]       {$W_{ya}$};
+      % Outputs themselves.
+      \node[above=7mm of nonlinearityabove] (yhat) {\color{green!80!black} $\hat y^{\langle t \rangle}$};
+      \draw[->, ultra thick, green!80!black] (nonlinearityabove) -- (yhat);
+      \node[right=12mm of nonlinearitybelow] (activationoutput) {\color{orange!80} $a^{\langle t           \rangle }$};
+      \draw[->, ultra thick, orange!80] (nonlinearitybelow) -- (activationoutput);
+      % Inputs.
+      \node[draw,fill=white,circle,left=12mm of nonlinearitybelow] (plus) {$+$};
+      \draw[->] (plus) -- (nonlinearitybelow);
+      \node[below=12mm of plus] (xinput) {\color{purple!80} $x^{\langle t \rangle}$};
+      \draw[->, ultra thick, purple!80] (xinput) -- (plus) node[midway, right]       {\color{black} $W_{ax}$};
+      \node[left=15mm of plus] (activationinput) {\color{orange!80} $a^{\langle           t - 1 \rangle }$};
+      \draw[->, ultra thick,orange!80] (activationinput) -- (plus) node[midway,       above] {\color{black} $W_{aa}$};
+\end{tikzpicture}
+\caption{This is an example diagram depicting the order of operations in an arbitrary recurrent neural network layer. The inputs to the cell are the current variable $x^{\langle t  \rangle}$ and the inputs from the previous layer $a^{\langle t - 1 \rangle}$. To get the current hidden state, first, we have toget the product of $W_{ax} x^{\langle t \rangle}$ and $W_{aa} a^{\langle t-1 \rangle}$, and then sum the resulting vectors element-wise. Next, we pass the resulting vector through an activation function, and with the resulting value we can both compute a prediction (by first multiplying the hidden state $a^{\langle t \rangle }$ with the learnable parameters $W_{ya}$ and passing through a non-linearity) and also the information to propagate to the subsequent layer.}
+  \end{center}
+\end{figure}
 
+The basic summary is that the hidden states propagate information through time, and a basic recurrent unit has two inputs: $a^{\langle t - 1 \rangle}$ and $x^{\langle t \rangle}$.
 
 \section{LSTMs and Named Entity Recognition}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
 \section{Siamese Networks}\vspace{.1pt} \hrule height 2pt \smallskip \renewcommand{\arraystretch}{1}% Tighter
